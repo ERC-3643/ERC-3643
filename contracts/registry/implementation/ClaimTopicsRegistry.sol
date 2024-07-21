@@ -76,6 +76,7 @@ contract ClaimTopicsRegistry is IClaimTopicsRegistry, OwnableUpgradeable, CTRSto
      *  @dev See {IClaimTopicsRegistry-addClaimTopic}.
      */
     function addClaimTopic(uint256 _claimTopic) external override onlyOwner {
+        require(_claimTopic != 0, "claim topic cannot be 0");
         uint256 length = _claimTopics.length;
         require(length < 15, "cannot require more than 15 topics");
         for (uint256 i = 0; i < length; i++) {

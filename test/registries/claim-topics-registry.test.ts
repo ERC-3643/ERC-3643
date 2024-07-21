@@ -28,6 +28,17 @@ describe('ClaimTopicsRegistry', () => {
     });
 
     describe('when sender is owner', () => {
+      describe('when claim topic is zero', () => {
+        it('should revert', async () => {
+          const {
+            suite: { claimTopicsRegistry },
+            accounts: { deployer },
+          } = await loadFixture(deployFullSuiteFixture);
+
+          await expect(claimTopicsRegistry.connect(deployer).addClaimTopic(0)).to.be.revertedWith('claim topic cannot be 0');
+        });
+      });
+
       describe('when topic array contains more than 14 elements', () => {
         it('should revert', async () => {
           const {
@@ -35,7 +46,7 @@ describe('ClaimTopicsRegistry', () => {
             accounts: { deployer },
           } = await loadFixture(deployFullSuiteFixture);
 
-          await Promise.all(Array.from({ length: 14 }, (_, i) => i).map((i) => claimTopicsRegistry.addClaimTopic(i)));
+          await Promise.all(Array.from({ length: 14 }, (_, i) => i).map((i) => claimTopicsRegistry.addClaimTopic(i+1)));
 
           await expect(claimTopicsRegistry.connect(deployer).addClaimTopic(14)).to.be.revertedWith('cannot require more than 15 topics');
         });
