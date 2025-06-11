@@ -14,7 +14,8 @@ describe('TrexImplementationAuthority', () => {
         } = await loadFixture(deployFullSuiteFixture);
 
         await expect(trexImplementationAuthority.connect(anotherWallet).setTREXFactory(ethers.ZeroAddress)).to.be.revertedWithCustomError(
-          trexImplementationAuthority,'OwnableUnauthorizedAccount',
+          trexImplementationAuthority,
+          'OwnableUnauthorizedAccount',
         );
       });
     });
@@ -91,7 +92,8 @@ describe('TrexImplementationAuthority', () => {
         } = await loadFixture(deployFullSuiteFixture);
 
         await expect(trexImplementationAuthority.connect(anotherWallet).setIAFactory(ethers.ZeroAddress)).to.be.revertedWithCustomError(
-          trexImplementationAuthority, 'OwnableUnauthorizedAccount',
+          trexImplementationAuthority,
+          'OwnableUnauthorizedAccount',
         );
       });
     });
@@ -226,7 +228,8 @@ describe('TrexImplementationAuthority', () => {
         };
 
         await expect(trexImplementationAuthority.connect(anotherWallet).addTREXVersion(versionStruct, contractsStruct)).to.be.revertedWithCustomError(
-          trexImplementationAuthority,'OwnableUnauthorizedAccount',
+          trexImplementationAuthority,
+          'OwnableUnauthorizedAccount',
         );
       });
     });
@@ -345,7 +348,8 @@ describe('TrexImplementationAuthority', () => {
         };
 
         await expect(trexImplementationAuthority.connect(anotherWallet).useTREXVersion(versionStruct)).to.be.revertedWithCustomError(
-          trexImplementationAuthority,'OwnableUnauthorizedAccount',
+          trexImplementationAuthority,
+          'OwnableUnauthorizedAccount',
         );
       });
     });

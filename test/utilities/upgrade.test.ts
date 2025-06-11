@@ -13,9 +13,10 @@ describe('UtilityChecker.upgrateTo', () => {
       const newImplementation = await ethers.deployContract('UtilityChecker');
 
       // Replace upgradeTo with upgradeToAndCall with empty data
-      await expect(
-        utilityChecker.connect(aliceWallet).upgradeToAndCall(newImplementation.target, '0x')
-      ).to.revertedWithCustomError(utilityChecker, 'OwnableUnauthorizedAccount');
+      await expect(utilityChecker.connect(aliceWallet).upgradeToAndCall(newImplementation.target, '0x')).to.revertedWithCustomError(
+        utilityChecker,
+        'OwnableUnauthorizedAccount',
+      );
     });
   });
 

@@ -432,7 +432,8 @@ describe('TREXFactory', () => {
         const tokenAddress = await getTREXSuiteDeployedTokenAddress(tx);
 
         await expect(trexFactory.connect(aliceWallet).recoverContractOwnership(tokenAddress, aliceWallet.address)).to.be.revertedWithCustomError(
-          trexFactory,'OwnableUnauthorizedAccount',
+          trexFactory,
+          'OwnableUnauthorizedAccount',
         );
       });
     });

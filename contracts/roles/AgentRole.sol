@@ -86,12 +86,12 @@ contract AgentRole is Ownable {
 
     Roles.Role private _agents;
 
-    constructor() Ownable(msg.sender) {}
-
     modifier onlyAgent() {
         require(isAgent(msg.sender), CallerDoesNotHaveAgentRole());
         _;
     }
+
+    constructor() Ownable(msg.sender) {}
 
     function addAgent(address _agent) public onlyOwner {
         require(_agent != address(0), ZeroAddress());

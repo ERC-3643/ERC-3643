@@ -13,7 +13,8 @@ describe('TREXGateway', () => {
         await context.factories.trexFactory.transferOwnership(gateway.target);
 
         await expect(gateway.connect(context.accounts.anotherWallet).setFactory(context.factories.trexFactory.target)).to.be.revertedWithCustomError(
-          gateway,'OwnableUnauthorizedAccount',
+          gateway,
+          'OwnableUnauthorizedAccount',
         );
       });
     });
@@ -52,7 +53,8 @@ describe('TREXGateway', () => {
         await context.factories.trexFactory.transferOwnership(gateway.target);
 
         await expect(gateway.connect(context.accounts.anotherWallet).setPublicDeploymentStatus(true)).to.be.revertedWithCustomError(
-          gateway,'OwnableUnauthorizedAccount',
+          gateway,
+          'OwnableUnauthorizedAccount',
         );
       });
     });
@@ -118,7 +120,8 @@ describe('TREXGateway', () => {
         await context.factories.trexFactory.transferOwnership(gateway.target);
 
         await expect(gateway.connect(context.accounts.anotherWallet).enableDeploymentFee(true)).to.be.revertedWithCustomError(
-          gateway,'OwnableUnauthorizedAccount',
+          gateway,
+          'OwnableUnauthorizedAccount',
         );
       });
     });
