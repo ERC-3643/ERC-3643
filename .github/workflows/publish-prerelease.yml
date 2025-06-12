@@ -49,7 +49,7 @@ jobs:
         with:
           node-version: 20
           registry-url: https://npm.pkg.github.com/
-          scope: "@tokenysolutions"
+          scope: "@erc3643org"
       - run: npm ci
       - run: npm run build
       - run: npm publish --tag beta
