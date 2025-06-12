@@ -45,7 +45,7 @@
  *     T-REX is a suite of smart contracts implementing the ERC-3643 standard and
  *     developed by Tokeny to manage and transfer financial assets on EVM blockchains
  *
- *     Copyright (C) 2023, Tokeny sàrl.
+ *     Copyright (C) 2025, Tokeny sàrl.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -61,7 +61,7 @@
  *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-pragma solidity 0.8.27;
+pragma solidity 0.8.30;
 
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -78,7 +78,7 @@ import { IUtilityChecker } from "./IUtilityChecker.sol";
 contract UtilityChecker is IUtilityChecker, OwnableUpgradeable, UUPSUpgradeable {
 
     function initialize() external initializer {
-        __Ownable_init();
+        __Ownable_init(msg.sender);
     }
 
     /// @inheritdoc IUtilityChecker

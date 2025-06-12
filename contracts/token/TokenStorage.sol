@@ -45,7 +45,7 @@
  *     T-REX is a suite of smart contracts implementing the ERC-3643 standard and
  *     developed by Tokeny to manage and transfer financial assets on EVM blockchains
  *
- *     Copyright (C) 2023, Tokeny sàrl.
+ *     Copyright (C) 2025, Tokeny sàrl.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -61,12 +61,14 @@
  *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-pragma solidity 0.8.27;
+pragma solidity 0.8.30;
 import "../ERC-3643/IERC3643Compliance.sol";
 import "../ERC-3643/IERC3643IdentityRegistry.sol";
 import "./TokenStructs.sol";
 
 contract TokenStorage {
+
+    string internal constant _TOKEN_VERSION = "4.2.0";
     /// @dev ERC20 basic variables
     mapping(address => uint256) internal _balances;
     mapping(address => mapping(address => uint256)) internal _allowances;
@@ -77,7 +79,6 @@ contract TokenStorage {
     string internal _tokenSymbol;
     uint8 internal _tokenDecimals;
     address internal _tokenOnchainID;
-    string internal constant _TOKEN_VERSION = "4.1.3";
 
     /// @dev Variables of freeze and pause functions
     mapping(address => bool) internal _frozen;

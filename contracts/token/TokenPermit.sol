@@ -45,7 +45,7 @@
  *     T-REX is a suite of smart contracts implementing the ERC-3643 standard and
  *     developed by Tokeny to manage and transfer financial assets on EVM blockchains
  *
- *     Copyright (C) 2023, Tokeny sàrl.
+ *     Copyright (C) 2025, Tokeny sàrl.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -61,10 +61,11 @@
  *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-pragma solidity 0.8.27;
+pragma solidity 0.8.30;
 
 import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { IERC5267 } from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 import { NoncesUpgradeable } from "../utils/NoncesUpgradeable.sol";
 
@@ -94,7 +95,7 @@ abstract contract TokenPermit is IERC20Permit, IERC5267, NoncesUpgradeable {
 
         bytes32 structHash = keccak256(abi.encode(_PERMIT_TYPEHASH, owner, spender, value, _useNonce(owner), deadline));
 
-        bytes32 hash = ECDSA.toTypedDataHash(_domainSeparatorV4(), structHash);
+        bytes32 hash = MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
 
         address signer = ECDSA.recover(hash, v, r, s);
         require(signer == owner, ERC2612InvalidSigner(signer, owner));
