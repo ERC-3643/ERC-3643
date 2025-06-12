@@ -3,6 +3,9 @@
   "version": "4.2.0-beta1",
   "description": "A fully compliant environment for the issuance and use of tokenized securities implementing the ERC-3643 standard.",
   "main": "index.js",
+  "publishConfig": {
+    "access": "public"
+  },
   "directories": {
     "doc": "docs",
     "test": "test"
