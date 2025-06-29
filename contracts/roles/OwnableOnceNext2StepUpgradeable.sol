@@ -86,6 +86,7 @@ contract OwnableOnceNext2StepUpgradeable is Initializable, ContextUpgradeable {
 
     /// @dev Preserve the owner address before an upgrade.
     address private _owner;
+    uint256[49] private __gap;
  
     modifier onlyOwner() {
         _checkOwner();

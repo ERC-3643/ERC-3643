@@ -18,3 +18,6 @@ flat/
 # NPM
 gas-report
 /bin/
+
+.storage_delta_cache
+storage_delta

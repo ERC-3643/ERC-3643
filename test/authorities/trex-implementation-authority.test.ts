@@ -13,9 +13,8 @@ describe('TrexImplementationAuthority', () => {
           accounts: { anotherWallet },
         } = await loadFixture(deployFullSuiteFixture);
 
-        await expect(trexImplementationAuthority.connect(anotherWallet).setTREXFactory(ethers.ZeroAddress)).to.be.revertedWithCustomError(
-          trexImplementationAuthority,
-          'OwnableUnauthorizedAccount',
+        await expect(trexImplementationAuthority.connect(anotherWallet).setTREXFactory(ethers.ZeroAddress)).to.be.revertedWith(
+          'Ownable: caller is not the owner',
         );
       });
     });
@@ -91,9 +90,8 @@ describe('TrexImplementationAuthority', () => {
           accounts: { anotherWallet },
         } = await loadFixture(deployFullSuiteFixture);
 
-        await expect(trexImplementationAuthority.connect(anotherWallet).setIAFactory(ethers.ZeroAddress)).to.be.revertedWithCustomError(
-          trexImplementationAuthority,
-          'OwnableUnauthorizedAccount',
+        await expect(trexImplementationAuthority.connect(anotherWallet).setIAFactory(ethers.ZeroAddress)).to.be.revertedWith(
+          'Ownable: caller is not the owner',
         );
       });
     });
@@ -227,9 +225,8 @@ describe('TrexImplementationAuthority', () => {
           mcImplementation: implementations.modularComplianceImplementation.target,
         };
 
-        await expect(trexImplementationAuthority.connect(anotherWallet).addTREXVersion(versionStruct, contractsStruct)).to.be.revertedWithCustomError(
-          trexImplementationAuthority,
-          'OwnableUnauthorizedAccount',
+        await expect(trexImplementationAuthority.connect(anotherWallet).addTREXVersion(versionStruct, contractsStruct)).to.be.revertedWith(
+          'Ownable: caller is not the owner',
         );
       });
     });
@@ -347,9 +344,8 @@ describe('TrexImplementationAuthority', () => {
           patch: 0,
         };
 
-        await expect(trexImplementationAuthority.connect(anotherWallet).useTREXVersion(versionStruct)).to.be.revertedWithCustomError(
-          trexImplementationAuthority,
-          'OwnableUnauthorizedAccount',
+        await expect(trexImplementationAuthority.connect(anotherWallet).useTREXVersion(versionStruct)).to.be.revertedWith(
+          'Ownable: caller is not the owner',
         );
       });
     });
