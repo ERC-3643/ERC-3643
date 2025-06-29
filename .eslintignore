@@ -7,3 +7,4 @@ typechain-types/
 coverage/
 *.d.ts
 hardhat.config.js
+scripts/storage-delta/_reporter.js
