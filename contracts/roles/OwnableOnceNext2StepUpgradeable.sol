@@ -74,18 +74,19 @@ import { OwnableUnauthorizedAccount} from "../errors/CommonErrors.sol";
 event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
 
 
-contract OwnableOnceNext2StepUpgradeable is Initializable, ContextUpgradeable {
+abstract contract OwnableOnceNext2StepUpgradeable is Initializable, ContextUpgradeable {
 
     /// @custom:storage-location erc7201:tokeny.storage.OwnableOnceNext2StepUpgradeable
     struct Ownable2StepsStorage {
         address pendingOwner;
-        bool firstCall;
+        bool nextOwner;
     }
     
     bytes32 private constant _STORAGE_SLOT = keccak256("tokeny.storage.OwnableOnceNext2StepUpgradeable");
 
     /// @dev Preserve the owner address before an upgrade.
     address private _owner;
+    uint256[49] private __gap;
  
     modifier onlyOwner() {
         _checkOwner();
@@ -98,8 +99,8 @@ contract OwnableOnceNext2StepUpgradeable is Initializable, ContextUpgradeable {
     /// @param newOwner The address of the new owner.
     function transferOwnership(address newOwner) public onlyOwner {
         Ownable2StepsStorage storage s = _getStorage();
-        if (s.firstCall) {
-            s.firstCall = false;
+        if (!s.nextOwner) {
+            s.nextOwner = true;
             _transferOwnership(newOwner);
         }
         else {

@@ -138,3 +138,48 @@ describe('AgentRole', () => {
     });
   });
 });
+
+describe('OwnableOnceNext2StepUpgradeable', () => {
+  describe('when first deploy', () => {
+    it('should set owner to caller', async () => {
+      const [deployer] = await ethers.getSigners();
+
+      const modularCompliance = await ethers.deployContract('ModularCompliance');
+      await modularCompliance.init();
+
+      expect(await modularCompliance.owner()).to.equal(deployer.address);
+    });
+  });
+
+  describe('when set first owner', () => {
+    it('should set next owner to caller', async () => {
+      const [deployer, aliceWallet] = await ethers.getSigners();
+
+      const modularCompliance = await ethers.deployContract('ModularCompliance');
+      await modularCompliance.init();
+
+      await modularCompliance.connect(deployer).transferOwnership(aliceWallet.address);
+
+      expect(await modularCompliance.owner()).to.equal(aliceWallet.address);
+    });
+  });
+
+  describe('when next owner is set', () => {
+    it('should set owner to next owner in 2 steps', async () => {
+      const [deployer, aliceWallet, bobWallet] = await ethers.getSigners();
+
+      const modularCompliance = await ethers.deployContract('ModularCompliance');
+      await modularCompliance.init();
+
+      await modularCompliance.connect(deployer).transferOwnership(aliceWallet.address);
+
+      let tx = await modularCompliance.connect(aliceWallet).transferOwnership(bobWallet.address);
+      await expect(tx).to.emit(modularCompliance, 'OwnershipTransferStarted').withArgs(aliceWallet.address, bobWallet.address);
+
+      tx = await modularCompliance.connect(bobWallet).acceptOwnership();
+      await expect(tx).to.emit(modularCompliance, 'OwnershipTransferred').withArgs(aliceWallet.address, bobWallet.address);
+
+      expect(await modularCompliance.owner()).to.equal(bobWallet.address);
+    });
+  });
+});
