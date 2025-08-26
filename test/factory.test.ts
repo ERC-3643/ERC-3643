@@ -303,7 +303,11 @@ describe('TREXFactory', () => {
             suite: { claimIssuerContract },
           } = await loadFixture(deployFullSuiteFixture);
 
-          const testModule = await ethers.deployContract('TestModule');
+          const testModuleImplem = await ethers.deployContract('TestModule');
+          const testModule = await ethers.deployContract('ModuleProxy', [
+            testModuleImplem.target,
+            testModuleImplem.interface.encodeFunctionData('initialize'),
+          ]);
 
           const tx = await trexFactory.connect(deployer).deployTREXSuite(
             'salt',

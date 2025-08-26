@@ -38,9 +38,17 @@ describe('UtilityChecker.testTransferDetails', () => {
   it('should return no pass for one of multiple modules', async () => {
     const context = await loadFixture(deployComplianceWithTestModule);
 
-    const testModule2 = await ethers.deployContract('TestModule');
-    await ethers.deployContract('ModuleProxy', [testModule2.target, testModule2.interface.encodeFunctionData('initialize')]);
+    // Deploy second module with proxy
+    const testModule2Implementation = await ethers.deployContract('TestModule');
+    const testModule2Proxy = await ethers.deployContract('ModuleProxy', [
+      testModule2Implementation.target,
+      testModule2Implementation.interface.encodeFunctionData('initialize'),
+    ]);
+    const testModule2 = await ethers.getContractAt('TestModule', testModule2Proxy.target);
+
+    // Add the proxy address to compliance, not the implementation
     await context.suite.compliance.addModule(testModule2.target);
+
     // block the second test module to show 2 different outputs
     await context.suite.compliance.callModuleFunction(
       new ethers.Interface(['function blockModule(bool _blocked)']).encodeFunctionData('blockModule', [true]),
@@ -64,8 +72,15 @@ describe('UtilityChecker.testTransferDetails', () => {
   it('should return pass for multiple modules', async () => {
     const context = await loadFixture(deployComplianceWithTestModule);
 
-    const testModule2 = await ethers.deployContract('TestModule');
-    await ethers.deployContract('ModuleProxy', [testModule2.target, testModule2.interface.encodeFunctionData('initialize')]);
+    // Deploy second module with proxy
+    const testModule2Implementation = await ethers.deployContract('TestModule');
+    const testModule2Proxy = await ethers.deployContract('ModuleProxy', [
+      testModule2Implementation.target,
+      testModule2Implementation.interface.encodeFunctionData('initialize'),
+    ]);
+    const testModule2 = await ethers.getContractAt('TestModule', testModule2Proxy.target);
+
+    // Add the proxy address to compliance, not the implementation
     await context.suite.compliance.addModule(testModule2.target);
 
     const utilityChecker = await ethers.deployContract('UtilityChecker');

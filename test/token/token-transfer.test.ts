@@ -141,7 +141,13 @@ describe('Token - Transfers', () => {
           accounts: { aliceWallet, bobWallet },
         } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-        const complianceModuleA = await ethers.deployContract('TestModule');
+        const complianceModuleAImplementation = await ethers.deployContract('TestModule');
+        const complianceModuleAProxy = await ethers.deployContract('ModuleProxy', [
+          complianceModuleAImplementation.target,
+          complianceModuleAImplementation.interface.encodeFunctionData('initialize'),
+        ]);
+        const complianceModuleA = await ethers.getContractAt('TestModule', complianceModuleAProxy.target);
+
         await compliance.addModule(complianceModuleA.target);
         await token.setCompliance(compliance.target);
         await compliance.callModuleFunction(
@@ -282,7 +288,13 @@ describe('Token - Transfers', () => {
           accounts: { aliceWallet, bobWallet },
         } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-        const complianceModuleA = await ethers.deployContract('TestModule');
+        const complianceModuleAImplementation = await ethers.deployContract('TestModule');
+        const complianceModuleAProxy = await ethers.deployContract('ModuleProxy', [
+          complianceModuleAImplementation.target,
+          complianceModuleAImplementation.interface.encodeFunctionData('initialize'),
+        ]);
+        const complianceModuleA = await ethers.getContractAt('TestModule', complianceModuleAProxy.target);
+
         await compliance.addModule(complianceModuleA.target);
         await token.setCompliance(compliance.target);
         await compliance.callModuleFunction(
@@ -390,7 +402,13 @@ describe('Token - Transfers', () => {
           accounts: { aliceWallet, bobWallet, tokenAgent },
         } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-        const complianceModuleA = await ethers.deployContract('TestModule');
+        const complianceModuleAImplementation = await ethers.deployContract('TestModule');
+        const complianceModuleAProxy = await ethers.deployContract('ModuleProxy', [
+          complianceModuleAImplementation.target,
+          complianceModuleAImplementation.interface.encodeFunctionData('initialize'),
+        ]);
+        const complianceModuleA = await ethers.getContractAt('TestModule', complianceModuleAProxy.target);
+
         await compliance.addModule(complianceModuleA.target);
         await token.setCompliance(compliance.target);
         await compliance.callModuleFunction(
@@ -476,7 +494,13 @@ describe('Token - Transfers', () => {
           accounts: { aliceWallet, tokenAgent },
         } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-        const complianceModuleA = await ethers.deployContract('TestModule');
+        const complianceModuleAImplementation = await ethers.deployContract('TestModule');
+        const complianceModuleAProxy = await ethers.deployContract('ModuleProxy', [
+          complianceModuleAImplementation.target,
+          complianceModuleAImplementation.interface.encodeFunctionData('initialize'),
+        ]);
+        const complianceModuleA = await ethers.getContractAt('TestModule', complianceModuleAProxy.target);
+
         await compliance.addModule(complianceModuleA.target);
         await token.setCompliance(compliance.target);
         await compliance.callModuleFunction(

@@ -7,6 +7,16 @@ import {
   deploySuiteWithModuleComplianceBoundToWallet,
 } from './fixtures/deploy-full-suite.fixture';
 
+// Helper function to deploy module with proxy
+async function deployModuleWithProxy(contractName: string = 'TestModule') {
+  const moduleImplementation = await ethers.deployContract(contractName);
+  const moduleProxy = await ethers.deployContract('ModuleProxy', [
+    moduleImplementation.target,
+    moduleImplementation.interface.encodeFunctionData('initialize'),
+  ]);
+  return ethers.getContractAt(contractName, moduleProxy.target);
+}
+
 describe('ModularCompliance', () => {
   describe('.init', () => {
     it('should prevent calling init twice', async () => {
@@ -180,7 +190,7 @@ describe('ModularCompliance', () => {
             suite: { compliance },
           } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-          const module = await ethers.deployContract('TestModule');
+          const module = await deployModuleWithProxy();
           await compliance.addModule(module.target);
 
           await expect(compliance.addModule(module.target)).to.be.revertedWithCustomError(compliance, 'ModuleAlreadyBound');
@@ -196,7 +206,7 @@ describe('ModularCompliance', () => {
             } = await loadFixture(deploySuiteWithModularCompliancesFixture);
             await compliance.connect(accounts.deployer).bindToken(token.target);
 
-            const module = await ethers.deployContract('ModuleNotPnP');
+            const module = await deployModuleWithProxy('ModuleNotPnP');
             await expect(compliance.addModule(module.target)).to.be.revertedWithCustomError(compliance, 'ComplianceNotSuitableForBindingToModule');
           });
         });
@@ -212,7 +222,7 @@ describe('ModularCompliance', () => {
             await token.connect(accounts.tokenAgent).burn(accounts.aliceWallet.address, 1000);
             await token.connect(accounts.tokenAgent).burn(accounts.bobWallet.address, 500);
 
-            const module = await ethers.deployContract('ModuleNotPnP');
+            const module = await deployModuleWithProxy('ModuleNotPnP');
             await module.setModuleReady(compliance.target, true);
             const tx = await compliance.addModule(module.target);
 
@@ -228,7 +238,7 @@ describe('ModularCompliance', () => {
             suite: { compliance },
           } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-          const module = await ethers.deployContract('TestModule');
+          const module = await deployModuleWithProxy();
           const tx = await compliance.addModule(module.target);
 
           await expect(tx).to.emit(compliance, 'ModuleAdded').withArgs(module.target);
@@ -242,11 +252,11 @@ describe('ModularCompliance', () => {
             suite: { compliance },
           } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-          const modules = await Promise.all(Array.from({ length: 25 }, () => ethers.deployContract('TestModule')));
+          const modules = await Promise.all(Array.from({ length: 25 }, () => deployModuleWithProxy()));
 
           await Promise.all(modules.map(module => compliance.addModule(module.target)));
 
-          const module = await ethers.deployContract('TestModule');
+          const module = await deployModuleWithProxy();
 
           await expect(compliance.addModule(module.target)).to.be.revertedWithCustomError(compliance, 'MaxModulesReached');
         });
@@ -286,7 +296,7 @@ describe('ModularCompliance', () => {
             suite: { compliance },
           } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-          const module = await ethers.deployContract('TestModule');
+          const module = await deployModuleWithProxy();
 
           await expect(compliance.removeModule(module.target)).to.be.revertedWithCustomError(compliance, 'ModuleNotBound');
         });
@@ -298,10 +308,10 @@ describe('ModularCompliance', () => {
             suite: { compliance },
           } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-          const module = await ethers.deployContract('TestModule');
+          const module = await deployModuleWithProxy();
           await compliance.addModule(module.target);
 
-          const moduleB = await ethers.deployContract('TestModule');
+          const moduleB = await deployModuleWithProxy();
           await compliance.addModule(moduleB.target);
 
           const tx = await compliance.removeModule(moduleB.target);
@@ -478,7 +488,7 @@ describe('ModularCompliance', () => {
             accounts: { charlieWallet, bobWallet },
           } = await loadFixture(deploySuiteWithModuleComplianceBoundToWallet);
 
-          const module = await ethers.deployContract('TestModule');
+          const module = await deployModuleWithProxy();
           await compliance.addModule(module.target);
 
           await expect(compliance.connect(charlieWallet).created(bobWallet.address, 100)).to.not.be.reverted;
@@ -580,7 +590,7 @@ describe('ModularCompliance', () => {
             accounts: { charlieWallet, aliceWallet },
           } = await loadFixture(deploySuiteWithModuleComplianceBoundToWallet);
 
-          const module = await ethers.deployContract('TestModule');
+          const module = await deployModuleWithProxy();
           await compliance.addModule(module.target);
 
           await expect(compliance.connect(charlieWallet).destroyed(aliceWallet.address, 100)).to.not.be.reverted;
@@ -624,7 +634,7 @@ describe('ModularCompliance', () => {
           suite: { compliance },
         } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-        const module = await ethers.deployContract('TestModule');
+        const module = await deployModuleWithProxy();
         await compliance.addModule(module.target);
 
         const callData = new ethers.Interface(['function someFunction()']).encodeFunctionData('someFunction');
@@ -643,7 +653,7 @@ describe('ModularCompliance', () => {
             suite: { compliance },
           } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-          const module = await ethers.deployContract('TestModule');
+          const module = await deployModuleWithProxy();
           const callData = new ethers.Interface(['function someFunction()']).encodeFunctionData('someFunction');
 
           await expect(compliance.callModuleFunction(callData, module.target)).to.be.revertedWithCustomError(compliance, 'ModuleNotBound');
@@ -656,7 +666,7 @@ describe('ModularCompliance', () => {
             suite: { compliance },
           } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-          const module = await ethers.deployContract('TestModule');
+          const module = await deployModuleWithProxy();
           await compliance.addModule(module.target);
 
           const callData = new ethers.Interface(['function blockModule(bool _blocked)']).encodeFunctionData('blockModule', [true]);
@@ -672,7 +682,7 @@ describe('ModularCompliance', () => {
             suite: { compliance },
           } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-          const module = await ethers.deployContract('TestModule');
+          const module = await deployModuleWithProxy();
           await compliance.addModule(module.target);
 
           // Use the actual blockModule function from TestModule
@@ -695,7 +705,7 @@ describe('ModularCompliance', () => {
           suite: { compliance },
         } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-        const module = await ethers.deployContract('TestModule');
+        const module = await deployModuleWithProxy();
         const interactions: string[] = [];
 
         await expect(compliance.connect(anotherWallet).addAndSetModule(module.target, interactions)).to.be.revertedWithCustomError(
@@ -712,7 +722,7 @@ describe('ModularCompliance', () => {
             suite: { compliance },
           } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-          const module = await ethers.deployContract('TestModule');
+          const module = await deployModuleWithProxy();
           const interactions = Array(6)
             .fill('0x')
             .map(() => new ethers.Interface(['function someFunction()']).encodeFunctionData('someFunction'));
@@ -727,7 +737,7 @@ describe('ModularCompliance', () => {
             suite: { compliance },
           } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-          const module = await ethers.deployContract('TestModule');
+          const module = await deployModuleWithProxy();
           const interactions = [
             new ethers.Interface(['function blockModule(bool _blocked)']).encodeFunctionData('blockModule', [true]),
             new ethers.Interface(['function blockModule(bool _blocked)']).encodeFunctionData('blockModule', [false]),
@@ -745,7 +755,7 @@ describe('ModularCompliance', () => {
             suite: { compliance },
           } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-          const module = await ethers.deployContract('TestModule');
+          const module = await deployModuleWithProxy();
           const interactions: string[] = [];
 
           const tx = await compliance.addAndSetModule(module.target, interactions);
@@ -847,7 +857,7 @@ describe('ModularCompliance', () => {
           accounts: { aliceWallet, bobWallet },
         } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
-        const module = await ethers.deployContract('TestModule');
+        const module = await deployModuleWithProxy();
         await compliance.addModule(module.target);
 
         // Block the module to make moduleCheck return false
@@ -868,9 +878,9 @@ describe('ModularCompliance', () => {
         } = await loadFixture(deploySuiteWithModularCompliancesFixture);
 
         // Add multiple modules to test array manipulation
-        const moduleA = await ethers.deployContract('TestModule');
-        const moduleB = await ethers.deployContract('TestModule');
-        const moduleC = await ethers.deployContract('TestModule');
+        const moduleA = await deployModuleWithProxy();
+        const moduleB = await deployModuleWithProxy();
+        const moduleC = await deployModuleWithProxy();
 
         await compliance.addModule(moduleA.target);
         await compliance.addModule(moduleB.target);

@@ -256,9 +256,21 @@ export async function deploySuiteWithModuleComplianceBoundToWallet() {
   const compliance = await ethers.deployContract('ModularCompliance');
   await compliance.init();
 
-  const complianceModuleA = await ethers.deployContract('TestModule');
+  const complianceModuleAImplementation = await ethers.deployContract('TestModule');
+  const complianceModuleAProxy = await ethers.deployContract('ModuleProxy', [
+    complianceModuleAImplementation.target,
+    complianceModuleAImplementation.interface.encodeFunctionData('initialize'),
+  ]);
+  const complianceModuleA = await ethers.getContractAt('TestModule', complianceModuleAProxy.target);
+
+  const complianceModuleBImplementation = await ethers.deployContract('TestModule');
+  const complianceModuleBProxy = await ethers.deployContract('ModuleProxy', [
+    complianceModuleBImplementation.target,
+    complianceModuleBImplementation.interface.encodeFunctionData('initialize'),
+  ]);
+  const complianceModuleB = await ethers.getContractAt('TestModule', complianceModuleBProxy.target);
+
   await compliance.addModule(complianceModuleA.target);
-  const complianceModuleB = await ethers.deployContract('TestModule');
   await compliance.addModule(complianceModuleB.target);
 
   await compliance.bindToken(context.accounts.charlieWallet.address);
