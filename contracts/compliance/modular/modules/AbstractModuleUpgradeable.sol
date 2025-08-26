@@ -86,13 +86,6 @@ abstract contract AbstractModuleUpgradeable is IModule, Initializable, OwnableOn
     0xf6cc97de1266c180cd39f3b311632644143ce7873d2927755382ad4b39e8ae00;
 
     /**
-     * @dev prevents use of the implementation contracts
-     */
-    constructor() {
-        _disableInitializers();
-    }
-
-    /**
      * @dev Throws if `_compliance` is not a bound compliance contract address.
      */
     modifier onlyBoundCompliance(address _compliance) {
@@ -108,6 +101,13 @@ abstract contract AbstractModuleUpgradeable is IModule, Initializable, OwnableOn
         AbstractModuleStorage storage s = _getAbstractModuleStorage();
         require(s.complianceBound[msg.sender], OnlyBoundComplianceCanCall());
         _;
+    }
+
+    /**
+     * @dev prevents use of the implementation contracts
+     */
+    constructor() {
+        _disableInitializers();
     }
 
     /**
