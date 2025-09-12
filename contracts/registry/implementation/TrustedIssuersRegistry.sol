@@ -99,6 +99,10 @@ error TrustedIssuerDoesNotExist();
 
 contract TrustedIssuersRegistry is ITrustedIssuersRegistry, OwnableOnceNext2StepUpgradeable, TIRStorage, IERC165 {
 
+    constructor() {
+        _disableInitializers();
+    }
+
     /// Functions
 
     function init() external initializer {

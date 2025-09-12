@@ -83,6 +83,10 @@ error EligibilityChecksEnabledAlready();
 
 contract IdentityRegistry is IIdentityRegistry, AgentRoleUpgradeable, IRStorage, IERC165 {
 
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      *  @dev the constructor initiates the Identity Registry smart contract
      *  @param _trustedIssuersRegistry the trusted issuers registry linked to the Identity Registry
