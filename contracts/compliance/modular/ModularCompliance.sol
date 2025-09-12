@@ -104,6 +104,10 @@ contract ModularCompliance is IModularCompliance, OwnableOnceNext2StepUpgradeabl
         _;
     }
 
+    constructor() {
+        _disableInitializers();
+    }
+
     function init() external initializer {
         __Ownable_init();
     }

@@ -142,6 +142,10 @@ contract Token is IToken, AgentRoleUpgradeable, TokenStorage, IERC165, TokenPerm
         _;
     }
 
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      *  @dev the constructor initiates the token contract
      *  msg.sender is set automatically as the owner of the smart contract

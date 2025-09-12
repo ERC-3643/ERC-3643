@@ -51,8 +51,6 @@ describe('Token - Permit', () => {
       expect(await token.nonces(aliceWallet)).to.equal(0n);
       expect(await token.nonces(bobWallet)).to.equal(0n);
       expect(await token.nonces(anotherWallet)).to.equal(0n);
-
-      console.log(await token.eip712Domain());
     });
 
     it('domain separator', async () => {

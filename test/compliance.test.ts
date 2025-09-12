@@ -17,6 +17,12 @@ async function deployModuleWithProxy(contractName: string = 'TestModule') {
   return ethers.getContractAt(contractName, moduleProxy.target);
 }
 
+// Helper function to deploy ModularCompliance with proxy
+async function deployModularComplianceWithProxy(implementationAuthority) {
+  const proxy = await ethers.deployContract('ModularComplianceProxy', [implementationAuthority]);
+  return ethers.getContractAt('ModularCompliance', proxy.target);
+}
+
 describe('ModularCompliance', () => {
   describe('.init', () => {
     it('should prevent calling init twice', async () => {
@@ -44,12 +50,12 @@ describe('ModularCompliance', () => {
       describe('when not calling as the token', () => {
         it('should revert', async () => {
           const {
-            accounts: { deployer, anotherWallet },
+            accounts: { anotherWallet },
             suite: { token },
+            authorities: { trexImplementationAuthority },
           } = await loadFixture(deployFullSuiteFixture);
 
-          const compliance = await ethers.deployContract('ModularCompliance', deployer);
-          await compliance.init();
+          const compliance = await deployModularComplianceWithProxy(trexImplementationAuthority.target);
 
           await compliance.bindToken(token.target);
 
@@ -64,13 +70,13 @@ describe('ModularCompliance', () => {
         it('should set the new compliance', async () => {
           const {
             suite: { token },
+            authorities: { trexImplementationAuthority },
           } = await loadFixture(deployFullSuiteFixture);
 
-          const compliance = await ethers.deployContract('ModularCompliance');
-          await compliance.init();
+          const compliance = await deployModularComplianceWithProxy(trexImplementationAuthority.target);
           await compliance.bindToken(token.target);
 
-          const newCompliance = await ethers.deployContract('ModularCompliance');
+          const newCompliance = await deployModularComplianceWithProxy(trexImplementationAuthority.target);
           await newCompliance.isTokenBound(token.target).then(bound => expect(bound).to.be.false);
           const tx = await token.setCompliance(newCompliance.target);
           await expect(tx).to.emit(token, 'ComplianceAdded').withArgs(newCompliance.target);
@@ -84,11 +90,10 @@ describe('ModularCompliance', () => {
       describe('when token address is zero', () => {
         it('should revert', async () => {
           const {
-            accounts: { deployer },
+            authorities: { trexImplementationAuthority },
           } = await loadFixture(deployFullSuiteFixture);
 
-          const compliance = await ethers.deployContract('ModularCompliance', deployer);
-          await compliance.init();
+          const compliance = await deployModularComplianceWithProxy(trexImplementationAuthority.target);
 
           await expect(compliance.bindToken(ethers.ZeroAddress)).to.be.revertedWithCustomError(compliance, 'ZeroAddress');
         });
@@ -128,12 +133,11 @@ describe('ModularCompliance', () => {
       describe('when token is not bound', () => {
         it('should revert', async () => {
           const {
-            accounts: { deployer },
+            authorities: { trexImplementationAuthority },
             suite: { token },
           } = await loadFixture(deployFullSuiteFixture);
 
-          const compliance = await ethers.deployContract('ModularCompliance', deployer);
-          await compliance.init();
+          const compliance = await deployModularComplianceWithProxy(trexImplementationAuthority.target);
 
           await expect(compliance.unbindToken(token.target)).to.be.revertedWithCustomError(compliance, 'TokenNotBound');
         });
@@ -897,6 +901,57 @@ describe('ModularCompliance', () => {
         expect(modules).to.include(moduleC.target);
         expect(modules).to.not.include(moduleB.target);
       });
+    });
+  });
+});
+
+describe('OwnableOnceNext2StepUpgradeable', () => {
+  describe('when first deploy', () => {
+    it('should set owner to caller', async () => {
+      const {
+        accounts: { deployer },
+        authorities: { trexImplementationAuthority },
+      } = await loadFixture(deploySuiteWithModularCompliancesFixture);
+
+      const modularCompliance = await deployModularComplianceWithProxy(trexImplementationAuthority.target);
+
+      expect(await modularCompliance.owner()).to.equal(deployer.address);
+    });
+  });
+
+  describe('when set first owner', () => {
+    it('should set next owner to caller', async () => {
+      const {
+        accounts: { deployer, aliceWallet },
+        authorities: { trexImplementationAuthority },
+      } = await loadFixture(deploySuiteWithModularCompliancesFixture);
+
+      const modularCompliance = await deployModularComplianceWithProxy(trexImplementationAuthority.target);
+
+      await modularCompliance.connect(deployer).transferOwnership(aliceWallet.address);
+
+      expect(await modularCompliance.owner()).to.equal(aliceWallet.address);
+    });
+  });
+
+  describe('when next owner is set', () => {
+    it('should set owner to next owner in 2 steps', async () => {
+      const {
+        accounts: { deployer, aliceWallet, bobWallet },
+        authorities: { trexImplementationAuthority },
+      } = await loadFixture(deploySuiteWithModularCompliancesFixture);
+
+      const modularCompliance = await deployModularComplianceWithProxy(trexImplementationAuthority.target);
+
+      await modularCompliance.connect(deployer).transferOwnership(aliceWallet.address);
+
+      let tx = await modularCompliance.connect(aliceWallet).transferOwnership(bobWallet.address);
+      await expect(tx).to.emit(modularCompliance, 'OwnershipTransferStarted').withArgs(aliceWallet.address, bobWallet.address);
+
+      tx = await modularCompliance.connect(bobWallet).acceptOwnership();
+      await expect(tx).to.emit(modularCompliance, 'OwnershipTransferred').withArgs(aliceWallet.address, bobWallet.address);
+
+      expect(await modularCompliance.owner()).to.equal(bobWallet.address);
     });
   });
 });

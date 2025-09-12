@@ -4,8 +4,13 @@ import { ethers } from 'hardhat';
 export async function deployComplianceFixture() {
   const [deployer, aliceWallet, bobWallet, anotherWallet] = await ethers.getSigners();
 
-  const compliance = await ethers.deployContract('ModularCompliance');
-  await compliance.init();
+  const complianceImplementation = await ethers.deployContract('ModularCompliance');
+  const complianceProxy = await ethers.deployContract('@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy', [
+    complianceImplementation.target,
+    complianceImplementation.interface.encodeFunctionData('init'),
+  ]);
+
+  const compliance = await ethers.getContractAt('ModularCompliance', complianceProxy.target);
 
   return {
     accounts: {

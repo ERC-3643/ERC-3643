@@ -6,8 +6,13 @@ import type { Token } from '../../typechain-types';
 import { deployFullSuiteFixture } from '../fixtures/deploy-full-suite.fixture';
 
 async function deployComplianceAndTestModule(token: Token, deployer: HardhatEthersSigner) {
-  const compliance = await ethers.deployContract('ModularCompliance');
-  await compliance.init();
+  const complianceImplementation = await ethers.deployContract('ModularCompliance');
+  const complianceProxy = await ethers.deployContract('@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy', [
+    complianceImplementation.target,
+    complianceImplementation.interface.encodeFunctionData('init'),
+  ]);
+  const compliance = await ethers.getContractAt('ModularCompliance', complianceProxy.target);
+
   await token.connect(deployer).setCompliance(compliance.target);
 
   const module = await ethers.deployContract('TestModule');

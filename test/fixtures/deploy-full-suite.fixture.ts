@@ -235,8 +235,8 @@ export async function deploySuiteWithModularCompliancesFixture() {
   const complianceProxy = await ethers.deployContract('ModularComplianceProxy', [context.authorities.trexImplementationAuthority.target]);
   const compliance = await ethers.getContractAt('ModularCompliance', complianceProxy.target);
 
-  const complianceBeta = await ethers.deployContract('ModularCompliance');
-  await complianceBeta.init();
+  const complianceBetaProxy = await ethers.deployContract('ModularComplianceProxy', [context.authorities.trexImplementationAuthority.target]);
+  const complianceBeta = await ethers.getContractAt('ModularCompliance', complianceBetaProxy.target);
 
   await context.suite.token.connect(context.accounts.deployer).setCompliance(compliance.target);
 
@@ -253,8 +253,8 @@ export async function deploySuiteWithModularCompliancesFixture() {
 export async function deploySuiteWithModuleComplianceBoundToWallet() {
   const context = await loadFixture(deployFullSuiteFixture);
 
-  const compliance = await ethers.deployContract('ModularCompliance');
-  await compliance.init();
+  const complianceProxy = await ethers.deployContract('ModularComplianceProxy', [context.authorities.trexImplementationAuthority.target]);
+  const compliance = await ethers.getContractAt('ModularCompliance', complianceProxy.target);
 
   const complianceModuleAImplementation = await ethers.deployContract('TestModule');
   const complianceModuleAProxy = await ethers.deployContract('ModuleProxy', [
