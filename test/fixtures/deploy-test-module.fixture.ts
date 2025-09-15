@@ -1,27 +1,25 @@
 import { ethers } from 'hardhat';
+import { deployComplianceFixture } from './deploy-compliance.fixture';
 
 // eslint-disable-next-line import/prefer-default-export
 export async function deployTestModuleFixture() {
-  const [deployer, aliceWallet, bobWallet, anotherWallet] = await ethers.getSigners();
-
-  // Deploy ModularCompliance
-  const compliance = await ethers.deployContract('ModularCompliance');
-  await compliance.init();
+  // Use existing compliance fixture
+  const { accounts, suite } = await deployComplianceFixture();
+  const { compliance } = suite;
 
   // Deploy TestModule
-  const testModule = await ethers.deployContract('TestModule');
-  await testModule.initialize();
+  const testModuleImplementation = await ethers.deployContract('TestModule');
+  const testModuleProxy = await ethers.deployContract('@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy', [
+    testModuleImplementation.target,
+    testModuleImplementation.interface.encodeFunctionData('initialize'),
+  ]);
+  const testModule = await ethers.getContractAt('TestModule', testModuleProxy.target);
 
   // Add the module to compliance
   await compliance.addModule(testModule.target);
 
   return {
-    accounts: {
-      deployer,
-      aliceWallet,
-      bobWallet,
-      anotherWallet,
-    },
+    accounts,
     suite: {
       compliance,
       testModule,
