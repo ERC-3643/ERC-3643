@@ -67,7 +67,6 @@ import "../token/IToken.sol";
 import "../compliance/modular/modules/AbstractModuleUpgradeable.sol";
 
 contract TestModule is AbstractModuleUpgradeable {
-
     /// state variables
     mapping(address => uint) private _complianceData;
     mapping(address => bool) private _blockedTransfers;
@@ -90,26 +89,31 @@ contract TestModule is AbstractModuleUpgradeable {
         _blockedTransfers[msg.sender] = _blocked;
     }
 
+    function getComplianceData(address _compliance) external view returns (uint) {
+        return _complianceData[_compliance];
+    }
+
+    function getBlockedTransfers(address _compliance) external view returns (bool) {
+        return _blockedTransfers[_compliance];
+    }
+
     /**
      *  @dev See {IModule-moduleTransferAction}.
      *  no transfer action required in this module
      */
-    function moduleTransferAction(address _from, address _to, uint256 _value) external override onlyComplianceCall {
-    }
+    function moduleTransferAction(address _from, address _to, uint256 _value) external override onlyComplianceCall {}
 
     /**
      *  @dev See {IModule-moduleMintAction}.
      *  no mint action required in this module
      */
-    function moduleMintAction(address _to, uint256 _value) external override onlyComplianceCall {
-    }
+    function moduleMintAction(address _to, uint256 _value) external override onlyComplianceCall {}
 
     /**
      *  @dev See {IModule-moduleBurnAction}.
      *  no burn action required in this module
      */
-    function moduleBurnAction(address _from, uint256 _value) external override onlyComplianceCall {
-    }
+    function moduleBurnAction(address _from, uint256 _value) external override onlyComplianceCall {}
 
     /**
      *  @dev See {IModule-moduleCheck}.
@@ -121,21 +125,21 @@ contract TestModule is AbstractModuleUpgradeable {
         uint256 _value,
         address _compliance
     ) external view override returns (bool) {
-        if(_blockedTransfers[_compliance]) {
+        if (_blockedTransfers[_compliance]) {
             return false;
         }
         return true;
     }
 
     /**
-      *  @dev See {IModule-canComplianceBind}.
+     *  @dev See {IModule-canComplianceBind}.
      */
     function canComplianceBind(address _compliance) external view returns (bool) {
         return true;
     }
 
     /**
-      *  @dev See {IModule-isPlugAndPlay}.
+     *  @dev See {IModule-isPlugAndPlay}.
      */
     function isPlugAndPlay() external pure returns (bool) {
         return true;
