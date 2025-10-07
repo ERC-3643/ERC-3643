@@ -81,8 +81,6 @@ describe('TestModule Multicall', () => {
       accounts: { deployer },
     } = await loadFixture(deployTestModuleFixture);
 
-    console.log('Here');
-
     const doSomething42Data = new Interface(['function doSomething(uint _value)']).encodeFunctionData('doSomething', [42]);
 
     await expect(testModule.connect(deployer).multicall([doSomething42Data])).to.be.revertedWithCustomError(testModule, 'OnlyBoundComplianceCanCall');
