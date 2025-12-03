@@ -69,6 +69,12 @@ import { ErrorsLib } from "../libraries/ErrorsLib.sol";
 import { EventsLib } from "../libraries/EventsLib.sol";
 import { Roles } from "./Roles.sol";
 
+/* ---- TODO ----
+
+    Work in progress while transitioning to AccessManager
+
+*/
+
 contract AgentRoleUpgradeable is Ownable2StepUpgradeable {
 
     using Roles for Roles.Role;

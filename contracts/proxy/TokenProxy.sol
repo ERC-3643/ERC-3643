@@ -77,7 +77,8 @@ contract TokenProxy is AbstractProxy {
         string memory _name,
         string memory _symbol,
         uint8 _decimals,
-        address _onchainID
+        address _onchainID,
+        address _accessManager
     ) AbstractProxy(implementationAuthority) {
         require(bytes(_name).length > 0 && bytes(_symbol).length > 0, ErrorsLib.EmptyString());
         require(0 <= _decimals && _decimals <= 18, ErrorsLib.DecimalsOutOfRange(_decimals));
@@ -85,16 +86,7 @@ contract TokenProxy is AbstractProxy {
         (bool success,) = getLogic()
             .delegatecall(
                 abi.encodeCall(
-                    Token.init,
-                    (
-                        _name,
-                        _symbol,
-                        _decimals,
-                        _identityRegistry,
-                        _compliance,
-                        _onchainID,
-                        address(0) // TODO access manager
-                    )
+                    Token.init, (_name, _symbol, _decimals, _identityRegistry, _compliance, _onchainID, _accessManager)
                 )
             );
         require(success, ErrorsLib.InitializationFailed());

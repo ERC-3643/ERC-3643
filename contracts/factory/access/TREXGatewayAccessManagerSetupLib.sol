@@ -36,6 +36,7 @@
 //                                        +@@@@%-
 //                                        :#%%=
 //
+
 /**
  *     NOTICE
  *
@@ -62,31 +63,36 @@
 
 pragma solidity 0.8.30;
 
-import { ErrorsLib } from "../libraries/ErrorsLib.sol";
-import { IdentityRegistry } from "../registry/implementation/IdentityRegistry.sol";
-import { AbstractProxy } from "./AbstractProxy.sol";
-import { ITREXImplementationAuthority } from "./authority/ITREXImplementationAuthority.sol";
+import { IAccessManager } from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 
-contract IdentityRegistryProxy is AbstractProxy {
+import { TREXGateway } from "../TREXGateway.sol";
+import { TREXGatewayRolesLib } from "./TREXGatewayRolesLib.sol";
 
-    constructor(
-        address implementationAuthority,
-        address trustedIssuersRegistry,
-        address claimTopicsRegistry,
-        address identityStorage,
-        address accessManager
-    ) AbstractProxy(implementationAuthority) {
-        (bool success,) = getLogic()
-            .delegatecall(
-                abi.encodeCall(
-                    IdentityRegistry.init, (trustedIssuersRegistry, claimTopicsRegistry, identityStorage, accessManager)
-                )
-            );
-        require(success, ErrorsLib.InitializationFailed());
-    }
+/// @title TREXGatewayAccessManagerSetupLib
+/// @notice Library for setting up roles and functions in AccessManager for the TREXGateway contract
+library TREXGatewayAccessManagerSetupLib {
 
-    function getLogic() internal view override returns (address) {
-        return (ITREXImplementationAuthority(getImplementationAuthority())).getIRImplementation();
+    function setupRoles(IAccessManager accessManager, address gateway) internal {
+        // ------ ADMIN role ------
+        bytes4[] memory functions = new bytes4[](2);
+        functions[0] = TREXGateway.setFactory.selector;
+        functions[1] = TREXGateway.setPublicDeploymentStatus.selector;
+        accessManager.setTargetFunctionRole(gateway, functions, TREXGatewayRolesLib.ADMIN);
+
+        // ------ DEPLOYER role ------
+        // Deployer role is checked with other non exclusive restrictions in the TREXGateway contract, not at function level
+
+        // ------ FEE_MANAGER role ------
+        functions = new bytes4[](3);
+        functions[0] = TREXGateway.enableDeploymentFee.selector;
+        functions[1] = TREXGateway.setDeploymentFee.selector;
+        functions[2] = TREXGateway.applyFeeDiscount.selector;
+        accessManager.setTargetFunctionRole(gateway, functions, TREXGatewayRolesLib.FEE_MANAGER);
+
+        // ------ Labeling roles ------
+        accessManager.labelRole(TREXGatewayRolesLib.ADMIN, "TREXGateway Admin");
+        accessManager.labelRole(TREXGatewayRolesLib.DEPLOYER, "TREXGateway Deployer");
+        accessManager.labelRole(TREXGatewayRolesLib.FEE_MANAGER, "TREXGateway Fee Manager");
     }
 
 }

@@ -36,6 +36,7 @@
 //                                        +@@@@%-
 //                                        :#%%=
 //
+
 /**
  *     NOTICE
  *
@@ -62,31 +63,25 @@
 
 pragma solidity 0.8.30;
 
-import { ErrorsLib } from "../libraries/ErrorsLib.sol";
-import { IdentityRegistry } from "../registry/implementation/IdentityRegistry.sol";
-import { AbstractProxy } from "./AbstractProxy.sol";
-import { ITREXImplementationAuthority } from "./authority/ITREXImplementationAuthority.sol";
+import { IAccessManager } from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 
-contract IdentityRegistryProxy is AbstractProxy {
+import { TREXFactory } from "../TREXFactory.sol";
+import { TREXFactoryRolesLib } from "./TREXFactoryRolesLib.sol";
 
-    constructor(
-        address implementationAuthority,
-        address trustedIssuersRegistry,
-        address claimTopicsRegistry,
-        address identityStorage,
-        address accessManager
-    ) AbstractProxy(implementationAuthority) {
-        (bool success,) = getLogic()
-            .delegatecall(
-                abi.encodeCall(
-                    IdentityRegistry.init, (trustedIssuersRegistry, claimTopicsRegistry, identityStorage, accessManager)
-                )
-            );
-        require(success, ErrorsLib.InitializationFailed());
-    }
+/// @title TREXFactoryAccessManagerSetupLib
+/// @notice Library for setting up roles and functions in AccessManager for the TREXFactory contract
+library TREXFactoryAccessManagerSetupLib {
 
-    function getLogic() internal view override returns (address) {
-        return (ITREXImplementationAuthority(getImplementationAuthority())).getIRImplementation();
+    function setupRoles(IAccessManager accessManager, address factory) internal {
+        // ------ ADMIN role ------
+        bytes4[] memory functions = new bytes4[](3);
+        functions[0] = TREXFactory.deployTREXSuite.selector;
+        functions[1] = TREXFactory.setImplementationAuthority.selector;
+        functions[2] = TREXFactory.setIdFactory.selector;
+        accessManager.setTargetFunctionRole(factory, functions, TREXFactoryRolesLib.ADMIN);
+
+        // ------ Labeling roles ------
+        accessManager.labelRole(TREXFactoryRolesLib.ADMIN, "TREXFactory Admin");
     }
 
 }

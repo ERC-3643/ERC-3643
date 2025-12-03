@@ -107,10 +107,8 @@ library ErrorsLib {
 
     // TREXGateway Errors
     error SenderIsNotAdmin();
-    error PublicDeploymentAlreadyEnabled();
-    error PublicDeploymentAlreadyDisabled();
-    error DeploymentFeesAlreadyEnabled();
-    error DeploymentFeesAlreadyDisabled();
+    error PublicDeploymentAlreadySet(bool _isEnabled);
+    error DeploymentFeesAlreadySet(bool _isEnabled);
     error DeployerAlreadyExists(address deployer);
     error DeployerDoesNotExist(address deployer);
     error PublicDeploymentsNotAllowed();
@@ -126,6 +124,7 @@ library ErrorsLib {
     error MaxAgentsReached(uint256 _max);
     error MaxModuleActionsReached(uint256 _max);
     error TokenAlreadyDeployed();
+    error ContractNotAccessManagerAdmin(address accessManager, address target);
 
     // Roles Errors
     error AccountAlreadyHasRole();

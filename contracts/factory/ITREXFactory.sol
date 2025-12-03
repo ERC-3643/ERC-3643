@@ -89,6 +89,8 @@ interface ITREXFactory {
         address[] complianceModules;
         // settings calls for compliance modules
         bytes[] complianceSettings;
+        // access manager address
+        address accessManager;
     }
 
     struct ClaimDetails {
@@ -158,7 +160,7 @@ interface ITREXFactory {
      *  @param _newOwner The address to transfer ownership to
      *  Only owner can call.
      */
-    function recoverContractOwnership(address _contract, address _newOwner) external;
+    //function recoverContractOwnership(address _contract, address _newOwner) external;
 
     /**
      *  @dev getter for implementation authority address

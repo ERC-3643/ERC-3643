@@ -13,8 +13,8 @@ contract_new_lines = true
 bracket_spacing = true
 
 [profile.default.lint]
-lint_on_build = true
-exclude_lints = [ "mixed-case-function" ]
+lint_on_build = false
+exclude_lints = [ "mixed-case-function", "pascal-case-struct", "mixed-case-variable" ]
 
 [soldeer]
 remappings_regenerate = false

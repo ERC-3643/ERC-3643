@@ -36,6 +36,7 @@
 //                                        +@@@@%-
 //                                        :#%%=
 //
+
 /**
  *     NOTICE
  *
@@ -62,31 +63,10 @@
 
 pragma solidity 0.8.30;
 
-import { ErrorsLib } from "../libraries/ErrorsLib.sol";
-import { IdentityRegistry } from "../registry/implementation/IdentityRegistry.sol";
-import { AbstractProxy } from "./AbstractProxy.sol";
-import { ITREXImplementationAuthority } from "./authority/ITREXImplementationAuthority.sol";
+library IdentityRegistryStorageRolesLib {
 
-contract IdentityRegistryProxy is AbstractProxy {
+    uint64 constant ROLE_PREFIX = uint64(uint256(keccak256("IdentityRegistryStorage"))) << 32;
 
-    constructor(
-        address implementationAuthority,
-        address trustedIssuersRegistry,
-        address claimTopicsRegistry,
-        address identityStorage,
-        address accessManager
-    ) AbstractProxy(implementationAuthority) {
-        (bool success,) = getLogic()
-            .delegatecall(
-                abi.encodeCall(
-                    IdentityRegistry.init, (trustedIssuersRegistry, claimTopicsRegistry, identityStorage, accessManager)
-                )
-            );
-        require(success, ErrorsLib.InitializationFailed());
-    }
-
-    function getLogic() internal view override returns (address) {
-        return (ITREXImplementationAuthority(getImplementationAuthority())).getIRImplementation();
-    }
+    uint64 constant ADMIN = ROLE_PREFIX + 0;
 
 }

@@ -64,7 +64,9 @@
 pragma solidity 0.8.30;
 
 import { IClaimIssuer } from "@onchain-id/solidity/contracts/interface/IClaimIssuer.sol";
-import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {
+    AccessManagedUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 import { ERC3643EventsLib } from "../../ERC-3643/ERC3643EventsLib.sol";
@@ -73,7 +75,7 @@ import { ErrorsLib } from "../../libraries/ErrorsLib.sol";
 import { IERC173 } from "../../roles/IERC173.sol";
 import { ITrustedIssuersRegistry } from "../interface/ITrustedIssuersRegistry.sol";
 
-contract TrustedIssuersRegistry is ITrustedIssuersRegistry, Ownable2StepUpgradeable, IERC165 {
+contract TrustedIssuersRegistry is ITrustedIssuersRegistry, AccessManagedUpgradeable, IERC165 {
 
     /// @custom:storage-location erc7201:ERC3643.storage.TrustedIssuersRegistry
     struct Storage {
@@ -96,8 +98,8 @@ contract TrustedIssuersRegistry is ITrustedIssuersRegistry, Ownable2StepUpgradea
 
     /// Functions
 
-    function init() external initializer {
-        __Ownable_init(msg.sender);
+    function init(address accessManager) external initializer {
+        __AccessManaged_init(accessManager);
     }
 
     /**
@@ -106,7 +108,7 @@ contract TrustedIssuersRegistry is ITrustedIssuersRegistry, Ownable2StepUpgradea
     function addTrustedIssuer(IClaimIssuer _trustedIssuer, uint256[] calldata _claimTopics)
         external
         override
-        onlyOwner
+        restricted
     {
         require(address(_trustedIssuer) != address(0), ErrorsLib.ZeroAddress());
 
@@ -126,7 +128,7 @@ contract TrustedIssuersRegistry is ITrustedIssuersRegistry, Ownable2StepUpgradea
     /**
      *  @dev See {ITrustedIssuersRegistry-removeTrustedIssuer}.
      */
-    function removeTrustedIssuer(IClaimIssuer _trustedIssuer) external override onlyOwner {
+    function removeTrustedIssuer(IClaimIssuer _trustedIssuer) external override restricted {
         require(address(_trustedIssuer) != address(0), ErrorsLib.ZeroAddress());
         Storage storage s = _getStorage();
         require(s.trustedIssuerClaimTopics[address(_trustedIssuer)].length != 0, ErrorsLib.NotATrustedIssuer());
@@ -164,7 +166,7 @@ contract TrustedIssuersRegistry is ITrustedIssuersRegistry, Ownable2StepUpgradea
     function updateIssuerClaimTopics(IClaimIssuer _trustedIssuer, uint256[] calldata _claimTopics)
         external
         override
-        onlyOwner
+        restricted
     {
         require(address(_trustedIssuer) != address(0), ErrorsLib.ZeroAddress());
         Storage storage s = _getStorage();

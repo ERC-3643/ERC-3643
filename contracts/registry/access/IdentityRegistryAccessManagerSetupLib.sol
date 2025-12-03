@@ -36,6 +36,7 @@
 //                                        +@@@@%-
 //                                        :#%%=
 //
+
 /**
  *     NOTICE
  *
@@ -62,31 +63,36 @@
 
 pragma solidity 0.8.30;
 
-import { ErrorsLib } from "../libraries/ErrorsLib.sol";
-import { IdentityRegistry } from "../registry/implementation/IdentityRegistry.sol";
-import { AbstractProxy } from "./AbstractProxy.sol";
-import { ITREXImplementationAuthority } from "./authority/ITREXImplementationAuthority.sol";
+import { IAccessManager } from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 
-contract IdentityRegistryProxy is AbstractProxy {
+import { IdentityRegistry } from "../implementation/IdentityRegistry.sol";
+import { IdentityRegistryRolesLib } from "./IdentityRegistryRolesLib.sol";
 
-    constructor(
-        address implementationAuthority,
-        address trustedIssuersRegistry,
-        address claimTopicsRegistry,
-        address identityStorage,
-        address accessManager
-    ) AbstractProxy(implementationAuthority) {
-        (bool success,) = getLogic()
-            .delegatecall(
-                abi.encodeCall(
-                    IdentityRegistry.init, (trustedIssuersRegistry, claimTopicsRegistry, identityStorage, accessManager)
-                )
-            );
-        require(success, ErrorsLib.InitializationFailed());
-    }
+/// @title IdentityRegistryAccessManagerSetupLib
+/// @notice Library for setting up roles and functions in AccessManager for the IdentityRegistry contract
+library IdentityRegistryAccessManagerSetupLib {
 
-    function getLogic() internal view override returns (address) {
-        return (ITREXImplementationAuthority(getImplementationAuthority())).getIRImplementation();
+    function setupRoles(IAccessManager accessManager, address ir) internal {
+        // ------ ADMIN role ------
+        bytes4[] memory functions = new bytes4[](5);
+        functions[0] = IdentityRegistry.setIdentityRegistryStorage.selector;
+        functions[1] = IdentityRegistry.setClaimTopicsRegistry.selector;
+        functions[2] = IdentityRegistry.setTrustedIssuersRegistry.selector;
+        functions[3] = IdentityRegistry.disableEligibilityChecks.selector;
+        functions[4] = IdentityRegistry.enableEligibilityChecks.selector;
+        accessManager.setTargetFunctionRole(ir, functions, IdentityRegistryRolesLib.ADMIN);
+
+        // ------ AGENT role ------
+        functions = new bytes4[](4);
+        functions[0] = IdentityRegistry.updateIdentity.selector;
+        functions[1] = IdentityRegistry.updateCountry.selector;
+        functions[2] = IdentityRegistry.deleteIdentity.selector;
+        functions[3] = IdentityRegistry.registerIdentity.selector;
+        accessManager.setTargetFunctionRole(ir, functions, IdentityRegistryRolesLib.AGENT);
+
+        // ------ Labeling roles ------
+        accessManager.labelRole(IdentityRegistryRolesLib.ADMIN, "IdentityRegistry Admin");
+        accessManager.labelRole(IdentityRegistryRolesLib.AGENT, "IdentityRegistry Agent");
     }
 
 }

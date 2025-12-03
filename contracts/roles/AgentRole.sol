@@ -64,39 +64,57 @@
 pragma solidity 0.8.30;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { AccessManaged } from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
+import { IAccessManager } from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 
 import { ErrorsLib } from "../libraries/ErrorsLib.sol";
-import { Roles } from "./Roles.sol";
+import { TokenRolesLib } from "../token/access/TokenRolesLib.sol";
 
 import { EventsLib } from "../libraries/EventsLib.sol";
 
-contract AgentRole is Ownable {
+/* ---- TODO ----
 
-    using Roles for Roles.Role;
+    Work in progress while transitioning to AccessManager
 
-    Roles.Role private _agents;
+*/
+
+contract AgentRole is Ownable, AccessManaged {
 
     modifier onlyAgent() {
         require(isAgent(msg.sender), ErrorsLib.CallerDoesNotHaveAgentRole());
         _;
     }
 
-    constructor() Ownable(msg.sender) { }
+    constructor(address accessManager) Ownable(msg.sender) AccessManaged(accessManager) { }
 
     function addAgent(address _agent) public onlyOwner {
         require(_agent != address(0), ErrorsLib.ZeroAddress());
-        _agents.add(_agent);
-        emit EventsLib.AgentAdded(_agent);
+
+        IAccessManager accessManager = IAccessManager(authority());
+        accessManager.grantRole(TokenRolesLib.AGENT_MINTER, _agent, 0);
+        accessManager.grantRole(TokenRolesLib.AGENT_BURNER, _agent, 0);
+        accessManager.grantRole(TokenRolesLib.AGENT_PARTIAL_FREEZER, _agent, 0);
+        accessManager.grantRole(TokenRolesLib.AGENT_ADDRESS_FREEZER, _agent, 0);
+        accessManager.grantRole(TokenRolesLib.AGENT_RECOVERY_ADDRESS, _agent, 0);
+        accessManager.grantRole(TokenRolesLib.AGENT_FORCED_TRANSFER, _agent, 0);
+        accessManager.grantRole(TokenRolesLib.AGENT_PAUSER, _agent, 0);
     }
 
     function removeAgent(address _agent) public onlyOwner {
         require(_agent != address(0), ErrorsLib.ZeroAddress());
-        _agents.remove(_agent);
-        emit EventsLib.AgentRemoved(_agent);
+
+        IAccessManager accessManager = IAccessManager(authority());
+        accessManager.revokeRole(TokenRolesLib.AGENT_MINTER, _agent);
+        accessManager.revokeRole(TokenRolesLib.AGENT_BURNER, _agent);
+        accessManager.revokeRole(TokenRolesLib.AGENT_PARTIAL_FREEZER, _agent);
+        accessManager.revokeRole(TokenRolesLib.AGENT_ADDRESS_FREEZER, _agent);
+        accessManager.revokeRole(TokenRolesLib.AGENT_RECOVERY_ADDRESS, _agent);
+        accessManager.revokeRole(TokenRolesLib.AGENT_FORCED_TRANSFER, _agent);
+        accessManager.revokeRole(TokenRolesLib.AGENT_PAUSER, _agent);
     }
 
     function isAgent(address _agent) public view returns (bool) {
-        return _agents.has(_agent);
+        return false;
     }
 
 }

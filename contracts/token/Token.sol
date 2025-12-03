@@ -376,7 +376,6 @@ contract Token is
         );
 
         uint256 frozenTokens = s.frozenStatus[lostWallet].amount;
-        bool addressFreeze = s.frozenStatus[lostWallet].addressFrozen;
         _transfer(lostWallet, newWallet, investorTokens);
 
         if (frozenTokens > 0) {
@@ -386,15 +385,13 @@ contract Token is
             emit ERC3643EventsLib.TokensFrozen(newWallet, frozenTokens);
         }
 
-        if (addressFreeze) {
-            s.frozenStatus[lostWallet].addressFrozen = false;
-            emit ERC3643EventsLib.AddressFrozen(lostWallet, false, address(this));
-
+        if (s.frozenStatus[lostWallet].addressFrozen) {
+            setAddressFrozen(lostWallet, false);
             if (!s.frozenStatus[newWallet].addressFrozen) {
-                s.frozenStatus[newWallet].addressFrozen = true;
-                emit ERC3643EventsLib.AddressFrozen(newWallet, true, address(this));
+                setAddressFrozen(newWallet, true);
             }
         }
+
         if (s.identityRegistry.contains(lostWallet)) {
             if (!s.identityRegistry.contains(newWallet)) {
                 s.identityRegistry

@@ -36,6 +36,7 @@
 //                                        +@@@@%-
 //                                        :#%%=
 //
+
 /**
  *     NOTICE
  *
@@ -62,31 +63,28 @@
 
 pragma solidity 0.8.30;
 
-import { ErrorsLib } from "../libraries/ErrorsLib.sol";
-import { IdentityRegistry } from "../registry/implementation/IdentityRegistry.sol";
-import { AbstractProxy } from "./AbstractProxy.sol";
-import { ITREXImplementationAuthority } from "./authority/ITREXImplementationAuthority.sol";
+import { IAccessManager } from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 
-contract IdentityRegistryProxy is AbstractProxy {
+import { IdentityRegistryStorage } from "../implementation/IdentityRegistryStorage.sol";
+import { IdentityRegistryStorageRolesLib } from "./IdentityRegistryStorageRolesLib.sol";
 
-    constructor(
-        address implementationAuthority,
-        address trustedIssuersRegistry,
-        address claimTopicsRegistry,
-        address identityStorage,
-        address accessManager
-    ) AbstractProxy(implementationAuthority) {
-        (bool success,) = getLogic()
-            .delegatecall(
-                abi.encodeCall(
-                    IdentityRegistry.init, (trustedIssuersRegistry, claimTopicsRegistry, identityStorage, accessManager)
-                )
-            );
-        require(success, ErrorsLib.InitializationFailed());
-    }
+/// @title IdentityRegistryStorageAccessManagerSetupLib
+/// @notice Library for setting up roles and functions in AccessManager for the IdentityRegistryStorage contract
+library IdentityRegistryStorageAccessManagerSetupLib {
 
-    function getLogic() internal view override returns (address) {
-        return (ITREXImplementationAuthority(getImplementationAuthority())).getIRImplementation();
+    function setupRoles(IAccessManager accessManager, address irs) internal {
+        // ------ ADMIN role ------
+        bytes4[] memory functions = new bytes4[](6);
+        functions[0] = IdentityRegistryStorage.addIdentityToStorage.selector;
+        functions[1] = IdentityRegistryStorage.modifyStoredIdentity.selector;
+        functions[2] = IdentityRegistryStorage.modifyStoredInvestorCountry.selector;
+        functions[3] = IdentityRegistryStorage.removeIdentityFromStorage.selector;
+        functions[4] = IdentityRegistryStorage.bindIdentityRegistry.selector;
+        functions[5] = IdentityRegistryStorage.unbindIdentityRegistry.selector;
+        accessManager.setTargetFunctionRole(irs, functions, IdentityRegistryStorageRolesLib.ADMIN);
+
+        // ------ Labeling roles ------
+        accessManager.labelRole(IdentityRegistryStorageRolesLib.ADMIN, "IdentityRegistryStorage Admin");
     }
 
 }

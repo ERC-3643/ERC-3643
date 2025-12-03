@@ -102,7 +102,8 @@ interface ITREXGateway {
      * @dev Only the owner can call this method. Utilizes the `transferOwnership` function of the Ownable pattern.
      * @param _newOwner Address of the new owner for the Factory contract.
      */
-    function transferFactoryOwnership(address _newOwner) external;
+    // TODO WIP AccessManager
+    //function transferFactoryOwnership(address _newOwner) external;
 
     /**
      * @notice Toggles the deployment fee status for TREX contracts.
@@ -136,7 +137,7 @@ interface ITREXGateway {
      * @param deployer Address to be added to the list of approved deployers.
      * emits DeployerAdded Indicates that a new deployer address has been successfully added.
      */
-    function addDeployer(address deployer) external;
+    //function addDeployer(address deployer) external;
 
     /**
      * @notice Adds multiple addresses to the list of approved deployers in a single transaction.
@@ -146,7 +147,7 @@ interface ITREXGateway {
      * Emits a `DeployerAdded` event for each successfully added deployer.
      * @param deployers An array of addresses to be added to the list of approved deployers.
      */
-    function batchAddDeployer(address[] calldata deployers) external;
+    //function batchAddDeployer(address[] calldata deployers) external;
 
     /**
      * @notice Removes an address from the list of approved deployers.
@@ -156,7 +157,7 @@ interface ITREXGateway {
      * @param deployer Address to be removed from the list of approved deployers.
      * emits DeployerRemoved Indicates that a deployer address has been successfully removed.
      */
-    function removeDeployer(address deployer) external;
+    //function removeDeployer(address deployer) external;
 
     /**
      * @notice Removes multiple addresses from the list of approved deployers in a single transaction.
@@ -166,7 +167,7 @@ interface ITREXGateway {
      * Emits a `DeployerRemoved` event for each successfully removed deployer.
      * @param deployers An array of addresses to be removed from the list of approved deployers.
      */
-    function batchRemoveDeployer(address[] calldata deployers) external;
+    //function batchRemoveDeployer(address[] calldata deployers) external;
 
     /**
      * @notice Applies a fee discount to a specific deployer's address.
