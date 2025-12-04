@@ -1,1 +1,4 @@
-node ./scripts/commit-msg.js $1 && npx --no-install commitlint --edit $1
+#!/usr/bin/env sh
+. "$(dirname "$0")/_/h"
+
+node ./scripts/commit-msg.js $1 && npx commitlint --edit $1

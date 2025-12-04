@@ -10,6 +10,7 @@ artifacts/
 cache/
 docgen/
 flat/
+out/            
 
 # IDEs
 .idea/

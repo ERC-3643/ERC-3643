@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FOUNDRY_PROFILE: ci
+  HUSKY: 0
+  ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY }}
+
+jobs:
+  check:
+    strategy:
+      fail-fast: true
+
+    name: Foundry project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Save hardhat cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            cache_hardhat
+            artifacts
+          key: ${{ github.ref_name }}-hardhat
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Run Linter
+        run: npm run lint
+        id: lint
+
+      - name: Run build
+        run: npm run build:forge
+        id: build
+
+      - name: Run forge tests
+        run: npm run test:forge
+        id: test-forge
+
+      - name: Run hardhat tests
+        run: npm run test:hardhat
+        id: test-hardhat
+
+      # Coverage checks disabled until tests are migrated to Foundry
+      # TODO: Re-enable after migrating tests to Foundry and achieving coverage
+      # - name: Run coverage
+      #   run: |
+      #     ./.github/scripts/hardhat_coverage.sh |
+      #     ./.github/scripts/forge_coverage.sh
+      #   id: coverage
