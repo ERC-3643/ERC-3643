@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: GPL-3.0
 //
 //                                             :+#####%%%%%%%%%%%%%%+
@@ -65,21 +64,21 @@
 pragma solidity 0.8.30;
 
 /// @dev Thrown when address is not a token bound to compliance contract.
-    error AddressNotATokenBoundToComplianceContract();
+error AddressNotATokenBoundToComplianceContract();
 
 /// @dev Thrown when compliance is already bound.
-    error ComplianceAlreadyBound();
+error ComplianceAlreadyBound();
 
 /// @dev Thrown when compliance is not bound.
-    error ComplianceNotBound();
+error ComplianceNotBound();
 
 /// @dev Thrown when coompliance is not suitable for binding to module.
 /// @param module Address of the module.
-    error ComplianceNotSuitableForBindingToModule(address module);
+error ComplianceNotSuitableForBindingToModule(address module);
 
 /// @dev Thrown when call by otther than bound compliance.
-    error OnlyBoundComplianceCanCall();
+error OnlyBoundComplianceCanCall();
 
 /// @dev Thrown when call by other than compliance contract.
-    error OnlyComplianceContractCanCall();
+error OnlyComplianceContractCanCall();
 

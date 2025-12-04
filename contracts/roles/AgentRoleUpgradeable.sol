@@ -63,10 +63,10 @@
 
 pragma solidity 0.8.30;
 
-import "./OwnableOnceNext2StepUpgradeable.sol";
-import "./Roles.sol";
 import "../errors/InvalidArgumentErrors.sol";
 import "../errors/RoleErrors.sol";
+import "./OwnableOnceNext2StepUpgradeable.sol";
+import "./Roles.sol";
 
 /// Events
 
@@ -78,8 +78,8 @@ event AgentAdded(address indexed _agent);
 /// @param _agent Address of agent contract
 event AgentRemoved(address indexed _agent);
 
-
 contract AgentRoleUpgradeable is OwnableOnceNext2StepUpgradeable {
+
     using Roles for Roles.Role;
 
     Roles.Role private _agents;
@@ -104,4 +104,5 @@ contract AgentRoleUpgradeable is OwnableOnceNext2StepUpgradeable {
     function isAgent(address _agent) public view returns (bool) {
         return _agents.has(_agent);
     }
+
 }

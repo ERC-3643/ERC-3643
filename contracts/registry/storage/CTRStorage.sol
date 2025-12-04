@@ -64,6 +64,7 @@
 pragma solidity 0.8.30;
 
 contract CTRStorage {
+
     /// @dev All required Claim Topics
     uint256[] internal _claimTopics;
 
@@ -72,4 +73,5 @@ contract CTRStorage {
      * variables without shifting down storage in the inheritance chain.
      */
     uint256[49] private __gap;
+
 }

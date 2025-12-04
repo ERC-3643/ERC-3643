@@ -62,10 +62,9 @@
 
 pragma solidity 0.8.30;
 
-import "./AbstractProxy.sol";
 import "../errors/CommonErrors.sol";
 import "../errors/InvalidArgumentErrors.sol";
-
+import "./AbstractProxy.sol";
 
 contract ModularComplianceProxy is AbstractProxy {
 
@@ -77,7 +76,7 @@ contract ModularComplianceProxy is AbstractProxy {
         address logic = (ITREXImplementationAuthority(getImplementationAuthority())).getMCImplementation();
 
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, ) = logic.delegatecall(abi.encodeWithSignature("init()"));
+        (bool success,) = logic.delegatecall(abi.encodeWithSignature("init()"));
         require(success, InitializationFailed());
     }
 
@@ -100,4 +99,5 @@ contract ModularComplianceProxy is AbstractProxy {
             }
         }
     }
+
 }

@@ -82,19 +82,12 @@ event IdFactorySet(address _idFactory);
 /// @param _mc Address of modular compliance contract.
 /// @param _salt The salt string that was used to deploy the token.
 event TREXSuiteDeployed(
-    address indexed _token, 
-    address _ir, 
-    address _irs, 
-    address _tir, 
-    address _ctr, 
-    address _mc, 
-    string indexed _salt);
-
+    address indexed _token, address _ir, address _irs, address _tir, address _ctr, address _mc, string indexed _salt
+);
 
 interface ITREXFactory {
 
     /// Types
-
     struct TokenDetails {
         // address of the owner of all contracts
         address owner;
@@ -179,7 +172,8 @@ interface ITREXFactory {
     function deployTREXSuite(
         string memory _salt,
         TokenDetails calldata _tokenDetails,
-        ClaimDetails calldata _claimDetails) external;
+        ClaimDetails calldata _claimDetails
+    ) external;
 
     /**
      *  @dev function that can be used to recover the ownership of contracts owned by the factory
@@ -193,16 +187,17 @@ interface ITREXFactory {
     /**
      *  @dev getter for implementation authority address
      */
-    function getImplementationAuthority() external view returns(address);
+    function getImplementationAuthority() external view returns (address);
 
     /**
      *  @dev getter for identity factory address
      */
-    function getIdFactory() external view returns(address);
+    function getIdFactory() external view returns (address);
 
     /**
      *  @dev getter for token address corresponding to salt string
      *  @param _salt The salt string that was used to deploy the token
      */
-    function getToken(string calldata _salt) external view returns(address);
+    function getToken(string calldata _salt) external view returns (address);
+
 }

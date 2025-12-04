@@ -63,14 +63,14 @@
 
 pragma solidity 0.8.30;
 
+import { NoncesUpgradeable } from "../utils/NoncesUpgradeable.sol";
+import { IERC5267 } from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import { IERC5267 } from "@openzeppelin/contracts/interfaces/IERC5267.sol";
-import { NoncesUpgradeable } from "../utils/NoncesUpgradeable.sol";
+import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 error ERC2612ExpiredSignature(uint256 deadline);
 error ERC2612InvalidSigner(address signer, address owner);
-
 
 abstract contract TokenPermit is IERC20Permit, IERC5267, NoncesUpgradeable {
 
@@ -81,20 +81,14 @@ abstract contract TokenPermit is IERC20Permit, IERC5267, NoncesUpgradeable {
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
     /// @inheritdoc IERC20Permit
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external {
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external
+    {
         require(block.timestamp <= deadline, ERC2612ExpiredSignature(deadline));
 
         bytes32 structHash = keccak256(abi.encode(_PERMIT_TYPEHASH, owner, spender, value, _useNonce(owner), deadline));
 
-        bytes32 hash = ECDSA.toTypedDataHash(_domainSeparatorV4(), structHash);
+        bytes32 hash = MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
 
         address signer = ECDSA.recover(hash, v, r, s);
         require(signer == owner, ERC2612InvalidSigner(signer, owner));
@@ -108,7 +102,7 @@ abstract contract TokenPermit is IERC20Permit, IERC5267, NoncesUpgradeable {
         return _domainSeparatorV4();
     }
 
-        /// @inheritdoc IERC5267
+    /// @inheritdoc IERC5267
     function eip712Domain()
         external
         view
@@ -134,16 +128,16 @@ abstract contract TokenPermit is IERC20Permit, IERC5267, NoncesUpgradeable {
         );
     }
 
-     /// @inheritdoc IERC20Permit
+    /// @inheritdoc IERC20Permit
     function nonces(address owner) public view override(IERC20Permit, NoncesUpgradeable) returns (uint256) {
         return super.nonces(owner);
     }
 
     /// @dev Implemented in Token.sol
-    function name() public virtual view returns (string memory);
+    function name() public view virtual returns (string memory);
 
     /// @dev Implemented in Token.sol
-    function version() public virtual view returns (string memory);
+    function version() public view virtual returns (string memory);
 
     /// @dev Implemented in Token.sol
     function _approve(address _owner, address _spender, uint256 _value) internal virtual;
@@ -151,13 +145,7 @@ abstract contract TokenPermit is IERC20Permit, IERC5267, NoncesUpgradeable {
     // @dev Returns the domain separator for the current chain.
     function _domainSeparatorV4() internal view returns (bytes32) {
         return keccak256(
-            abi.encode(
-                _TYPE_HASH,
-                keccak256(bytes(name())), 
-                keccak256(bytes(version())), 
-                block.chainid, 
-                address(this)
-            )
+            abi.encode(_TYPE_HASH, keccak256(bytes(name())), keccak256(bytes(version())), block.chainid, address(this))
         );
     }
 

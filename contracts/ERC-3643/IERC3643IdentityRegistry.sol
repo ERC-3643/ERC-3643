@@ -38,10 +38,10 @@
 //
 pragma solidity 0.8.30;
 
-import "@onchain-id/solidity/contracts/interface/IIdentity.sol";
+import "./IERC3643ClaimTopicsRegistry.sol";
 import "./IERC3643IdentityRegistryStorage.sol";
 import "./IERC3643TrustedIssuersRegistry.sol";
-import "./IERC3643ClaimTopicsRegistry.sol";
+import "@onchain-id/solidity/contracts/interface/IIdentity.sol";
 
 /// Events
 
@@ -80,9 +80,7 @@ event CountryUpdated(address indexed _investorAddress, uint16 indexed _country);
 interface IERC3643IdentityRegistry {
 
     /// Functions
-
     /// Identity Registry Setters
-
     /**
      *  @dev Replace the actual identityRegistryStorage contract with a new one.
      *  This function can only be called by the wallet set as owner of the smart contract
@@ -117,11 +115,7 @@ interface IERC3643IdentityRegistry {
      *  @param _country The country of the investor
      *  emits `IdentityRegistered` event
      */
-    function registerIdentity(
-        address _userAddress,
-        IIdentity _identity,
-        uint16 _country
-    ) external;
+    function registerIdentity(address _userAddress, IIdentity _identity, uint16 _country) external;
 
     /**
      *  @dev Removes an user from the identity registry.

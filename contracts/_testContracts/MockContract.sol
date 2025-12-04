@@ -1,6 +1,7 @@
 pragma solidity 0.8.30;
 
 contract MockContract {
+
     address _irRegistry;
     uint16 _investorCountry;
     address _compliance;
@@ -28,4 +29,5 @@ contract MockContract {
     function compliance() public view returns (address) {
         return _compliance;
     }
+
 }

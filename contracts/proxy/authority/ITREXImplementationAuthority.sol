@@ -68,15 +68,15 @@ pragma solidity 0.8.30;
 /// @param _version Version details.
 /// @param _trex Address of contract for this version.
 event TREXVersionAdded(
-    ITREXImplementationAuthority.Version indexed _version, 
-    ITREXImplementationAuthority.TREXContracts indexed _trex);
+    ITREXImplementationAuthority.Version indexed _version, ITREXImplementationAuthority.TREXContracts indexed _trex
+);
 
 /// @dev Event emitted when a new TREX version is fetched from reference contract by auxiliary contract.
 /// @param _version Version details.
 /// @param _trex Address of contract for this version.
 event TREXVersionFetched(
-    ITREXImplementationAuthority.Version indexed _version, 
-    ITREXImplementationAuthority.TREXContracts indexed _trex);
+    ITREXImplementationAuthority.Version indexed _version, ITREXImplementationAuthority.TREXContracts indexed _trex
+);
 
 /// @dev Event emitted when the current version is updated.
 /// @param _version Version details.
@@ -100,11 +100,9 @@ event IAFactorySet(address indexed _iaFactory);
 /// @param _newImplementationAuthority Address of the new implementation authorirty contract.
 event ImplementationAuthorityChanged(address indexed _token, address indexed _newImplementationAuthority);
 
-
 interface ITREXImplementationAuthority {
 
     /// types
-
     struct TREXContracts {
         // address of token implementation contract
         address tokenImplementation;
@@ -275,4 +273,5 @@ interface ITREXImplementationAuthority {
      *  @dev getter for reference contract address
      */
     function getReferenceContract() external view returns (address);
+
 }

@@ -62,16 +62,16 @@
 
 pragma solidity 0.8.30;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./ITREXImplementationAuthority.sol";
-import "../../token/IToken.sol";
-import "../interface/IProxy.sol";
-import "../../factory/ITREXFactory.sol";
-import "./IIAFactory.sol";
 import "../../errors/CommonErrors.sol";
 import "../../errors/InvalidArgumentErrors.sol";
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "../../factory/ITREXFactory.sol";
 import "../../roles/IERC173.sol";
+import "../../token/IToken.sol";
+import "../interface/IProxy.sol";
+import "./IIAFactory.sol";
+import "./ITREXImplementationAuthority.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// Errors
 
@@ -102,11 +102,9 @@ error VersionAlreadyInUse();
 /// @dev Thrown when version of new implementation authority is not the same as the current implementation authority version.
 error VersionOfNewIAMustBeTheSameAsCurrentIA();
 
-
 contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, IERC165 {
 
     /// variables
-
     /// current version
     Version private _currentVersion;
 
@@ -135,7 +133,7 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
      *  emits `ImplementationAuthoritySet` event
      *  emits a `IAFactorySet` event
      */
-    constructor (bool referenceStatus, address trexFactory, address iaFactory) {
+    constructor(bool referenceStatus, address trexFactory, address iaFactory) Ownable(msg.sender) {
         _reference = referenceStatus;
         _trexFactory = trexFactory;
         _iaFactory = iaFactory;
@@ -148,9 +146,9 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
      */
     function setTREXFactory(address trexFactory) external override onlyOwner {
         require(
-            isReferenceContract() &&
-            ITREXFactory(trexFactory).getImplementationAuthority() == address(this)
-        , OnlyReferenceContractCanCall());
+            isReferenceContract() && ITREXFactory(trexFactory).getImplementationAuthority() == address(this),
+            OnlyReferenceContractCanCall()
+        );
         _trexFactory = trexFactory;
         emit TREXFactorySet(trexFactory);
     }
@@ -160,9 +158,9 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
      */
     function setIAFactory(address iaFactory) external override onlyOwner {
         require(
-            isReferenceContract() &&
-            ITREXFactory(_trexFactory).getImplementationAuthority() == address(this)
-        , OnlyReferenceContractCanCall());
+            isReferenceContract() && ITREXFactory(_trexFactory).getImplementationAuthority() == address(this),
+            OnlyReferenceContractCanCall()
+        );
         _iaFactory = iaFactory;
         emit IAFactorySet(iaFactory);
     }
@@ -183,7 +181,7 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
         require(_contracts[_versionToBytes(_version)].tokenImplementation == address(0), VersionAlreadyFetched());
 
         _contracts[_versionToBytes(_version)] =
-        ITREXImplementationAuthority(getReferenceContract()).getContracts(_version);
+            ITREXImplementationAuthority(getReferenceContract()).getContracts(_version);
         emit TREXVersionFetched(_version, _contracts[_versionToBytes(_version)]);
     }
 
@@ -203,30 +201,30 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
 
         // calling this function requires ownership of ALL contracts of the T-REX suite
         require(
-            Ownable(_token).owner() == msg.sender
-            && Ownable(_ir).owner() == msg.sender
-            && Ownable(_mc).owner() == msg.sender
-            && Ownable(_irs).owner() == msg.sender
-            && Ownable(_ctr).owner() == msg.sender
-            && Ownable(_tir).owner() == msg.sender,
-            CallerNotOwnerOfAllImpactedContracts());
+            Ownable(_token).owner() == msg.sender && Ownable(_ir).owner() == msg.sender
+                && Ownable(_mc).owner() == msg.sender && Ownable(_irs).owner() == msg.sender
+                && Ownable(_ctr).owner() == msg.sender && Ownable(_tir).owner() == msg.sender,
+            CallerNotOwnerOfAllImpactedContracts()
+        );
 
-        if(_newImplementationAuthority == address(0)) {
+        if (_newImplementationAuthority == address(0)) {
             _newImplementationAuthority = IIAFactory(_iaFactory).deployIA(_token);
-        }
-        else {
+        } else {
             require(
-                _versionToBytes(ITREXImplementationAuthority(_newImplementationAuthority).getCurrentVersion()) ==
-                _versionToBytes(_currentVersion),
-                VersionOfNewIAMustBeTheSameAsCurrentIA());
+                _versionToBytes(ITREXImplementationAuthority(_newImplementationAuthority).getCurrentVersion())
+                    == _versionToBytes(_currentVersion),
+                VersionOfNewIAMustBeTheSameAsCurrentIA()
+            );
             require(
-                !ITREXImplementationAuthority(_newImplementationAuthority).isReferenceContract() ||
-                _newImplementationAuthority == getReferenceContract(),
-                NewIAIsNotAReferenceContract());
+                !ITREXImplementationAuthority(_newImplementationAuthority).isReferenceContract()
+                    || _newImplementationAuthority == getReferenceContract(),
+                NewIAIsNotAReferenceContract()
+            );
             require(
-                IIAFactory(_iaFactory).deployedByFactory(_newImplementationAuthority) ||
-                _newImplementationAuthority == getReferenceContract(),
-                InvalidImplementationAuthority());
+                IIAFactory(_iaFactory).deployedByFactory(_newImplementationAuthority)
+                    || _newImplementationAuthority == getReferenceContract(),
+                InvalidImplementationAuthority()
+            );
         }
 
         IProxy(_token).setImplementationAuthority(_newImplementationAuthority);
@@ -312,13 +310,11 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
         require(_contracts[_versionToBytes(_version)].tokenImplementation == address(0), VersionAlreadyExists());
 
         require(
-            _trex.ctrImplementation != address(0)
-            && _trex.irImplementation != address(0)
-            && _trex.irsImplementation != address(0)
-            && _trex.mcImplementation != address(0)
-            && _trex.tirImplementation != address(0)
-            && _trex.tokenImplementation != address(0)
-        , ZeroAddress());
+            _trex.ctrImplementation != address(0) && _trex.irImplementation != address(0)
+                && _trex.irsImplementation != address(0) && _trex.mcImplementation != address(0)
+                && _trex.tirImplementation != address(0) && _trex.tokenImplementation != address(0),
+            ZeroAddress()
+        );
 
         _contracts[_versionToBytes(_version)] = _trex;
         emit TREXVersionAdded(_version, _trex);
@@ -353,16 +349,15 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
      *  @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(bytes4 interfaceId) public pure virtual override returns (bool) {
-        return
-            interfaceId == type(ITREXImplementationAuthority).interfaceId ||
-            interfaceId == type(IERC173).interfaceId ||
-            interfaceId == type(IERC165).interfaceId;
+        return interfaceId == type(ITREXImplementationAuthority).interfaceId || interfaceId == type(IERC173).interfaceId
+            || interfaceId == type(IERC165).interfaceId;
     }
 
     /**
      *  @dev casting function Version => bytes to allow compare values easier
      */
-    function _versionToBytes(Version memory _version) private pure returns(bytes32) {
+    function _versionToBytes(Version memory _version) private pure returns (bytes32) {
         return bytes32(keccak256(abi.encodePacked(_version.major, _version.minor, _version.patch)));
     }
+
 }

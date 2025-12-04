@@ -1,0 +1,26 @@
+[[dependencies]]
+name = "@openzeppelin-contracts"
+version = "5.5.0"
+url = "https://soldeer-revisions.s3.amazonaws.com/@openzeppelin-contracts/5_5_0_01-11-2025_09:56:40_contracts.zip"
+checksum = "2ee78837130cf06b456d9ef7ab70753685d9c1c9c2c5b70f24bd4c16695d0337"
+integrity = "da8336cf949f0e0667ae8360af849681e3a3e76d7e61e7a86b1a3414a158aeea"
+
+[[dependencies]]
+name = "@openzeppelin-contracts-upgradeable"
+version = "5.5.0"
+url = "https://soldeer-revisions.s3.amazonaws.com/@openzeppelin-contracts-upgradeable/5_5_0_01-11-2025_09:56:46_contracts-upgradeable.zip"
+checksum = "6360df12918b82436dfd68a4a7d9b962aa4d4b0b6bf323ecbd400b9eca5e5974"
+integrity = "ede37ded73bb7dff1325cdfcc124d83afff3d92e646a9418d79ac0d6a9721b05"
+
+[[dependencies]]
+name = "forge-std"
+version = "1.11.0"
+url = "https://soldeer-revisions.s3.amazonaws.com/forge-std/1_11_0_09-10-2025_06:23:22_forge-std-1.11.zip"
+checksum = "0290ef84c693dc9086f98f6a9b4a69dc5c2b6aa1cfe10a989bd1def1a456c099"
+integrity = "84aa7d32f8c7329468cf16f31f0f74e68072e634fdbde98f3bb00c6b136103b2"
+
+[[dependencies]]
+name = "onchain-id"
+version = "2.2.2-beta3"
+git = "https://github.com/onchain-id/solidity.git"
+rev = "0e681fbf40f7982be5f76f3bbb1f2995e28e40f8"

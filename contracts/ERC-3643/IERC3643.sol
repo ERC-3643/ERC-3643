@@ -39,10 +39,10 @@
 
 pragma solidity 0.8.30;
 
+import "./IERC3643Compliance.sol";
+import "./IERC3643IdentityRegistry.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "./IERC3643IdentityRegistry.sol";
-import "./IERC3643Compliance.sol";
 
 /// Events
 
@@ -52,8 +52,13 @@ import "./IERC3643Compliance.sol";
 /// @param _newDecimals is the decimals of the token.
 /// @param _newVersion is the version of the token.
 /// @param _newOnchainID is the address of the onchainID of the token.
-event UpdatedTokenInformation(string indexed _newName, string indexed _newSymbol, uint8 _newDecimals,
-        string _newVersion, address indexed _newOnchainID);
+event UpdatedTokenInformation(
+    string indexed _newName,
+    string indexed _newSymbol,
+    uint8 _newDecimals,
+    string _newVersion,
+    address indexed _newOnchainID
+);
 
 /// @dev This event is emitted when the IdentityRegistry has been set for the token.
 /// @param _identityRegistry is the address of the Identity Registry of the token.
@@ -95,13 +100,10 @@ event Paused(address _userAddress);
 /// @param _userAddress is the address of the wallet that called the unpause function.
 event Unpaused(address _userAddress);
 
-
 interface IERC3643 is IERC20, IERC20Metadata {
 
     /// Functions
-
     /// Setters
-
     /**
      *  @dev sets the token name
      *  @param _name the name of token to set
@@ -127,67 +129,67 @@ interface IERC3643 is IERC20, IERC20Metadata {
     function setOnchainID(address _onchainID) external;
 
     /**
-    * @dev Pauses the token contract. When the contract is paused, investors cannot transfer tokens anymore.
-    * This function can only be called by an agent of the token, provided the agent is not restricted from pausing the token.
-    * emits a `Paused` event upon successful execution.
-    * To pause token transfers, the calling agent must have pausing capabilities enabled.
-    * If the agent is disabled from pausing, the function call will fail.
-    * The function can be called only when the contract is not already paused.
-    * error AgentNotAuthorized - Thrown if the agent is disabled from pausing the token,
-    * indicating they do not have the necessary permissions to execute this function.
-    */
+     * @dev Pauses the token contract. When the contract is paused, investors cannot transfer tokens anymore.
+     * This function can only be called by an agent of the token, provided the agent is not restricted from pausing the token.
+     * emits a `Paused` event upon successful execution.
+     * To pause token transfers, the calling agent must have pausing capabilities enabled.
+     * If the agent is disabled from pausing, the function call will fail.
+     * The function can be called only when the contract is not already paused.
+     * error AgentNotAuthorized - Thrown if the agent is disabled from pausing the token,
+     * indicating they do not have the necessary permissions to execute this function.
+     */
     function pause() external;
 
     /**
-    * @dev Unpauses the token contract, allowing investors to resume token transfers under normal conditions
-    * This function can only be called by an agent of the token, provided the agent is not restricted from pausing the token.
-    * emits an `Unpaused` event upon successful execution.
-    * To unpause token transfers, the calling agent must have pausing capabilities enabled.
-    * If the agent is disabled from pausing, the function call will fail.
-    * The function can be called only when the contract is currently paused.
-    * error AgentNotAuthorized - Thrown if the agent is disabled from pausing the token,
-    * indicating they do not have the necessary permissions to execute this function.
-    */
+     * @dev Unpauses the token contract, allowing investors to resume token transfers under normal conditions
+     * This function can only be called by an agent of the token, provided the agent is not restricted from pausing the token.
+     * emits an `Unpaused` event upon successful execution.
+     * To unpause token transfers, the calling agent must have pausing capabilities enabled.
+     * If the agent is disabled from pausing, the function call will fail.
+     * The function can be called only when the contract is currently paused.
+     * error AgentNotAuthorized - Thrown if the agent is disabled from pausing the token,
+     * indicating they do not have the necessary permissions to execute this function.
+     */
     function unpause() external;
 
     /**
-    * @dev Sets an address's frozen status for this token,
-    * either freezing or unfreezing the address based on the provided boolean value.
-    * This function can be called by an agent of the token, assuming the agent is not restricted from freezing addresses.
-    * emits an `AddressFrozen` event upon successful execution.
-    * @param _userAddress The address for which to update the frozen status.
-    * @param _freeze The frozen status to be applied: `true` to freeze, `false` to unfreeze.
-    * @notice To change an address's frozen status, the calling agent must have the capability to freeze addresses enabled.
-    * If the agent is disabled from freezing addresses, the function call will fail.
-    * error AgentNotAuthorized - Thrown if the agent is disabled from freezing addresses,
-    * indicating they do not have the necessary permissions to execute this function.
-    */
+     * @dev Sets an address's frozen status for this token,
+     * either freezing or unfreezing the address based on the provided boolean value.
+     * This function can be called by an agent of the token, assuming the agent is not restricted from freezing addresses.
+     * emits an `AddressFrozen` event upon successful execution.
+     * @param _userAddress The address for which to update the frozen status.
+     * @param _freeze The frozen status to be applied: `true` to freeze, `false` to unfreeze.
+     * @notice To change an address's frozen status, the calling agent must have the capability to freeze addresses enabled.
+     * If the agent is disabled from freezing addresses, the function call will fail.
+     * error AgentNotAuthorized - Thrown if the agent is disabled from freezing addresses,
+     * indicating they do not have the necessary permissions to execute this function.
+     */
     function setAddressFrozen(address _userAddress, bool _freeze) external;
 
     /**
-    * @dev Freezes a specified token amount for a given address, preventing those tokens from being transferred.
-    * This function can be called by an agent of the token, provided the agent is not restricted from freezing tokens.
-    * emits a `TokensFrozen` event upon successful execution.
-    * @param _userAddress The address for which to freeze tokens.
-    * @param _amount The amount of tokens to be frozen.
-    * @notice To freeze tokens for an address, the calling agent must have the capability to freeze tokens enabled.
-    * If the agent is disabled from freezing tokens, the function call will fail.
-    * error AgentNotAuthorized - Thrown if the agent is disabled from freezing tokens,
-    * indicating they do not have the necessary permissions to execute this function.
-    */
+     * @dev Freezes a specified token amount for a given address, preventing those tokens from being transferred.
+     * This function can be called by an agent of the token, provided the agent is not restricted from freezing tokens.
+     * emits a `TokensFrozen` event upon successful execution.
+     * @param _userAddress The address for which to freeze tokens.
+     * @param _amount The amount of tokens to be frozen.
+     * @notice To freeze tokens for an address, the calling agent must have the capability to freeze tokens enabled.
+     * If the agent is disabled from freezing tokens, the function call will fail.
+     * error AgentNotAuthorized - Thrown if the agent is disabled from freezing tokens,
+     * indicating they do not have the necessary permissions to execute this function.
+     */
     function freezePartialTokens(address _userAddress, uint256 _amount) external;
 
     /**
-    * @dev Unfreezes a specified token amount for a given address, allowing those tokens to be transferred again.
-    * This function can be called by an agent of the token, assuming the agent is not restricted from unfreezing tokens.
-    * emits a `TokensUnfrozen` event upon successful execution.
-    * @param _userAddress The address for which to unfreeze tokens.
-    * @param _amount The amount of tokens to be unfrozen.
-    * @notice To unfreeze tokens for an address, the calling agent must have the capability to unfreeze tokens enabled.
-    * If the agent is disabled from unfreezing tokens, the function call will fail.
-    * error AgentNotAuthorized - Thrown if the agent is disabled from unfreezing tokens,
-    * indicating they do not have the necessary permissions to execute this function.
-    */
+     * @dev Unfreezes a specified token amount for a given address, allowing those tokens to be transferred again.
+     * This function can be called by an agent of the token, assuming the agent is not restricted from unfreezing tokens.
+     * emits a `TokensUnfrozen` event upon successful execution.
+     * @param _userAddress The address for which to unfreeze tokens.
+     * @param _amount The amount of tokens to be unfrozen.
+     * @notice To unfreeze tokens for an address, the calling agent must have the capability to unfreeze tokens enabled.
+     * If the agent is disabled from unfreezing tokens, the function call will fail.
+     * error AgentNotAuthorized - Thrown if the agent is disabled from unfreezing tokens,
+     * indicating they do not have the necessary permissions to execute this function.
+     */
     function unfreezePartialTokens(address _userAddress, uint256 _amount) external;
 
     /**
@@ -228,12 +230,8 @@ interface IERC3643 is IERC20, IERC20Metadata {
      *  The function can only be called when the contract is not already paused.
      *  error `AgentNotAuthorized` - Thrown if the agent is restricted from initiating forced transfers of the token,
      *  indicating they do not have the necessary permissions to execute this function.
-    */
-    function forcedTransfer(
-        address _from,
-        address _to,
-        uint256 _amount
-    ) external returns (bool);
+     */
+    function forcedTransfer(address _from, address _to, uint256 _amount) external returns (bool);
 
     /**
      *  @dev Mints tokens to a specified address.
@@ -246,7 +244,7 @@ interface IERC3643 is IERC20, IERC20Metadata {
      *  Emits a `Transfer` event upon successful minting.
      *  To execute this function, the calling agent must not be restricted from minting tokens.
      *  If the agent is restricted from this capability, the function call will fail.
-    */
+     */
     function mint(address _to, uint256 _amount) external;
 
     /**
@@ -263,7 +261,7 @@ interface IERC3643 is IERC20, IERC20Metadata {
      *  Also emits a `Transfer` event.
      *  To execute this function, the calling agent must not be restricted from burning tokens.
      *  If the agent is restricted from this capability, the function call will fail.
-    */
+     */
     function burn(address _userAddress, uint256 _amount) external;
 
     /**
@@ -308,11 +306,9 @@ interface IERC3643 is IERC20, IERC20Metadata {
      *
      * @return A boolean value indicating whether the recovery process was successful.
      */
-    function recoveryAddress(
-        address _lostWallet,
-        address _newWallet,
-        address _investorOnchainID
-    ) external returns (bool);
+    function recoveryAddress(address _lostWallet, address _newWallet, address _investorOnchainID)
+        external
+        returns (bool);
 
     /// Batch Actions
 
@@ -344,12 +340,9 @@ interface IERC3643 is IERC20, IERC20Metadata {
      *  Also emits _fromList.length `Transfer` events upon successful batch transfer.
      *  To execute this function, the calling agent must not be restricted from initiating forced transfer.
      *  If the agent is restricted from this capability, the function call will fail.
-    */
-    function batchForcedTransfer(
-        address[] calldata _fromList,
-        address[] calldata _toList,
-        uint256[] calldata _amounts
-    ) external;
+     */
+    function batchForcedTransfer(address[] calldata _fromList, address[] calldata _toList, uint256[] calldata _amounts)
+        external;
 
     /**
      *  @dev Initiates minting of tokens in batch.
@@ -363,7 +356,7 @@ interface IERC3643 is IERC20, IERC20Metadata {
      *  Emits _toList.length `Transfer` events upon successful batch minting.
      *  To execute this function, the calling agent must not be restricted from minting tokens.
      *  If the agent is restricted from this capability, the function call will fail.
-    */
+     */
     function batchMint(address[] calldata _toList, uint256[] calldata _amounts) external;
 
     /**
@@ -378,7 +371,7 @@ interface IERC3643 is IERC20, IERC20Metadata {
      *  Emits _userAddresses.length `Transfer` events upon successful batch burn.
      *  To execute this function, the calling agent must not be restricted from burning tokens.
      *  If the agent is restricted from this capability, the function call will fail.
-    */
+     */
     function batchBurn(address[] calldata _userAddresses, uint256[] calldata _amounts) external;
 
     /**
@@ -392,7 +385,7 @@ interface IERC3643 is IERC20, IERC20Metadata {
      *  Emits _userAddresses.length `AddressFrozen` events upon successful batch update of frozen status.
      *  To execute this function, the calling agent must not be restricted from setting frozen addresses.
      *  If the agent is restricted from this capability, the function call will fail.
-    */
+     */
     function batchSetAddressFrozen(address[] calldata _userAddresses, bool[] calldata _freeze) external;
 
     /**
@@ -406,7 +399,7 @@ interface IERC3643 is IERC20, IERC20Metadata {
      *  Emits _userAddresses.length `TokensFrozen` events upon successful batch partial freezing.
      *  To execute this function, the calling agent must not be restricted from partially freezing tokens.
      *  If the agent is restricted from this capability, the function call will fail.
-    */
+     */
     function batchFreezePartialTokens(address[] calldata _userAddresses, uint256[] calldata _amounts) external;
 
     /**
@@ -420,7 +413,7 @@ interface IERC3643 is IERC20, IERC20Metadata {
      *  Emits _userAddresses.length `TokensUnfrozen` events upon successful batch partial unfreezing.
      *  To execute this function, the calling agent must not be restricted from partially freezing tokens.
      *  If the agent is restricted from this capability, the function call will fail.
-    */
+     */
     function batchUnfreezePartialTokens(address[] calldata _userAddresses, uint256[] calldata _amounts) external;
 
     /// Getters
@@ -467,4 +460,5 @@ interface IERC3643 is IERC20, IERC20Metadata {
      *  @param _userAddress the address of the wallet on which getFrozenTokens is called
      */
     function getFrozenTokens(address _userAddress) external view returns (uint256);
+
 }

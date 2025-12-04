@@ -63,8 +63,8 @@
 
 pragma solidity 0.8.30;
 
-import "./TokenStructs.sol";
 import "../ERC-3643/IERC3643.sol";
+import "./TokenStructs.sol";
 
 /// @dev This event is emitted when restrictions on an agent's roles are updated.
 /// @param _agent is the address of the agent whose roles are being restricted.
@@ -83,7 +83,8 @@ event AgentRestrictionsSet(
     bool _disableForceTransfer,
     bool _disablePartialFreeze,
     bool _disablePause,
-    bool _disableRecovery);
+    bool _disableRecovery
+);
 
 /// @dev This event is emitted when the owner gives or cancels a default allowance.
 /// @param _to Address of target.
@@ -102,23 +103,22 @@ event DefaultAllowanceEnabled(address _user);
 interface IToken is IERC3643 {
 
     /// functions
-
     /**
      * @dev The owner of this address can allow or disallow spending without allowance.
      * Any `TransferFrom` from these targets won't need allowance (allow = true) or will need allowance (allow = false).
      * @param _allow Allow or disallow spending without allowance.
      * @param _targets Addresses without allowance needed.
-    */
+     */
     function setAllowanceForAll(bool _allow, address[] calldata _targets) external;
 
     /**
      * @dev The caller can remove default allowance globally.
-    */
+     */
     function disableDefaultAllowance() external;
 
     /**
      * @dev The caller can get default allowance back globally.
-    */
+     */
     function enableDefaultAllowance() external;
 
     /**

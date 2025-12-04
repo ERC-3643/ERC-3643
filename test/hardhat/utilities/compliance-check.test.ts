@@ -19,12 +19,12 @@ async function deployComplianceWithTestModule() {
   return { ...context, suite: { ...context.suite, testModule, mock: contract } };
 }
 
-describe('UtilityChecker.testTransferDetails', () => {
+describe('UtilityChecker.checkTransferDetails', () => {
   it('should return pass for single module', async () => {
     const context = await loadFixture(deployComplianceWithTestModule);
 
     const utilityChecker = await ethers.deployContract('UtilityChecker');
-    const results = await utilityChecker.testTransferDetails(
+    const results = await utilityChecker.checkTransferDetails(
       context.suite.mock.target,
       context.accounts.aliceWallet,
       context.accounts.bobWallet,
@@ -56,7 +56,7 @@ describe('UtilityChecker.testTransferDetails', () => {
     );
 
     const utilityChecker = await ethers.deployContract('UtilityChecker');
-    const results = await utilityChecker.testTransferDetails(
+    const results = await utilityChecker.checkTransferDetails(
       context.suite.mock.target,
       context.accounts.aliceWallet,
       context.accounts.bobWallet,
@@ -84,7 +84,7 @@ describe('UtilityChecker.testTransferDetails', () => {
     await context.suite.compliance.addModule(testModule2.target);
 
     const utilityChecker = await ethers.deployContract('UtilityChecker');
-    const results = await utilityChecker.testTransferDetails(
+    const results = await utilityChecker.checkTransferDetails(
       context.suite.mock.target,
       context.accounts.aliceWallet,
       context.accounts.bobWallet,

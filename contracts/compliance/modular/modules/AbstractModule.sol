@@ -62,9 +62,9 @@
 
 pragma solidity 0.8.30;
 
-import "./IModule.sol";
-import "../../../errors/InvalidArgumentErrors.sol";
 import "../../../errors/ComplianceErrors.sol";
+import "../../../errors/InvalidArgumentErrors.sol";
+import "./IModule.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 abstract contract AbstractModule is IModule, IERC165 {
@@ -102,7 +102,7 @@ abstract contract AbstractModule is IModule, IERC165 {
     /**
      *  @dev See {IModule-unbindCompliance}.
      */
-    function unbindCompliance(address _compliance) external onlyComplianceCall override {
+    function unbindCompliance(address _compliance) external override onlyComplianceCall {
         require(_compliance != address(0), ZeroAddress());
         require(msg.sender == _compliance, OnlyComplianceContractCanCall());
         _complianceBound[_compliance] = false;
@@ -120,9 +120,7 @@ abstract contract AbstractModule is IModule, IERC165 {
      *  @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(bytes4 interfaceId) public pure virtual override returns (bool) {
-        return
-            interfaceId == type(IModule).interfaceId ||
-            interfaceId == type(IERC165).interfaceId;
+        return interfaceId == type(IModule).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
 
 }

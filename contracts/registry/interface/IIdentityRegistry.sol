@@ -72,7 +72,6 @@ event EligibilityChecksDisabled();
 /// @dev This event is emitted when Eligibility checks are enabled.
 event EligibilityChecksEnabled();
 
-
 interface IIdentityRegistry is IERC3643IdentityRegistry {
 
     /**
@@ -107,4 +106,5 @@ interface IIdentityRegistry is IERC3643IdentityRegistry {
      * Emits an `EligibilityChecksEnabled` event upon successful execution.
      */
     function enableEligibilityChecks() external;
+
 }

@@ -71,6 +71,7 @@ import "../errors/RoleErrors.sol";
  * @dev Library for managing addresses assigned to a Role.
  */
 library Roles {
+
     struct Role {
         mapping(address => bool) bearer;
     }
@@ -99,4 +100,5 @@ library Roles {
         require(account != address(0), ZeroAddress());
         return role.bearer[account];
     }
+
 }

@@ -64,6 +64,7 @@
 pragma solidity 0.8.30;
 
 contract MCStorage {
+
     /// token linked to the compliance contract
     address internal _tokenBound;
 
@@ -78,4 +79,5 @@ contract MCStorage {
      * variables without shifting down storage in the inheritance chain.
      */
     uint256[49] private __gap;
+
 }

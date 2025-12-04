@@ -65,13 +65,13 @@ pragma solidity 0.8.30;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
-import "./IModule.sol";
-import "../../../roles/OwnableOnceNext2StepUpgradeable.sol";
-import "../../../errors/InvalidArgumentErrors.sol";
 import "../../../errors/ComplianceErrors.sol";
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "../../../errors/InvalidArgumentErrors.sol";
 import "../../../roles/IERC173.sol";
+import "../../../roles/OwnableOnceNext2StepUpgradeable.sol";
+import "./IModule.sol";
+import "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 abstract contract AbstractModuleUpgradeable is
     IModule,
@@ -81,6 +81,7 @@ abstract contract AbstractModuleUpgradeable is
     MulticallUpgradeable,
     IERC165
 {
+
     struct AbstractModuleStorage {
         /// compliance contract binding status
         mapping(address => bool) complianceBound;
@@ -90,7 +91,7 @@ abstract contract AbstractModuleUpgradeable is
 
     // keccak256(abi.encode(uint256(keccak256("ERC3643.storage.AbstractModule")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant _ABSTRACT_MODULE_STORAGE_LOCATION =
-    0xf6cc97de1266c180cd39f3b311632644143ce7873d2927755382ad4b39e8ae00;
+        0xf6cc97de1266c180cd39f3b311632644143ce7873d2927755382ad4b39e8ae00;
 
     /**
      * @dev Throws if `_compliance` is not a bound compliance contract address.
@@ -132,13 +133,13 @@ abstract contract AbstractModuleUpgradeable is
     /**
      *  @dev See {IModule-unbindCompliance}.
      */
-    function unbindCompliance(address _compliance) external onlyComplianceCall onlyProxy override {
+    function unbindCompliance(address _compliance) external override onlyComplianceCall onlyProxy {
         AbstractModuleStorage storage s = _getAbstractModuleStorage();
         require(_compliance != address(0), ZeroAddress());
         require(msg.sender == _compliance, OnlyComplianceContractCanCall());
 
         s.complianceBound[_compliance] = false;
-        s.nonces[_compliance] ++;
+        s.nonces[_compliance]++;
 
         emit ComplianceUnbound(_compliance);
     }
@@ -160,10 +161,8 @@ abstract contract AbstractModuleUpgradeable is
      *  @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(bytes4 interfaceId) public pure virtual override returns (bool) {
-        return
-            interfaceId == type(IModule).interfaceId ||
-            interfaceId == type(IERC173).interfaceId ||
-            interfaceId == type(IERC165).interfaceId;
+        return interfaceId == type(IModule).interfaceId || interfaceId == type(IERC173).interfaceId
+            || interfaceId == type(IERC165).interfaceId;
     }
 
     // solhint-disable-next-line func-name-mixedcase
@@ -173,10 +172,17 @@ abstract contract AbstractModuleUpgradeable is
     }
 
     // solhint-disable-next-line no-empty-blocks, func-name-mixedcase
-    function __AbstractModule_init_unchained() internal onlyInitializing {}
+    function __AbstractModule_init_unchained() internal onlyInitializing { }
 
     // solhint-disable-next-line no-empty-blocks
-    function _authorizeUpgrade(address /*newImplementation*/) internal virtual override onlyOwner {}
+    function _authorizeUpgrade(
+        address /*newImplementation*/
+    )
+        internal
+        virtual
+        override
+        onlyOwner
+    { }
 
     function _getAbstractModuleStorage() private pure returns (AbstractModuleStorage storage s) {
         // solhint-disable-next-line no-inline-assembly
@@ -184,4 +190,5 @@ abstract contract AbstractModuleUpgradeable is
             s.slot := _ABSTRACT_MODULE_STORAGE_LOCATION
         }
     }
+
 }

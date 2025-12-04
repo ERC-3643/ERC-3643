@@ -63,14 +63,14 @@
 pragma solidity 0.8.30;
 
 import "../compliance/modular/IModularCompliance.sol";
-import "../token/IToken.sol";
 import "../compliance/modular/modules/AbstractModuleUpgradeable.sol";
+import "../token/IToken.sol";
 
 // basic test contract showcasing the behavior of a module not plug & play
 contract ModuleNotPnP is AbstractModuleUpgradeable {
 
     /// state variables
-    mapping(address => uint) private _complianceData;
+    mapping(address => uint256) private _complianceData;
     mapping(address => bool) private _moduleReady;
 
     /// functions
@@ -83,12 +83,12 @@ contract ModuleNotPnP is AbstractModuleUpgradeable {
         __AbstractModule_init();
     }
 
-    function doSomething(uint _value) external onlyComplianceCall {
+    function doSomething(uint256 _value) external onlyComplianceCall {
         _complianceData[msg.sender] = _value;
     }
 
     function setModuleReady(address compliance, bool ready) external {
-        require(msg.sender == Ownable(compliance).owner(),"only compliance owner can call");
+        require(msg.sender == Ownable(compliance).owner(), "only compliance owner can call");
         _moduleReady[compliance] = ready;
     }
 
@@ -96,45 +96,48 @@ contract ModuleNotPnP is AbstractModuleUpgradeable {
      *  @dev See {IModule-moduleTransferAction}.
      *  no transfer action required in this module
      */
-    function moduleTransferAction(address _from, address _to, uint256 _value) external override onlyComplianceCall {
-    }
+    function moduleTransferAction(address _from, address _to, uint256 _value) external override onlyComplianceCall { }
 
     /**
      *  @dev See {IModule-moduleMintAction}.
      *  no mint action required in this module
      */
-    function moduleMintAction(address _to, uint256 _value) external override onlyComplianceCall {
-    }
+    function moduleMintAction(address _to, uint256 _value) external override onlyComplianceCall { }
 
     /**
      *  @dev See {IModule-moduleBurnAction}.
      *  no burn action required in this module
      */
-    function moduleBurnAction(address _from, uint256 _value) external override onlyComplianceCall {
-    }
+    function moduleBurnAction(address _from, uint256 _value) external override onlyComplianceCall { }
 
     /**
      *  @dev See {IModule-moduleCheck}.
      *  always returns true (just a test module)
      */
     function moduleCheck(
-        address /*_from*/,
+        address,
+        /*_from*/
         address _to,
         uint256 _value,
         address _compliance
-    ) external view override returns (bool) {
+    )
+        external
+        view
+        override
+        returns (bool)
+    {
         return true;
     }
 
     /**
-      *  @dev See {IModule-canComplianceBind}.
+     *  @dev See {IModule-canComplianceBind}.
      */
     function canComplianceBind(address _compliance) external view returns (bool) {
         return _moduleReady[_compliance];
     }
 
     /**
-      *  @dev See {IModule-isPlugAndPlay}.
+     *  @dev See {IModule-isPlugAndPlay}.
      */
     function isPlugAndPlay() external pure returns (bool) {
         return false;
@@ -146,4 +149,5 @@ contract ModuleNotPnP is AbstractModuleUpgradeable {
     function name() public pure returns (string memory _name) {
         return "ModuleNotPnP";
     }
+
 }

@@ -23,7 +23,7 @@ async function deployComplianceAndTestModule(token: Token, deployer: HardhatEthe
   await compliance.bindToken(token.target);
 }
 
-describe('UtilityChecker.testTransfer', () => {
+describe('UtilityChecker.checkTransfer', () => {
   describe('When sender is frozen', () => {
     it('should return false', async () => {
       const {
@@ -35,7 +35,7 @@ describe('UtilityChecker.testTransfer', () => {
       const utilityChecker = await ethers.deployContract('UtilityChecker');
 
       await token.connect(tokenAgent).setAddressFrozen(aliceWallet.address, true);
-      const result = await utilityChecker.testTransfer(token.target, aliceWallet.address, bobWallet.address, 100);
+      const result = await utilityChecker.checkTransfer(token.target, aliceWallet.address, bobWallet.address, 100);
       expect(result[0]).to.be.equal(false);
       expect(result[1]).to.be.equal(true);
       expect(result[2]).to.be.equal(true);
@@ -53,7 +53,7 @@ describe('UtilityChecker.testTransfer', () => {
       const utilityChecker = await ethers.deployContract('UtilityChecker');
 
       await token.connect(tokenAgent).setAddressFrozen(bobWallet.address, true);
-      const result = await utilityChecker.testTransfer(token.target, aliceWallet.address, bobWallet.address, 100);
+      const result = await utilityChecker.checkTransfer(token.target, aliceWallet.address, bobWallet.address, 100);
       expect(result[0]).to.be.equal(false);
       expect(result[1]).to.be.equal(true);
       expect(result[2]).to.be.equal(true);
@@ -72,7 +72,7 @@ describe('UtilityChecker.testTransfer', () => {
 
       const initialBalance = await token.balanceOf(aliceWallet.address);
       await token.connect(tokenAgent).freezePartialTokens(aliceWallet.address, initialBalance - 10n);
-      const result = await utilityChecker.testTransfer(token.target, aliceWallet.address, bobWallet.address, 100);
+      const result = await utilityChecker.checkTransfer(token.target, aliceWallet.address, bobWallet.address, 100);
       expect(result[0]).to.be.equal(false);
       expect(result[1]).to.be.equal(true);
       expect(result[2]).to.be.equal(true);
@@ -91,7 +91,7 @@ describe('UtilityChecker.testTransfer', () => {
 
       const utilityChecker = await ethers.deployContract('UtilityChecker');
 
-      const result = await utilityChecker.testTransfer(token.target, aliceWallet.address, bobWallet.address, 100);
+      const result = await utilityChecker.checkTransfer(token.target, aliceWallet.address, bobWallet.address, 100);
       expect(result[0]).to.be.equal(true);
       expect(result[1]).to.be.equal(true);
       expect(result[2]).to.be.equal(true);
@@ -109,7 +109,7 @@ describe('UtilityChecker.testTransfer', () => {
 
       const utilityChecker = await ethers.deployContract('UtilityChecker');
 
-      const result = await utilityChecker.testTransfer(token.target, aliceWallet.address, bobWallet.address, 100);
+      const result = await utilityChecker.checkTransfer(token.target, aliceWallet.address, bobWallet.address, 100);
       expect(result[0]).to.be.equal(true);
       expect(result[1]).to.be.equal(false);
       expect(result[2]).to.be.equal(true);
@@ -129,7 +129,7 @@ describe('UtilityChecker.testTransfer', () => {
       await deployComplianceAndTestModule(token, deployer);
       const utilityChecker = await ethers.deployContract('UtilityChecker');
 
-      const result = await utilityChecker.testTransfer(token.target, aliceWallet.address, charlieWallet.address, 100);
+      const result = await utilityChecker.checkTransfer(token.target, aliceWallet.address, charlieWallet.address, 100);
       expect(result[0]).to.be.equal(true);
       expect(result[1]).to.be.equal(false);
       expect(result[2]).to.be.equal(true);
@@ -147,7 +147,7 @@ describe('UtilityChecker.testTransfer', () => {
       await identityRegistry.connect(tokenAgent).updateCountry(bobWallet.address, 42);
 
       const utilityChecker = await ethers.deployContract('UtilityChecker');
-      const result = await utilityChecker.testTransfer(token.target, aliceWallet.address, bobWallet.address, 100);
+      const result = await utilityChecker.checkTransfer(token.target, aliceWallet.address, bobWallet.address, 100);
       expect(result[0]).to.be.equal(true);
       expect(result[1]).to.be.equal(true);
       expect(result[2]).to.be.equal(true);

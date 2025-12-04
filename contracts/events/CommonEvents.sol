@@ -63,7 +63,6 @@
 
 pragma solidity 0.8.30;
 
-
 /// event emitted when the implementation authority of the factory contract is set
 event ImplementationAuthoritySet(address _implementationAuthority);
 

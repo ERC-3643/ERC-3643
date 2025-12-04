@@ -49,6 +49,7 @@ event ClaimTopicAdded(uint256 indexed _claimTopic);
 event ClaimTopicRemoved(uint256 indexed _claimTopic);
 
 interface IERC3643ClaimTopicsRegistry {
+
     /**
      * @dev Add a trusted claim topic (For example: KYC=1, AML=2).
      * Only owner can call.
@@ -71,4 +72,5 @@ interface IERC3643ClaimTopicsRegistry {
      *  @return Array of trusted claim topics
      */
     function getClaimTopics() external view returns (uint256[] memory);
+
 }

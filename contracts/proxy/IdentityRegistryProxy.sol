@@ -62,8 +62,8 @@
 
 pragma solidity 0.8.30;
 
-import "./AbstractProxy.sol";
 import "../errors/CommonErrors.sol";
+import "./AbstractProxy.sol";
 
 contract IdentityRegistryProxy is AbstractProxy {
 
@@ -74,23 +74,21 @@ contract IdentityRegistryProxy is AbstractProxy {
         address _identityStorage
     ) {
         require(
-        implementationAuthority != address(0)
-        && _trustedIssuersRegistry != address(0)
-        && _claimTopicsRegistry != address(0)
-        && _identityStorage != address(0)
-        , ZeroAddress());
+            implementationAuthority != address(0) && _trustedIssuersRegistry != address(0)
+                && _claimTopicsRegistry != address(0) && _identityStorage != address(0),
+            ZeroAddress()
+        );
         _storeImplementationAuthority(implementationAuthority);
         emit ImplementationAuthoritySet(implementationAuthority);
 
         address logic = (ITREXImplementationAuthority(getImplementationAuthority())).getIRImplementation();
 
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, ) = logic.delegatecall(
+        (bool success,) = logic.delegatecall(
             abi.encodeWithSignature(
-                    "init(address,address,address)",
-                    _trustedIssuersRegistry,
-                    _claimTopicsRegistry,
-                    _identityStorage));
+                "init(address,address,address)", _trustedIssuersRegistry, _claimTopicsRegistry, _identityStorage
+            )
+        );
         require(success, InitializationFailed());
     }
 
@@ -113,4 +111,5 @@ contract IdentityRegistryProxy is AbstractProxy {
             }
         }
     }
+
 }

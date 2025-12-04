@@ -55,7 +55,6 @@ event TrustedIssuerRemoved(IClaimIssuer indexed _trustedIssuer);
 /// @param _claimTopics is the set of claims that the trusted issuer is allowed to emit.
 event ClaimTopicsUpdated(IClaimIssuer indexed _trustedIssuer, uint256[] _claimTopics);
 
-
 interface IERC3643TrustedIssuersRegistry {
 
     // Functions
@@ -133,4 +132,5 @@ interface IERC3643TrustedIssuersRegistry {
      *  @return true if the issuer is trusted for this claim topic.
      */
     function hasClaimTopic(address _issuer, uint256 _claimTopic) external view returns (bool);
+
 }

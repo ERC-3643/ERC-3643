@@ -67,7 +67,6 @@ import "./TREXImplementationAuthority.sol";
 contract IAFactory is IIAFactory, IERC165 {
 
     /// variables
-
     /// address of the trex factory
     address private _trexFactory;
 
@@ -80,18 +79,18 @@ contract IAFactory is IIAFactory, IERC165 {
 
     /// functions
 
-    constructor (address trexFactory) {
+    constructor(address trexFactory) {
         _trexFactory = trexFactory;
     }
 
     /**
      *  @dev See {IIAFactory-deployIA}.
      */
-    function deployIA(address _token) external override returns (address){
-        require(ITREXFactory(_trexFactory).getImplementationAuthority() == msg.sender,
-            OnlyReferenceIACanDeploy());
-        TREXImplementationAuthority _newIA =
-        new TREXImplementationAuthority(false, ITREXImplementationAuthority(msg.sender).getTREXFactory(), address(this));
+    function deployIA(address _token) external override returns (address) {
+        require(ITREXFactory(_trexFactory).getImplementationAuthority() == msg.sender, OnlyReferenceIACanDeploy());
+        TREXImplementationAuthority _newIA = new TREXImplementationAuthority(
+            false, ITREXImplementationAuthority(msg.sender).getTREXFactory(), address(this)
+        );
         _newIA.fetchVersion(ITREXImplementationAuthority(msg.sender).getCurrentVersion());
         _newIA.useTREXVersion(ITREXImplementationAuthority(msg.sender).getCurrentVersion());
         Ownable(_newIA).transferOwnership(Ownable(_token).owner());
@@ -111,8 +110,7 @@ contract IAFactory is IIAFactory, IERC165 {
      *  @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(bytes4 interfaceId) public pure virtual override returns (bool) {
-        return
-            interfaceId == type(IIAFactory).interfaceId ||
-            interfaceId == type(IERC165).interfaceId;
+        return interfaceId == type(IIAFactory).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
+
 }
