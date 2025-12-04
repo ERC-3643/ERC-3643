@@ -67,6 +67,6 @@ library IdentityRegistryStorageRolesLib {
 
     uint64 constant ROLE_PREFIX = uint64(uint256(keccak256("IdentityRegistryStorage"))) << 32;
 
-    uint64 constant ADMIN = ROLE_PREFIX + 0;
+    uint64 constant AGENT = ROLE_PREFIX + 0;
 
 }

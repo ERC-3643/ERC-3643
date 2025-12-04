@@ -62,8 +62,12 @@
 
 pragma solidity 0.8.30;
 
-import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {
+    AccessManagedUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
+import { IAccessManager } from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import { ERC3643EventsLib } from "../../ERC-3643/ERC3643EventsLib.sol";
 import { IERC3643Compliance } from "../../ERC-3643/IERC3643Compliance.sol";
@@ -71,16 +75,19 @@ import { ErrorsLib } from "../../libraries/ErrorsLib.sol";
 import { EventsLib } from "../../libraries/EventsLib.sol";
 import { IERC173 } from "../../roles/IERC173.sol";
 import { IModularCompliance } from "./IModularCompliance.sol";
+import { ModularComplianceRolesLib } from "./access/ModularComplianceRolesLib.sol";
 import { IModule } from "./modules/IModule.sol";
 
-contract ModularCompliance is IModularCompliance, Ownable2StepUpgradeable, IERC165 {
+contract ModularCompliance is IModularCompliance, AccessManagedUpgradeable, IERC165 {
+
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @custom:storage-location erc7201:ERC3643.storage.ModularCompliance
     struct Storage {
         /// token linked to the compliance contract
         address tokenBound;
         /// Array of modules bound to the compliance
-        address[] modules;
+        EnumerableSet.AddressSet modules;
         /// Mapping of module binding status
         mapping(address => bool) moduleBound;
     }
@@ -88,10 +95,10 @@ contract ModularCompliance is IModularCompliance, Ownable2StepUpgradeable, IERC1
     // keccak256(abi.encode(uint256(keccak256("ERC3643.storage.ModularCompliance")) - 1)) & ~bytes32(uint256(0xff));
     bytes32 private constant STORAGE_LOCATION = 0x44b49c37d3109105ef492022bec834e94dca859d191a0d5323d3afbc4aa69400;
 
+    uint256 private constant MAX_MODULES = 25;
+
     /// modifiers
-    /**
-     * @dev Throws if called by any address that is not a token bound to the compliance.
-     */
+    /// @dev Throws if called by any address that is not a token bound to the compliance.
     modifier onlyBoundedToken() {
         require(msg.sender == _getStorage().tokenBound, ErrorsLib.AddressNotATokenBoundToComplianceContract());
         _;
@@ -101,101 +108,83 @@ contract ModularCompliance is IModularCompliance, Ownable2StepUpgradeable, IERC1
         _disableInitializers();
     }
 
-    function init() external initializer {
-        __Ownable_init(msg.sender);
+    function init(address accessManager) external initializer {
+        __AccessManaged_init(accessManager);
     }
 
-    /**
-     *  @dev See {IERC3643Compliance-bindToken}.
-     */
-    function bindToken(address _token) external override {
+    /// @inheritdoc IERC3643Compliance
+    function bindToken(address token) external override {
         Storage storage s = _getStorage();
         require(
-            owner() == msg.sender || (s.tokenBound == address(0) && msg.sender == _token),
+            _isAdmin(msg.sender) || (s.tokenBound == address(0) && msg.sender == token),
             ErrorsLib.OnlyOwnerOrTokenCanCall()
         );
-        require(_token != address(0), ErrorsLib.ZeroAddress());
-        s.tokenBound = _token;
-        emit ERC3643EventsLib.TokenBound(_token);
+        require(token != address(0), ErrorsLib.ZeroAddress());
+        s.tokenBound = token;
+        emit ERC3643EventsLib.TokenBound(token);
     }
 
-    /**
-     *  @dev See {IERC3643Compliance-unbindToken}.
-     */
-    function unbindToken(address _token) external override {
-        require(owner() == msg.sender || msg.sender == _token, ErrorsLib.OnlyOwnerOrTokenCanCall());
+    /// @inheritdoc IERC3643Compliance
+    function unbindToken(address token) external override {
+        require(_isAdmin(msg.sender) || msg.sender == token, ErrorsLib.OnlyOwnerOrTokenCanCall());
 
         Storage storage s = _getStorage();
-        require(_token == s.tokenBound, ErrorsLib.TokenNotBound());
-        require(_token != address(0), ErrorsLib.ZeroAddress());
+        require(token == s.tokenBound, ErrorsLib.TokenNotBound());
+        require(token != address(0), ErrorsLib.ZeroAddress());
+
         delete s.tokenBound;
-        emit ERC3643EventsLib.TokenUnbound(_token);
+        emit ERC3643EventsLib.TokenUnbound(token);
     }
 
-    /**
-     *  @dev See {IModularCompliance-removeModule}.
-     */
-    function removeModule(address _module) external override onlyOwner {
+    /// @inheritdoc IModularCompliance
+    function removeModule(address _module) external override restricted {
         require(_module != address(0), ErrorsLib.ZeroAddress());
 
         Storage storage s = _getStorage();
         require(s.moduleBound[_module], ErrorsLib.ModuleNotBound());
-        uint256 length = s.modules.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (s.modules[i] == _module) {
-                IModule(_module).unbindCompliance(address(this));
-                s.modules[i] = s.modules[length - 1];
-                s.modules.pop();
-                s.moduleBound[_module] = false;
-                emit EventsLib.ModuleRemoved(_module);
-                break;
-            }
-        }
+
+        IModule(_module).unbindCompliance(address(this));
+        s.modules.remove(_module);
+        s.moduleBound[_module] = false;
+
+        emit EventsLib.ModuleRemoved(_module);
     }
 
-    /**
-     *  @dev See {IERC3643Compliance-transferred}.
-     */
+    /// @inheritdoc IERC3643Compliance
     function transferred(address _from, address _to, uint256 _value) external override onlyBoundedToken {
         require(_from != address(0) && _to != address(0), ErrorsLib.ZeroAddress());
         require(_value > 0, ErrorsLib.ZeroValue());
-        Storage storage s = _getStorage();
-        uint256 length = s.modules.length;
-        for (uint256 i = 0; i < length; i++) {
-            IModule(s.modules[i]).moduleTransferAction(_from, _to, _value);
+
+        EnumerableSet.AddressSet storage modules = _getStorage().modules;
+        for (uint256 i = 0; i < modules.length(); i++) {
+            IModule(modules.at(i)).moduleTransferAction(_from, _to, _value);
         }
     }
 
-    /**
-     *  @dev See {IERC3643Compliance-created}.
-     */
+    /// @inheritdoc IERC3643Compliance
     function created(address _to, uint256 _value) external override onlyBoundedToken {
         require(_to != address(0), ErrorsLib.ZeroAddress());
         require(_value > 0, ErrorsLib.ZeroValue());
-        Storage storage s = _getStorage();
-        uint256 length = s.modules.length;
-        for (uint256 i = 0; i < length; i++) {
-            IModule(s.modules[i]).moduleMintAction(_to, _value);
+
+        EnumerableSet.AddressSet storage modules = _getStorage().modules;
+        for (uint256 i = 0; i < modules.length(); i++) {
+            IModule(modules.at(i)).moduleMintAction(_to, _value);
         }
     }
 
-    /**
-     *  @dev See {IERC3643Compliance-destroyed}.
-     */
+    /// @inheritdoc IERC3643Compliance
     function destroyed(address _from, uint256 _value) external override onlyBoundedToken {
         require(_from != address(0), ErrorsLib.ZeroAddress());
         require(_value > 0, ErrorsLib.ZeroValue());
-        Storage storage s = _getStorage();
-        uint256 length = s.modules.length;
-        for (uint256 i = 0; i < length; i++) {
-            IModule(s.modules[i]).moduleBurnAction(_from, _value);
+
+        EnumerableSet.AddressSet storage modules = _getStorage().modules;
+        for (uint256 i = 0; i < modules.length(); i++) {
+            IModule(modules.at(i)).moduleBurnAction(_from, _value);
         }
     }
 
-    /**
-     *  @dev See {IModularCompliance-addAndSetModule}.
-     */
-    function addAndSetModule(address _module, bytes[] calldata _interactions) external override onlyOwner {
+    /// @inheritdoc IModularCompliance
+    function addAndSetModule(address _module, bytes[] calldata _interactions) external override restricted {
         require(_interactions.length <= 5, ErrorsLib.ArraySizeLimited(5));
         addModule(_module);
         for (uint256 i = 0; i < _interactions.length; i++) {
@@ -203,42 +192,31 @@ contract ModularCompliance is IModularCompliance, Ownable2StepUpgradeable, IERC1
         }
     }
 
-    /**
-     *  @dev See {IModularCompliance-isModuleBound}.
-     */
+    /// @inheritdoc IModularCompliance
     function isModuleBound(address _module) external view override returns (bool) {
         return _getStorage().moduleBound[_module];
     }
 
-    /**
-     *  @dev See {IModularCompliance-getModules}.
-     */
+    /// @inheritdoc IModularCompliance
     function getModules() external view override returns (address[] memory) {
-        return _getStorage().modules;
+        return _getStorage().modules.values();
     }
 
-    /**
-     *  @dev See {IERC3643Compliance-getTokenBound}.
-     */
+    /// @inheritdoc IERC3643Compliance
     function getTokenBound() external view override returns (address) {
         return _getStorage().tokenBound;
     }
 
-    /**
-     *  @dev See {IERC3643Compliance-getTokenBound}.
-     */
+    /// @inheritdoc IERC3643Compliance
     function isTokenBound(address _token) external view override returns (bool) {
         return _token == _getStorage().tokenBound;
     }
 
-    /**
-     *  @dev See {IERC3643Compliance-canTransfer}.
-     */
+    /// @inheritdoc IERC3643Compliance
     function canTransfer(address _from, address _to, uint256 _value) external view override returns (bool) {
-        Storage storage s = _getStorage();
-        uint256 length = s.modules.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (!IModule(s.modules[i]).moduleCheck(_from, _to, _value, address(this))) {
+        EnumerableSet.AddressSet storage modules = _getStorage().modules;
+        for (uint256 i = 0; i < modules.length(); i++) {
+            if (!IModule(modules.at(i)).moduleCheck(_from, _to, _value, address(this))) {
                 return false;
             }
         }
@@ -246,14 +224,12 @@ contract ModularCompliance is IModularCompliance, Ownable2StepUpgradeable, IERC1
         return true;
     }
 
-    /**
-     *  @dev See {IModularCompliance-addModule}.
-     */
-    function addModule(address _module) public override onlyOwner {
+    /// @inheritdoc IModularCompliance
+    function addModule(address _module) public override restricted {
         require(_module != address(0), ErrorsLib.ZeroAddress());
         Storage storage s = _getStorage();
         require(!s.moduleBound[_module], ErrorsLib.ModuleAlreadyBound());
-        require(s.modules.length <= 24, ErrorsLib.MaxModulesReached(25));
+        require(s.modules.length() < MAX_MODULES, ErrorsLib.MaxModulesReached(MAX_MODULES));
         IModule module = IModule(_module);
         require(
             module.isPlugAndPlay() || module.canComplianceBind(address(this)),
@@ -261,15 +237,13 @@ contract ModularCompliance is IModularCompliance, Ownable2StepUpgradeable, IERC1
         );
 
         module.bindCompliance(address(this));
-        s.modules.push(_module);
+        s.modules.add(_module);
         s.moduleBound[_module] = true;
         emit EventsLib.ModuleAdded(_module);
     }
 
-    /**
-     *  @dev see {IModularCompliance-callModuleFunction}.
-     */
-    function callModuleFunction(bytes calldata callData, address _module) public override onlyOwner {
+    /// @inheritdoc IModularCompliance
+    function callModuleFunction(bytes calldata callData, address _module) public override restricted {
         require(_getStorage().moduleBound[_module], ErrorsLib.ModuleNotBound());
         // NOTE: Use assembly to call the interaction instead of a low level
         // call for two reasons:
@@ -303,9 +277,7 @@ contract ModularCompliance is IModularCompliance, Ownable2StepUpgradeable, IERC1
         emit EventsLib.ModuleInteraction(_module, _selector(callData));
     }
 
-    /**
-     *  @dev See {IERC165-supportsInterface}.
-     */
+    /// @inheritdoc IERC165
     function supportsInterface(bytes4 interfaceId) public pure virtual override returns (bool) {
         return interfaceId == type(IModularCompliance).interfaceId
             || interfaceId == type(IERC3643Compliance).interfaceId || interfaceId == type(IERC173).interfaceId
@@ -327,6 +299,10 @@ contract ModularCompliance is IModularCompliance, Ownable2StepUpgradeable, IERC1
                 result := calldataload(callData.offset)
             }
         }
+    }
+
+    function _isAdmin(address user) internal view returns (bool isAdmin) {
+        (isAdmin,) = IAccessManager(authority()).hasRole(ModularComplianceRolesLib.ADMIN, user);
     }
 
     function _getStorage() internal pure returns (Storage storage s) {

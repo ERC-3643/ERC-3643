@@ -63,41 +63,10 @@
 
 pragma solidity 0.8.30;
 
-import { ErrorsLib } from "../libraries/ErrorsLib.sol";
+library ClaimTopicsRegistryRolesLib {
 
-/**
- * @title Roles
- * @dev Library for managing addresses assigned to a Role.
- */
-library Roles {
+    uint64 constant ROLE_PREFIX = uint64(uint256(keccak256("ClaimTopicsRegistry"))) << 32;
 
-    struct Role {
-        mapping(address => bool) bearer;
-    }
-
-    /**
-     * @dev Give an account access to this role.
-     */
-    function add(Role storage role, address account) internal {
-        require(!has(role, account), ErrorsLib.AccountAlreadyHasRole());
-        role.bearer[account] = true;
-    }
-
-    /**
-     * @dev Remove an account's access to this role.
-     */
-    function remove(Role storage role, address account) internal {
-        require(has(role, account), ErrorsLib.AccountDoesNotHaveRole());
-        role.bearer[account] = false;
-    }
-
-    /**
-     * @dev Check if an account has this role.
-     * @return bool
-     */
-    function has(Role storage role, address account) internal view returns (bool) {
-        require(account != address(0), ErrorsLib.ZeroAddress());
-        return role.bearer[account];
-    }
+    uint64 constant ADMIN = ROLE_PREFIX + 0;
 
 }

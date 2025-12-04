@@ -78,8 +78,8 @@ contract ModuleNotPnP is AbstractModuleUpgradeable {
      * @dev initializes the contract and sets the initial state.
      * @notice This function should only be called once during the contract deployment.
      */
-    function initialize() external initializer {
-        __AbstractModule_init();
+    function initialize(address accessManager) external initializer {
+        __AbstractModule_init(accessManager);
     }
 
     function doSomething(uint256 _value) external onlyComplianceCall {

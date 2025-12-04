@@ -104,124 +104,103 @@ contract IdentityRegistryStorage is IIdentityRegistryStorage, AccessManagedUpgra
         __AccessManaged_init(accessManager);
     }
 
-    /**
-     *  @dev See {IIdentityRegistryStorage-addIdentityToStorage}.
-     */
-    function addIdentityToStorage(address _userAddress, IIdentity _identity, uint16 _country)
+    /// @inheritdoc IERC3643IdentityRegistryStorage
+    function addIdentityToStorage(address userAddress, IIdentity identity, uint16 country)
         external
         override
         restricted
     {
-        require(_userAddress != address(0) && address(_identity) != address(0), ErrorsLib.ZeroAddress());
+        require(userAddress != address(0) && address(identity) != address(0), ErrorsLib.ZeroAddress());
 
         Storage storage s = _getStorage();
-        require(address(s.identities[_userAddress].identityContract) == address(0), ErrorsLib.AddressAlreadyStored());
-        s.identities[_userAddress].identityContract = _identity;
-        s.identities[_userAddress].investorCountry = _country;
-        emit ERC3643EventsLib.IdentityStored(_userAddress, _identity);
+        require(address(s.identities[userAddress].identityContract) == address(0), ErrorsLib.AddressAlreadyStored());
+        s.identities[userAddress].identityContract = identity;
+        s.identities[userAddress].investorCountry = country;
+        emit ERC3643EventsLib.IdentityStored(userAddress, identity);
     }
 
-    /**
-     *  @dev See {IIdentityRegistryStorage-modifyStoredIdentity}.
-     */
-    function modifyStoredIdentity(address _userAddress, IIdentity _identity) external override restricted {
-        require(_userAddress != address(0) && address(_identity) != address(0), ErrorsLib.ZeroAddress());
+    /// @inheritdoc IERC3643IdentityRegistryStorage
+    function modifyStoredIdentity(address userAddress, IIdentity identity) external override restricted {
+        require(userAddress != address(0) && address(identity) != address(0), ErrorsLib.ZeroAddress());
         Storage storage s = _getStorage();
-        require(address(s.identities[_userAddress].identityContract) != address(0), ErrorsLib.AddressNotYetStored());
-        IIdentity oldIdentity = s.identities[_userAddress].identityContract;
-        s.identities[_userAddress].identityContract = _identity;
-        emit ERC3643EventsLib.IdentityModified(oldIdentity, _identity);
+        require(address(s.identities[userAddress].identityContract) != address(0), ErrorsLib.AddressNotYetStored());
+        IIdentity oldIdentity = s.identities[userAddress].identityContract;
+        s.identities[userAddress].identityContract = identity;
+        emit ERC3643EventsLib.IdentityModified(oldIdentity, identity);
     }
 
-    /**
-     *  @dev See {IIdentityRegistryStorage-modifyStoredInvestorCountry}.
-     */
-    function modifyStoredInvestorCountry(address _userAddress, uint16 _country) external override restricted {
-        require(_userAddress != address(0), ErrorsLib.ZeroAddress());
+    /// @inheritdoc IERC3643IdentityRegistryStorage
+    function modifyStoredInvestorCountry(address userAddress, uint16 country) external override restricted {
+        require(userAddress != address(0), ErrorsLib.ZeroAddress());
         Storage storage s = _getStorage();
-        require(address(s.identities[_userAddress].identityContract) != address(0), ErrorsLib.AddressNotYetStored());
-        s.identities[_userAddress].investorCountry = _country;
-        emit ERC3643EventsLib.CountryModified(_userAddress, _country);
+        require(address(s.identities[userAddress].identityContract) != address(0), ErrorsLib.AddressNotYetStored());
+        s.identities[userAddress].investorCountry = country;
+        emit ERC3643EventsLib.CountryModified(userAddress, country);
     }
 
-    /**
-     *  @dev See {IIdentityRegistryStorage-removeIdentityFromStorage}.
-     */
-    function removeIdentityFromStorage(address _userAddress) external override restricted {
-        require(_userAddress != address(0), ErrorsLib.ZeroAddress());
+    /// @inheritdoc IERC3643IdentityRegistryStorage
+    function removeIdentityFromStorage(address userAddress) external override restricted {
+        require(userAddress != address(0), ErrorsLib.ZeroAddress());
         Storage storage s = _getStorage();
-        require(address(s.identities[_userAddress].identityContract) != address(0), ErrorsLib.AddressNotYetStored());
-        IIdentity oldIdentity = s.identities[_userAddress].identityContract;
-        delete s.identities[_userAddress];
-        emit ERC3643EventsLib.IdentityUnstored(_userAddress, oldIdentity);
+        require(address(s.identities[userAddress].identityContract) != address(0), ErrorsLib.AddressNotYetStored());
+        IIdentity oldIdentity = s.identities[userAddress].identityContract;
+        delete s.identities[userAddress];
+        emit ERC3643EventsLib.IdentityUnstored(userAddress, oldIdentity);
     }
 
-    /**
-     *  @dev See {IIdentityRegistryStorage-bindIdentityRegistry}.
-     */
-    function bindIdentityRegistry(address _identityRegistry) external override restricted {
-        require(_identityRegistry != address(0), ErrorsLib.ZeroAddress());
+    /// @inheritdoc IERC3643IdentityRegistryStorage
+    function bindIdentityRegistry(address identityRegistry) external override restricted {
+        require(identityRegistry != address(0), ErrorsLib.ZeroAddress());
         Storage storage s = _getStorage();
         require(s.identityRegistries.length < 300, ErrorsLib.MaxIRByIRSReached(300));
 
-        IAccessManager(authority()).grantRole(IdentityRegistryStorageRolesLib.ADMIN, _identityRegistry, 0);
+        IAccessManager(authority()).grantRole(IdentityRegistryStorageRolesLib.AGENT, identityRegistry, 0);
 
-        s.identityRegistries.push(_identityRegistry);
-        emit ERC3643EventsLib.IdentityRegistryBound(_identityRegistry);
+        s.identityRegistries.push(identityRegistry);
+        emit ERC3643EventsLib.IdentityRegistryBound(identityRegistry);
     }
 
-    /**
-     *  @dev See {IIdentityRegistryStorage-unbindIdentityRegistry}.
-     */
-    function unbindIdentityRegistry(address _identityRegistry) external override restricted {
-        require(_identityRegistry != address(0), ErrorsLib.ZeroAddress());
+    /// @inheritdoc IERC3643IdentityRegistryStorage
+    function unbindIdentityRegistry(address identityRegistry) external override restricted {
+        require(identityRegistry != address(0), ErrorsLib.ZeroAddress());
         Storage storage s = _getStorage();
         require(s.identityRegistries.length > 0, ErrorsLib.IdentityRegistryNotStored());
         uint256 length = s.identityRegistries.length;
         for (uint256 i = 0; i < length; i++) {
-            if (s.identityRegistries[i] == _identityRegistry) {
+            if (s.identityRegistries[i] == identityRegistry) {
                 s.identityRegistries[i] = s.identityRegistries[length - 1];
                 s.identityRegistries.pop();
                 break;
             }
         }
 
-        IAccessManager(authority()).revokeRole(IdentityRegistryStorageRolesLib.ADMIN, _identityRegistry);
+        IAccessManager(authority()).revokeRole(IdentityRegistryStorageRolesLib.AGENT, identityRegistry);
 
-        emit ERC3643EventsLib.IdentityRegistryUnbound(_identityRegistry);
+        emit ERC3643EventsLib.IdentityRegistryUnbound(identityRegistry);
     }
 
-    /**
-     *  @dev See {IIdentityRegistryStorage-linkedIdentityRegistries}.
-     */
+    /// @inheritdoc IERC3643IdentityRegistryStorage
     function linkedIdentityRegistries() external view override returns (address[] memory) {
         return _getStorage().identityRegistries;
     }
 
-    /**
-     *  @dev See {IIdentityRegistryStorage-storedIdentity}.
-     */
-    function storedIdentity(address _userAddress) external view override returns (IIdentity) {
-        return _getStorage().identities[_userAddress].identityContract;
+    /// @inheritdoc IERC3643IdentityRegistryStorage
+    function storedIdentity(address userAddress) external view override returns (IIdentity) {
+        return _getStorage().identities[userAddress].identityContract;
     }
 
-    /**
-     *  @dev See {IIdentityRegistryStorage-storedInvestorCountry}.
-     */
-    function storedInvestorCountry(address _userAddress) external view override returns (uint16) {
-        return _getStorage().identities[_userAddress].investorCountry;
+    /// @inheritdoc IERC3643IdentityRegistryStorage
+    function storedInvestorCountry(address userAddress) external view override returns (uint16) {
+        return _getStorage().identities[userAddress].investorCountry;
     }
 
-    /**
-     *  @dev See {IERC165-supportsInterface}.
-     */
+    /// @inheritdoc IERC165
     function supportsInterface(bytes4 interfaceId) public pure virtual override returns (bool) {
         return interfaceId == type(IERC3643IdentityRegistryStorage).interfaceId
             || interfaceId == type(IERC173).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
 
     function _getStorage() internal pure returns (Storage storage s) {
-        // solhint-disable-next-line no-inline-assembly
         assembly {
             s.slot := STORAGE_LOCATION
         }

@@ -63,43 +63,26 @@
 
 pragma solidity 0.8.30;
 
-import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import { IAccessManager } from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 
-import { ErrorsLib } from "../libraries/ErrorsLib.sol";
-import { EventsLib } from "../libraries/EventsLib.sol";
-import { Roles } from "./Roles.sol";
+import { ModularCompliance } from "../ModularCompliance.sol";
+import { ModularComplianceRolesLib } from "./ModularComplianceRolesLib.sol";
 
-/* ---- TODO ----
+/// @title ModularComplianceAccessManagerSetupLib
+/// @notice Library for setting up roles and functions in AccessManager for the ModularCompliance contract
+library ModularComplianceAccessManagerSetupLib {
 
-    Work in progress while transitioning to AccessManager
+    function setupRoles(IAccessManager accessManager, address mc) internal {
+        // ------ ADMIN role ------
+        bytes4[] memory functions = new bytes4[](4);
+        functions[0] = ModularCompliance.addAndSetModule.selector;
+        functions[1] = ModularCompliance.addModule.selector;
+        functions[2] = ModularCompliance.removeModule.selector;
+        functions[3] = ModularCompliance.callModuleFunction.selector;
+        accessManager.setTargetFunctionRole(mc, functions, ModularComplianceRolesLib.ADMIN);
 
-*/
-
-contract AgentRoleUpgradeable is Ownable2StepUpgradeable {
-
-    using Roles for Roles.Role;
-
-    Roles.Role private _agents;
-
-    modifier onlyAgent() {
-        require(isAgent(msg.sender), ErrorsLib.CallerDoesNotHaveAgentRole());
-        _;
-    }
-
-    function addAgent(address _agent) public onlyOwner {
-        require(_agent != address(0), ErrorsLib.ZeroAddress());
-        _agents.add(_agent);
-        emit EventsLib.AgentAdded(_agent);
-    }
-
-    function removeAgent(address _agent) public onlyOwner {
-        require(_agent != address(0), ErrorsLib.ZeroAddress());
-        _agents.remove(_agent);
-        emit EventsLib.AgentRemoved(_agent);
-    }
-
-    function isAgent(address _agent) public view returns (bool) {
-        return _agents.has(_agent);
+        // ------ Labeling roles ------
+        accessManager.labelRole(ModularComplianceRolesLib.ADMIN, "ModularCompliance Admin");
     }
 
 }

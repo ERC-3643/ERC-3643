@@ -62,7 +62,9 @@
 
 pragma solidity 0.8.30;
 
-import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {
+    AccessManagedUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { MulticallUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
@@ -76,7 +78,7 @@ import { IModule } from "./IModule.sol";
 abstract contract AbstractModuleUpgradeable is
     IModule,
     Initializable,
-    Ownable2StepUpgradeable,
+    AccessManagedUpgradeable,
     UUPSUpgradeable,
     MulticallUpgradeable,
     IERC165
@@ -121,10 +123,11 @@ abstract contract AbstractModuleUpgradeable is
      *  @dev See {IModule-bindCompliance}.
      */
     function bindCompliance(address _compliance) external override onlyProxy {
-        AbstractModuleStorage storage s = _getAbstractModuleStorage();
         require(_compliance != address(0), ErrorsLib.ZeroAddress());
+        AbstractModuleStorage storage s = _getAbstractModuleStorage();
         require(!s.complianceBound[_compliance], ErrorsLib.ComplianceAlreadyBound());
         require(msg.sender == _compliance, ErrorsLib.OnlyComplianceContractCanCall());
+
         s.complianceBound[_compliance] = true;
         emit EventsLib.ComplianceBound(_compliance);
     }
@@ -133,10 +136,10 @@ abstract contract AbstractModuleUpgradeable is
      *  @dev See {IModule-unbindCompliance}.
      */
     function unbindCompliance(address _compliance) external override onlyComplianceCall onlyProxy {
-        AbstractModuleStorage storage s = _getAbstractModuleStorage();
         require(_compliance != address(0), ErrorsLib.ZeroAddress());
         require(msg.sender == _compliance, ErrorsLib.OnlyComplianceContractCanCall());
 
+        AbstractModuleStorage storage s = _getAbstractModuleStorage();
         s.complianceBound[_compliance] = false;
         s.nonces[_compliance]++;
 
@@ -147,13 +150,11 @@ abstract contract AbstractModuleUpgradeable is
      *  @dev See {IModule-isComplianceBound}.
      */
     function isComplianceBound(address _compliance) external view override returns (bool) {
-        AbstractModuleStorage storage s = _getAbstractModuleStorage();
-        return s.complianceBound[_compliance];
+        return _getAbstractModuleStorage().complianceBound[_compliance];
     }
 
     function getNonce(address _compliance) public view returns (uint256) {
-        AbstractModuleStorage storage s = _getAbstractModuleStorage();
-        return s.nonces[_compliance];
+        return _getAbstractModuleStorage().nonces[_compliance];
     }
 
     /**
@@ -164,27 +165,23 @@ abstract contract AbstractModuleUpgradeable is
             || interfaceId == type(IERC165).interfaceId;
     }
 
-    // solhint-disable-next-line func-name-mixedcase
-    function __AbstractModule_init() internal onlyInitializing {
-        __Ownable_init(msg.sender);
+    function __AbstractModule_init(address accessManager) internal onlyInitializing {
+        __AccessManaged_init(accessManager);
         __AbstractModule_init_unchained();
     }
 
-    // solhint-disable-next-line no-empty-blocks, func-name-mixedcase
     function __AbstractModule_init_unchained() internal onlyInitializing { }
 
-    // solhint-disable-next-line no-empty-blocks
     function _authorizeUpgrade(
         address /*newImplementation*/
     )
         internal
         virtual
         override
-        onlyOwner
+        restricted
     { }
 
     function _getAbstractModuleStorage() private pure returns (AbstractModuleStorage storage s) {
-        // solhint-disable-next-line no-inline-assembly
         assembly {
             s.slot := _ABSTRACT_MODULE_STORAGE_LOCATION
         }

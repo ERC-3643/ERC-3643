@@ -36,6 +36,7 @@
 //                                        +@@@@%-
 //                                        :#%%=
 //
+
 /**
  *     NOTICE
  *
@@ -62,99 +63,24 @@
 
 pragma solidity 0.8.30;
 
-import { AbstractModuleUpgradeable } from "contracts/compliance/modular/modules/AbstractModuleUpgradeable.sol";
+import { IAccessManager } from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 
-contract TestModule is AbstractModuleUpgradeable {
+import { ClaimTopicsRegistry } from "../implementation/ClaimTopicsRegistry.sol";
+import { ClaimTopicsRegistryRolesLib } from "./ClaimTopicsRegistryRolesLib.sol";
 
-    /// state variables
-    mapping(address => uint256) private _complianceData;
-    mapping(address => bool) private _blockedTransfers;
+/// @title ClaimTopicsRegistryAccessManagerSetupLib
+/// @notice Library for setting up roles and functions in AccessManager for the ClaimTopicsRegistry contract
+library ClaimTopicsRegistryAccessManagerSetupLib {
 
-    /// functions
+    function setupRoles(IAccessManager accessManager, address ctr) internal {
+        // ------ ADMIN role ------
+        bytes4[] memory functions = new bytes4[](2);
+        functions[0] = ClaimTopicsRegistry.addClaimTopic.selector;
+        functions[1] = ClaimTopicsRegistry.removeClaimTopic.selector;
+        accessManager.setTargetFunctionRole(ctr, functions, ClaimTopicsRegistryRolesLib.ADMIN);
 
-    /**
-     * @dev initializes the contract and sets the initial state.
-     * @notice This function should only be called once during the contract deployment.
-     */
-    function initialize(address accessManager) external initializer {
-        __AbstractModule_init(accessManager);
-    }
-
-    function doSomething(uint256 _value) external onlyComplianceCall {
-        _complianceData[msg.sender] = _value;
-    }
-
-    function blockModule(bool _blocked) external onlyComplianceCall {
-        _blockedTransfers[msg.sender] = _blocked;
-    }
-
-    function getComplianceData(address _compliance) external view returns (uint256) {
-        return _complianceData[_compliance];
-    }
-
-    function getBlockedTransfers(address _compliance) external view returns (bool) {
-        return _blockedTransfers[_compliance];
-    }
-
-    /**
-     *  @dev See {IModule-moduleTransferAction}.
-     *  no transfer action required in this module
-     */
-    function moduleTransferAction(address _from, address _to, uint256 _value) external override onlyComplianceCall { }
-
-    /**
-     *  @dev See {IModule-moduleMintAction}.
-     *  no mint action required in this module
-     */
-    function moduleMintAction(address _to, uint256 _value) external override onlyComplianceCall { }
-
-    /**
-     *  @dev See {IModule-moduleBurnAction}.
-     *  no burn action required in this module
-     */
-    function moduleBurnAction(address _from, uint256 _value) external override onlyComplianceCall { }
-
-    /**
-     *  @dev See {IModule-moduleCheck}.
-     *  always returns true (just a test module)
-     */
-    function moduleCheck(
-        address,
-        /*_from*/
-        address _to,
-        uint256 _value,
-        address _compliance
-    )
-        external
-        view
-        override
-        returns (bool)
-    {
-        if (_blockedTransfers[_compliance]) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     *  @dev See {IModule-canComplianceBind}.
-     */
-    function canComplianceBind(address _compliance) external view returns (bool) {
-        return true;
-    }
-
-    /**
-     *  @dev See {IModule-isPlugAndPlay}.
-     */
-    function isPlugAndPlay() external pure returns (bool) {
-        return true;
-    }
-
-    /**
-     *  @dev See {IModule-name}.
-     */
-    function name() public pure returns (string memory _name) {
-        return "TestModule";
+        // ------ Labeling roles ------
+        accessManager.labelRole(ClaimTopicsRegistryRolesLib.ADMIN, "ClaimTopicsRegistry Admin");
     }
 
 }

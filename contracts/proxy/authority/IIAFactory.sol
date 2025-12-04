@@ -68,6 +68,7 @@ interface IIAFactory {
     /**
      *  @dev deploy a new TREXImplementationAuthority smart contract
      *  @param _token the token for which the new IA will be used
+     *  @param accessManager the address of the access manager contract
      *  function called by the `changeImplementationAuthority` function
      *  can be called only by the reference TREXImplementationAuthority contract
      *  the new contract deployed will contain all the versions from reference IA
@@ -76,7 +77,7 @@ interface IIAFactory {
      *  emits a `ImplementationAuthorityDeployed` event
      *  returns the address of the IA contract deployed
      */
-    function deployIA(address _token) external returns (address);
+    function deployIA(address _token, address accessManager) external returns (address);
 
     /**
      *  @dev function used to know if an IA contract was deployed by the factory or not

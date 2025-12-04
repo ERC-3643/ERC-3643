@@ -73,7 +73,7 @@ import { IdentityRegistryStorageRolesLib } from "./IdentityRegistryStorageRolesL
 library IdentityRegistryStorageAccessManagerSetupLib {
 
     function setupRoles(IAccessManager accessManager, address irs) internal {
-        // ------ ADMIN role ------
+        // ------ AGENT role ------
         bytes4[] memory functions = new bytes4[](6);
         functions[0] = IdentityRegistryStorage.addIdentityToStorage.selector;
         functions[1] = IdentityRegistryStorage.modifyStoredIdentity.selector;
@@ -81,10 +81,10 @@ library IdentityRegistryStorageAccessManagerSetupLib {
         functions[3] = IdentityRegistryStorage.removeIdentityFromStorage.selector;
         functions[4] = IdentityRegistryStorage.bindIdentityRegistry.selector;
         functions[5] = IdentityRegistryStorage.unbindIdentityRegistry.selector;
-        accessManager.setTargetFunctionRole(irs, functions, IdentityRegistryStorageRolesLib.ADMIN);
+        accessManager.setTargetFunctionRole(irs, functions, IdentityRegistryStorageRolesLib.AGENT);
 
         // ------ Labeling roles ------
-        accessManager.labelRole(IdentityRegistryStorageRolesLib.ADMIN, "IdentityRegistryStorage Admin");
+        accessManager.labelRole(IdentityRegistryStorageRolesLib.AGENT, "IdentityRegistryStorage Agent");
     }
 
 }

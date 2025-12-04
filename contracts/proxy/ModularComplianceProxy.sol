@@ -64,14 +64,13 @@ pragma solidity 0.8.30;
 
 import { ModularCompliance } from "../compliance/modular/ModularCompliance.sol";
 import { ErrorsLib } from "../libraries/ErrorsLib.sol";
-import { EventsLib } from "../libraries/EventsLib.sol";
 import { AbstractProxy } from "./AbstractProxy.sol";
 import { ITREXImplementationAuthority } from "./authority/ITREXImplementationAuthority.sol";
 
 contract ModularComplianceProxy is AbstractProxy {
 
-    constructor(address implementationAuthority) AbstractProxy(implementationAuthority) {
-        (bool success,) = getLogic().delegatecall(abi.encodeCall(ModularCompliance.init, ()));
+    constructor(address implementationAuthority, address accessManager) AbstractProxy(implementationAuthority) {
+        (bool success,) = getLogic().delegatecall(abi.encodeCall(ModularCompliance.init, (accessManager)));
         require(success, ErrorsLib.InitializationFailed());
     }
 

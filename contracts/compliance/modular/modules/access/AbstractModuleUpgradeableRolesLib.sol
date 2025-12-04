@@ -63,58 +63,10 @@
 
 pragma solidity 0.8.30;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { AccessManaged } from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
-import { IAccessManager } from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
+library AbstractModuleUpgradeableRolesLib {
 
-import { ErrorsLib } from "../libraries/ErrorsLib.sol";
-import { TokenRolesLib } from "../token/access/TokenRolesLib.sol";
+    uint64 constant ROLE_PREFIX = uint64(uint256(keccak256("AbstractModuleUpgradeable"))) << 32;
 
-import { EventsLib } from "../libraries/EventsLib.sol";
-
-/* ---- TODO ----
-
-    Work in progress while transitioning to AccessManager
-
-*/
-
-contract AgentRole is Ownable, AccessManaged {
-
-    modifier onlyAgent() {
-        require(isAgent(msg.sender), ErrorsLib.CallerDoesNotHaveAgentRole());
-        _;
-    }
-
-    constructor(address accessManager) Ownable(msg.sender) AccessManaged(accessManager) { }
-
-    function addAgent(address _agent) public onlyOwner {
-        require(_agent != address(0), ErrorsLib.ZeroAddress());
-
-        IAccessManager accessManager = IAccessManager(authority());
-        accessManager.grantRole(TokenRolesLib.AGENT_MINTER, _agent, 0);
-        accessManager.grantRole(TokenRolesLib.AGENT_BURNER, _agent, 0);
-        accessManager.grantRole(TokenRolesLib.AGENT_PARTIAL_FREEZER, _agent, 0);
-        accessManager.grantRole(TokenRolesLib.AGENT_ADDRESS_FREEZER, _agent, 0);
-        accessManager.grantRole(TokenRolesLib.AGENT_RECOVERY_ADDRESS, _agent, 0);
-        accessManager.grantRole(TokenRolesLib.AGENT_FORCED_TRANSFER, _agent, 0);
-        accessManager.grantRole(TokenRolesLib.AGENT_PAUSER, _agent, 0);
-    }
-
-    function removeAgent(address _agent) public onlyOwner {
-        require(_agent != address(0), ErrorsLib.ZeroAddress());
-
-        IAccessManager accessManager = IAccessManager(authority());
-        accessManager.revokeRole(TokenRolesLib.AGENT_MINTER, _agent);
-        accessManager.revokeRole(TokenRolesLib.AGENT_BURNER, _agent);
-        accessManager.revokeRole(TokenRolesLib.AGENT_PARTIAL_FREEZER, _agent);
-        accessManager.revokeRole(TokenRolesLib.AGENT_ADDRESS_FREEZER, _agent);
-        accessManager.revokeRole(TokenRolesLib.AGENT_RECOVERY_ADDRESS, _agent);
-        accessManager.revokeRole(TokenRolesLib.AGENT_FORCED_TRANSFER, _agent);
-        accessManager.revokeRole(TokenRolesLib.AGENT_PAUSER, _agent);
-    }
-
-    function isAgent(address _agent) public view returns (bool) {
-        return false;
-    }
+    uint64 constant UPGRADER = ROLE_PREFIX + 99;
 
 }

@@ -36,33 +36,32 @@
 //                                        +@@@@%-
 //                                        :#%%=
 //
-/**
- *     NOTICE
- *
- *     The T-REX software is licensed under a proprietary license or the GPL v.3.
- *     If you choose to receive it under the GPL v.3 license, the following applies:
- *     T-REX is a suite of smart contracts implementing the ERC-3643 standard and
- *     developed by Tokeny to manage and transfer financial assets on EVM blockchains
- *
- *     Copyright (C) 2025, Tokeny sàrl.
- *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
- *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
- *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+///     NOTICE
+///
+///     The T-REX software is licensed under a proprietary license or the GPL v.3.
+///     If you choose to receive it under the GPL v.3 license, the following applies:
+///     T-REX is a suite of smart contracts implementing the ERC-3643 standard and
+///     developed by Tokeny to manage and transfer financial assets on EVM blockchains
+///
+///     Copyright (C) 2025, Tokeny sàrl.
+///
+///     This program is free software: you can redistribute it and/or modify
+///     it under the terms of the GNU General Public License as published by
+///     the Free Software Foundation, either version 3 of the License, or
+///     (at your option) any later version.
+///
+///     This program is distributed in the hope that it will be useful,
+///     but WITHOUT ANY WARRANTY; without even the implied warranty of
+///     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+///     GNU General Public License for more details.
+///
+///     You should have received a copy of the GNU General Public License
+///     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pragma solidity 0.8.30;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { AccessManaged, IAccessManaged } from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
+import { IAccessManager } from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 import { IERC3643IdentityRegistry } from "../../ERC-3643/IERC3643IdentityRegistry.sol";
@@ -75,7 +74,7 @@ import { IProxy } from "../interface/IProxy.sol";
 import { IIAFactory } from "./IIAFactory.sol";
 import { ITREXImplementationAuthority } from "./ITREXImplementationAuthority.sol";
 
-contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, IERC165 {
+contract TREXImplementationAuthority is ITREXImplementationAuthority, AccessManaged, IERC165 {
 
     /// variables
     /// current version
@@ -95,18 +94,18 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
 
     /// functions
 
-    /**
-     *  @dev Constructor of the ImplementationAuthority contract
-     *  @param referenceStatus boolean value determining if the contract
-     *  is the main IA or an auxiliary contract
-     *  @param trexFactory the address of TREXFactory referencing the main IA
-     *  if `referenceStatus` is true then `trexFactory` at deployment is set
-     *  on zero address. In that scenario, call `setTREXFactory` post-deployment
-     *  @param iaFactory the address for the factory of IA contracts
-     *  emits `ImplementationAuthoritySet` event
-     *  emits a `IAFactorySet` event
-     */
-    constructor(bool referenceStatus, address trexFactory, address iaFactory) Ownable(msg.sender) {
+    /// @dev Constructor of the ImplementationAuthority contract
+    /// @param referenceStatus boolean value determining if the contract
+    /// is the main IA or an auxiliary contract
+    /// @param trexFactory the address of TREXFactory referencing the main IA
+    /// if `referenceStatus` is true then `trexFactory` at deployment is set
+    /// on zero address. In that scenario, call `setTREXFactory` post-deployment
+    /// @param iaFactory the address for the factory of IA contracts
+    /// emits `ImplementationAuthoritySet` event
+    /// emits a `IAFactorySet` event
+    constructor(bool referenceStatus, address trexFactory, address iaFactory, address accessManager)
+        AccessManaged(accessManager)
+    {
         _reference = referenceStatus;
         _trexFactory = trexFactory;
         _iaFactory = iaFactory;
@@ -114,10 +113,8 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
         emit EventsLib.IAFactorySet(iaFactory);
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-setTREXFactory}.
-     */
-    function setTREXFactory(address trexFactory) external override onlyOwner {
+    /// @inheritdoc ITREXImplementationAuthority
+    function setTREXFactory(address trexFactory) external override restricted {
         require(
             isReferenceContract() && ITREXFactory(trexFactory).getImplementationAuthority() == address(this),
             ErrorsLib.OnlyReferenceContractCanCall()
@@ -126,10 +123,8 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
         emit EventsLib.TREXFactorySet(trexFactory);
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-setIAFactory}.
-     */
-    function setIAFactory(address iaFactory) external override onlyOwner {
+    /// @inheritdoc ITREXImplementationAuthority
+    function setIAFactory(address iaFactory) external override restricted {
         require(
             isReferenceContract() && ITREXFactory(_trexFactory).getImplementationAuthority() == address(this),
             ErrorsLib.OnlyReferenceContractCanCall()
@@ -138,17 +133,13 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
         emit EventsLib.IAFactorySet(iaFactory);
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-useTREXVersion}.
-     */
+    /// @inheritdoc ITREXImplementationAuthority
     function addAndUseTREXVersion(Version calldata _version, TREXContracts calldata _trex) external override {
         addTREXVersion(_version, _trex);
         useTREXVersion(_version);
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-fetchVersionList}.
-     */
+    /// @inheritdoc ITREXImplementationAuthority
     function fetchVersion(Version calldata _version) external override {
         require(!isReferenceContract(), ErrorsLib.CannotCallOnReferenceContract());
         require(
@@ -160,9 +151,7 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
         emit EventsLib.TREXVersionFetched(_version, _contracts[_versionToBytes(_version)]);
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-changeImplementationAuthority}.
-     */
+    /// @inheritdoc ITREXImplementationAuthority
     // solhint-disable-next-line code-complexity, function-max-lines
     function changeImplementationAuthority(address _token, address _newImplementationAuthority) external override {
         require(_token != address(0), ErrorsLib.ZeroAddress());
@@ -178,14 +167,12 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
 
         // calling this function requires ownership of ALL contracts of the T-REX suite
         require(
-            Ownable(_token).owner() == msg.sender && Ownable(_ir).owner() == msg.sender
-                && Ownable(_mc).owner() == msg.sender && Ownable(_irs).owner() == msg.sender
-                && Ownable(_ctr).owner() == msg.sender && Ownable(_tir).owner() == msg.sender,
+            _isAdmin(_token) && _isAdmin(_ir) && _isAdmin(_mc) && _isAdmin(_irs) && _isAdmin(_ctr) && _isAdmin(_tir),
             ErrorsLib.CallerNotOwnerOfAllImpactedContracts()
         );
 
         if (_newImplementationAuthority == address(0)) {
-            _newImplementationAuthority = IIAFactory(_iaFactory).deployIA(_token);
+            _newImplementationAuthority = IIAFactory(_iaFactory).deployIA(_token, authority());
         } else {
             require(
                 _versionToBytes(ITREXImplementationAuthority(_newImplementationAuthority).getCurrentVersion())
@@ -216,73 +203,53 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
         emit EventsLib.ImplementationAuthorityChanged(_token, _newImplementationAuthority);
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-getCurrentVersion}.
-     */
+    /// @inheritdoc ITREXImplementationAuthority
     function getCurrentVersion() external view override returns (Version memory) {
         return _currentVersion;
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-getContracts}.
-     */
+    /// @inheritdoc ITREXImplementationAuthority
     function getContracts(Version calldata _version) external view override returns (TREXContracts memory) {
         return _contracts[_versionToBytes(_version)];
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-getTREXFactory}.
-     */
+    /// @inheritdoc ITREXImplementationAuthority
     function getTREXFactory() external view override returns (address) {
         return _trexFactory;
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-getTokenImplementation}.
-     */
+    /// @inheritdoc ITREXImplementationAuthority
     function getTokenImplementation() external view override returns (address) {
         return _contracts[_versionToBytes(_currentVersion)].tokenImplementation;
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-getCTRImplementation}.
-     */
+    /// @inheritdoc ITREXImplementationAuthority
     function getCTRImplementation() external view override returns (address) {
         return _contracts[_versionToBytes(_currentVersion)].ctrImplementation;
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-getIRImplementation}.
-     */
+    /// @inheritdoc ITREXImplementationAuthority
     function getIRImplementation() external view override returns (address) {
         return _contracts[_versionToBytes(_currentVersion)].irImplementation;
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-getIRSImplementation}.
-     */
+    /// @inheritdoc ITREXImplementationAuthority
     function getIRSImplementation() external view override returns (address) {
         return _contracts[_versionToBytes(_currentVersion)].irsImplementation;
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-getTIRImplementation}.
-     */
+    /// @inheritdoc ITREXImplementationAuthority
     function getTIRImplementation() external view override returns (address) {
         return _contracts[_versionToBytes(_currentVersion)].tirImplementation;
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-getMCImplementation}.
-     */
+    /// @inheritdoc ITREXImplementationAuthority
     function getMCImplementation() external view override returns (address) {
         return _contracts[_versionToBytes(_currentVersion)].mcImplementation;
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-addTREXVersion}.
-     */
-    function addTREXVersion(Version calldata _version, TREXContracts calldata _trex) public override onlyOwner {
+    /// @inheritdoc ITREXImplementationAuthority
+    function addTREXVersion(Version calldata _version, TREXContracts calldata _trex) public override restricted {
         require(isReferenceContract(), ErrorsLib.OnlyReferenceContractCanCall());
         require(
             _contracts[_versionToBytes(_version)].tokenImplementation == address(0), ErrorsLib.VersionAlreadyExists()
@@ -299,10 +266,8 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
         emit EventsLib.TREXVersionAdded(_version, _trex);
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-useTREXVersion}.
-     */
-    function useTREXVersion(Version calldata _version) public override onlyOwner {
+    /// @inheritdoc ITREXImplementationAuthority
+    function useTREXVersion(Version calldata _version) public override restricted {
         require(_versionToBytes(_version) != _versionToBytes(_currentVersion), ErrorsLib.VersionAlreadyInUse());
         require(_contracts[_versionToBytes(_version)].tokenImplementation != address(0), ErrorsLib.NonExistingVersion());
 
@@ -310,31 +275,27 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable, I
         emit EventsLib.VersionUpdated(_version);
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-isReferenceContract}.
-     */
+    /// @inheritdoc ITREXImplementationAuthority
     function isReferenceContract() public view override returns (bool) {
         return _reference;
     }
 
-    /**
-     *  @dev See {ITREXImplementationAuthority-getReferenceContract}.
-     */
+    /// @inheritdoc ITREXImplementationAuthority
     function getReferenceContract() public view override returns (address) {
         return ITREXFactory(_trexFactory).getImplementationAuthority();
     }
 
-    /**
-     *  @dev See {IERC165-supportsInterface}.
-     */
+    /// @inheritdoc IERC165
     function supportsInterface(bytes4 interfaceId) public pure virtual override returns (bool) {
         return interfaceId == type(ITREXImplementationAuthority).interfaceId || interfaceId == type(IERC173).interfaceId
             || interfaceId == type(IERC165).interfaceId;
     }
 
-    /**
-     *  @dev casting function Version => bytes to allow compare values easier
-     */
+    function _isAdmin(address contractAddress) private view returns (bool isAdmin) {
+        (isAdmin,) = IAccessManager(IAccessManaged(contractAddress).authority()).hasRole(0, contractAddress);
+    }
+
+    /// @dev casting function Version => bytes to allow compare values easier
     function _versionToBytes(Version memory _version) private pure returns (bytes32) {
         return bytes32(keccak256(abi.encodePacked(_version.major, _version.minor, _version.patch)));
     }

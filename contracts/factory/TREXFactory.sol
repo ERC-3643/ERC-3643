@@ -133,8 +133,10 @@ contract TREXFactory is ITREXFactory, AccessManaged {
 
         ITrustedIssuersRegistry tir =
             ITrustedIssuersRegistry(_deployTIR(_salt, _implementationAuthority, _tokenDetails.accessManager));
-        IClaimTopicsRegistry ctr = IClaimTopicsRegistry(_deployCTR(_salt, _implementationAuthority));
-        IModularCompliance mc = IModularCompliance(_deployMC(_salt, _implementationAuthority));
+        IClaimTopicsRegistry ctr =
+            IClaimTopicsRegistry(_deployCTR(_salt, _implementationAuthority, _tokenDetails.accessManager));
+        IModularCompliance mc =
+            IModularCompliance(_deployMC(_salt, _implementationAuthority, _tokenDetails.accessManager));
 
         IIdentityRegistryStorage irs;
         if (_tokenDetails.irs == address(0)) {
@@ -292,17 +294,23 @@ contract TREXFactory is ITREXFactory, AccessManaged {
     }
 
     /// function used to deploy a claim topics registry using CREATE2
-    function _deployCTR(string memory _salt, address implementationAuthority_) private returns (address) {
+    function _deployCTR(string memory _salt, address implementationAuthority_, address accessManager)
+        private
+        returns (address)
+    {
         bytes memory _code = type(ClaimTopicsRegistryProxy).creationCode;
-        bytes memory _constructData = abi.encode(implementationAuthority_);
+        bytes memory _constructData = abi.encode(implementationAuthority_, accessManager);
         bytes memory bytecode = abi.encodePacked(_code, _constructData);
         return _deploy(_salt, bytecode);
     }
 
     /// function used to deploy modular compliance contract using CREATE2
-    function _deployMC(string memory _salt, address implementationAuthority_) private returns (address) {
+    function _deployMC(string memory _salt, address implementationAuthority_, address accessManager)
+        private
+        returns (address)
+    {
         bytes memory _code = type(ModularComplianceProxy).creationCode;
-        bytes memory _constructData = abi.encode(implementationAuthority_);
+        bytes memory _constructData = abi.encode(implementationAuthority_, accessManager);
         bytes memory bytecode = abi.encodePacked(_code, _constructData);
         return _deploy(_salt, bytecode);
     }
