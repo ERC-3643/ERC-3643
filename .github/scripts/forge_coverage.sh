@@ -3,7 +3,7 @@
 FAIL=0
 
 echo "Generating coverage report..."
-COVERAGE_OUTPUT=$(forge coverage --no-match-coverage "(test|script|node_modules)" --report summary)
+COVERAGE_OUTPUT=$(npm run coverage 2>&1)
           
 # Display the coverage report
 echo "=== Coverage Report ==="

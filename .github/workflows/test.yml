@@ -52,16 +52,12 @@ jobs:
         id: lint
 
       - name: Run build
-        run: npm run build:forge
+        run: npm run build
         id: build
 
-      - name: Run forge tests
-        run: npm run test:forge
-        id: test-forge
-
-      - name: Run hardhat tests
-        run: npm run test:hardhat
-        id: test-hardhat
+      - name: Run tests
+        run: npm run test
+        id: test
 
       # Coverage checks disabled until tests are migrated to Foundry
       # TODO: Re-enable after migrating tests to Foundry and achieving coverage
