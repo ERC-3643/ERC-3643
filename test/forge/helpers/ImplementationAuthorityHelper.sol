@@ -10,7 +10,6 @@ import { IdentityRegistryStorage } from "contracts/registry/implementation/Ident
 import { TrustedIssuersRegistry } from "contracts/registry/implementation/TrustedIssuersRegistry.sol";
 import { Token } from "contracts/token/Token.sol";
 
-/// @title ImplementationAuthorityHelper
 /// @notice Helper library for deploying and configuring TREX Implementation Authority
 /// @dev Handles deploying all implementations and registering them with the IA
 library ImplementationAuthorityHelper {

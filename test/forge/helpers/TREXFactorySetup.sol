@@ -10,7 +10,6 @@ import { TREXFactory } from "contracts/factory/TREXFactory.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
 import { Test } from "forge-std/Test.sol";
 
-/// @title TREXFactorySetup
 /// @notice Comprehensive fixture that orchestrates all helpers to deploy the full ERC-3643/T-REX suite
 /// @dev Combines all 3 helpers: IdentityFactoryHelper, ImplementationAuthorityHelper, TREXFactoryHelper
 /// Provides standard test addresses and convenience getters for easy access to all components

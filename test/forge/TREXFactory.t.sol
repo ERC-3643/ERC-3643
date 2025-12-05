@@ -5,7 +5,6 @@ import { TREXFactory } from "contracts/factory/TREXFactory.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
 import { TREXFactorySetup } from "test/forge/helpers/TREXFactorySetup.sol";
 
-/// @title TREXFactoryTest
 contract TREXFactoryTest is TREXFactorySetup {
 
     function test_TREXSuiteDeploys() public view {

@@ -5,7 +5,6 @@ import { Identity } from "@onchain-id/solidity/contracts/Identity.sol";
 import { IdFactory } from "@onchain-id/solidity/contracts/factory/IdFactory.sol";
 import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 
-/// @title IdentityFactoryHelper
 /// @notice Helper library for deploying ONCHAINID Identity Factory infrastructure
 /// @dev Handles Identity implementation + IdFactory (ImplementationAuthority is used internally)
 library IdentityFactoryHelper {

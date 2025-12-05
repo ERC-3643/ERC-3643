@@ -5,7 +5,6 @@ import { IdFactory } from "@onchain-id/solidity/contracts/factory/IdFactory.sol"
 import { TREXFactory } from "contracts/factory/TREXFactory.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
 
-/// @title TREXFactoryHelper
 /// @notice Helper library for deploying TREX Factory and linking it with everything
 /// @dev Deploys TREX Factory and creates bidirectional links with IA and Identity Factory
 library TREXFactoryHelper {
