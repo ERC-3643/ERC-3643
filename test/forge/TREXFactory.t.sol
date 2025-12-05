@@ -7,6 +7,7 @@ import { TREXFactorySetup } from "test/forge/helpers/TREXFactorySetup.sol";
 
 /// @title TREXFactoryTest
 contract TREXFactoryTest is TREXFactorySetup {
+
     function test_TREXSuiteDeploys() public view {
         // Verify all components are deployed
         assertNotEq(address(trexFactory), address(0), "TREX Factory should be deployed");
@@ -22,4 +23,5 @@ contract TREXFactoryTest is TREXFactorySetup {
         assertEq(factory.getImplementationAuthority(), address(ia), "Factory should reference IA");
         assertEq(factory.getIdFactory(), address(getIdFactory()), "Factory should reference IdFactory");
     }
+
 }
