@@ -26,24 +26,16 @@ contract TREXFactorySetup is Test {
     TREXFactory public trexFactory;
 
     // Standard test addresses
-    address public deployer;
-    address public alice;
-    address public bob;
-    address public charlie;
-    address public david;
-    address public another;
+    address public deployer = makeAddr("deployer");
+    address public alice = makeAddr("alice");
+    address public bob = makeAddr("bob");
+    address public charlie = makeAddr("charlie");
+    address public david = makeAddr("david");
+    address public another = makeAddr("another");
 
     /// @notice Sets up the complete TREX infrastructure with standard test addresses
     /// Creates a reference Implementation Authority (isReference = true)
     function setUp() public {
-        // Create standard test addresses
-        deployer = makeAddr("deployer");
-        alice = makeAddr("alice");
-        bob = makeAddr("bob");
-        charlie = makeAddr("charlie");
-        david = makeAddr("david");
-        another = makeAddr("another");
-
         // Deploy complete suite (reference Implementation authority = true for main setup)
         deploy(deployer, true);
     }
