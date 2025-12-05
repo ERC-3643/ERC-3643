@@ -63,6 +63,8 @@
 
 pragma solidity 0.8.30;
 
+import { IClaimIssuer, IIdentity } from "@onchain-id/solidity/contracts/interface/IClaimIssuer.sol";
+
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -72,7 +74,6 @@ import { IModularCompliance } from "../compliance/modular/IModularCompliance.sol
 import { IModule } from "../compliance/modular/modules/IModule.sol";
 import { IToken } from "../token/IToken.sol";
 import { IUtilityChecker } from "./IUtilityChecker.sol";
-import { IClaimIssuer, IIdentity } from "@onchain-id/solidity/contracts/interface/IClaimIssuer.sol";
 
 contract UtilityChecker is IUtilityChecker, OwnableUpgradeable, UUPSUpgradeable {
 
@@ -82,7 +83,7 @@ contract UtilityChecker is IUtilityChecker, OwnableUpgradeable, UUPSUpgradeable 
 
     /// @inheritdoc IUtilityChecker
     /// @dev This function is not gas optimized and should be called only OFF chain.
-    function checkTransfer(address _token, address _from, address _to, uint256 _amount)
+    function getTransferStatus(address _token, address _from, address _to, uint256 _amount)
         external
         view
         override
@@ -92,13 +93,13 @@ contract UtilityChecker is IUtilityChecker, OwnableUpgradeable, UUPSUpgradeable 
 
         _freezeStatus = !token.paused();
 
-        (bool frozen,) = checkFreeze(_token, _from, _to, _amount);
+        (bool frozen,) = getFreezeStatus(_token, _from, _to, _amount);
         _freezeStatus = _freezeStatus && !frozen;
 
         IERC3643IdentityRegistry ir = token.identityRegistry();
         _eligibilityStatus = ir.isVerified(_to);
 
-        ComplianceCheckDetails[] memory details = checkTransferDetails(_token, _from, _to, _amount);
+        ComplianceCheckDetails[] memory details = getTransferDetails(_token, _from, _to, _amount);
         for (uint256 i; i < details.length; i++) {
             if (!details[i].pass) {
                 _complianceStatus = false;
@@ -109,7 +110,7 @@ contract UtilityChecker is IUtilityChecker, OwnableUpgradeable, UUPSUpgradeable 
     }
 
     /// @inheritdoc IUtilityChecker
-    function checkVerifiedDetails(address _token, address _userAddress)
+    function getVerifiedDetails(address _token, address _userAddress)
         public
         view
         override
@@ -150,7 +151,7 @@ contract UtilityChecker is IUtilityChecker, OwnableUpgradeable, UUPSUpgradeable 
     }
 
     /// @inheritdoc IUtilityChecker
-    function checkFreeze(address _token, address _from, address _to, uint256 _amount)
+    function getFreezeStatus(address _token, address _from, address _to, uint256 _amount)
         public
         view
         override
@@ -168,7 +169,7 @@ contract UtilityChecker is IUtilityChecker, OwnableUpgradeable, UUPSUpgradeable 
     }
 
     /// @inheritdoc IUtilityChecker
-    function checkTransferDetails(address _token, address _from, address _to, uint256 _value)
+    function getTransferDetails(address _token, address _from, address _to, uint256 _value)
         public
         view
         override

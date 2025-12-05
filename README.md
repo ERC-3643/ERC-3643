@@ -6,10 +6,7 @@
 ![GitHub repo size](https://img.shields.io/github/repo-size/ERC-3643/ERC-3643)
 ![GitHub Release Date](https://img.shields.io/github/release-date/ERC-3643/ERC-3643)
 
-
-
-
-----
+---
 
 <br><br>
 
@@ -18,7 +15,6 @@
   <img src="./docs/img/T-REX.png" width="150" title="t-rex">
   </a>
 </p>
-
 
 ## Overview
 
@@ -48,8 +44,84 @@ The T-REX protocol consists of several key components:
 
 1. Clone the repository: `git clone https://github.com/ERC-3643/ERC-3643.git`
 2. Install dependencies: `npm ci`
-3. Compile the contracts: `hardhat compile`
-4. Run tests: `hardhat test`
+3. Compile the contracts: `npm run build` (Foundry) or `npm run build:hardhat` (Hardhat)
+4. Run tests: `npm run test` (Foundry) or `npm run test:hardhat` (Hardhat)
+
+## Development
+
+This project supports both **Foundry** and **Hardhat** for development and testing. Both frameworks are fully integrated and can be used interchangeably.
+
+### Prerequisites
+
+- **Node.js** (v20.x or later recommended)
+- **Foundry** (for Foundry commands) - Install from [getfoundry.sh](https://getfoundry.sh/)
+- **npm** or **yarn**
+
+### Installation
+
+```bash
+# Install all dependencies (including Soldeer dependencies)
+npm install
+```
+
+This will automatically:
+
+- Install npm dependencies
+- Install Foundry dependencies via Soldeer
+
+### Build Commands
+
+#### Foundry
+
+```bash
+npm run build              # Compile contracts with Foundry
+```
+
+#### Hardhat
+
+```bash
+npm run build:hardhat      # Compile contracts with Hardhat
+```
+
+### Testing
+
+#### Foundry
+
+```bash
+npm run test               # Run Foundry tests with gas report
+```
+
+#### Hardhat
+
+```bash
+npm run test:hardhat       # Run Hardhat TypeScript tests
+```
+
+### Coverage
+
+#### Foundry
+
+```bash
+npm run coverage           # Generate coverage report with Foundry
+npm run coverage:report    # Generate HTML coverage report and open in browser
+```
+
+#### Hardhat
+
+```bash
+npm run coverage:hardhat   # Generate coverage report with Hardhat
+```
+
+### Project Structure
+
+```
+├── contracts/             # Solidity contracts
+├── test/
+│   ├── forge/            # Foundry tests (Solidity)
+│   └── hardhat/          # Hardhat tests (TypeScript)
+├── scripts/              # Deployment and utility scripts
+└── docs/                 # Documentation files
+```
 
 ## Documentation
 
@@ -64,7 +136,7 @@ We welcome contributions from the community. Please refer to the [CONTRIBUTING](
 
 This project is licensed under the [GNU General Public License v3.0](./LICENSE.md).
 
-----
+---
 
 <div style="padding: 16px;">
    <a href="https://tokeny.com/wp-content/uploads/2023/04/Tokeny_TREX-v4_SC_Audit_Report.pdf" target="_blank">
@@ -72,4 +144,4 @@ This project is licensed under the [GNU General Public License v3.0](./LICENSE.m
    </a>
 </div>
 
-----
+---

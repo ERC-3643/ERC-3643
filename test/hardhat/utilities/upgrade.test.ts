@@ -13,9 +13,9 @@ describe('UtilityChecker.upgrateTo', () => {
       const newImplementation = await ethers.deployContract('UtilityChecker');
 
       // Replace upgradeTo with upgradeToAndCall with empty data
-      await expect(utilityChecker.connect(aliceWallet).upgradeToAndCall(newImplementation.target, '0x')).to.revertedWith(
-        'Ownable: caller is not the owner',
-      );
+      await expect(utilityChecker.connect(aliceWallet).upgradeToAndCall(newImplementation.target, '0x'))
+        .to.be.revertedWithCustomError(utilityChecker, 'OwnableUnauthorizedAccount')
+        .withArgs(aliceWallet.address);
     });
   });
 
@@ -29,7 +29,7 @@ describe('UtilityChecker.upgrateTo', () => {
 
       const newImplementation = await ethers.deployContract('UtilityChecker');
 
-      await utilityChecker.connect(deployer).upgradeTo(newImplementation.target);
+      await utilityChecker.connect(deployer).upgradeToAndCall(newImplementation.target, '0x');
 
       // Read the implementation address from the EIP-1967 implementation slot
       const implementationSlot = '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc';

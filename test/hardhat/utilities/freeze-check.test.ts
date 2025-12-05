@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { deployFullSuiteFixture } from '../fixtures/deploy-full-suite.fixture';
 
-describe('UtilityChecker.checkFreeze', () => {
+describe('UtilityChecker.getFreezeStatus', () => {
   describe('When sender is frozen', () => {
     it('should return true', async () => {
       const {
@@ -14,7 +14,7 @@ describe('UtilityChecker.checkFreeze', () => {
       await token.connect(tokenAgent).setAddressFrozen(aliceWallet.address, true);
 
       const utilityChecker = await ethers.deployContract('UtilityChecker');
-      const [success, balance] = await utilityChecker.checkFreeze(token.target, aliceWallet.address, bobWallet.address, 100);
+      const [success, balance] = await utilityChecker.getFreezeStatus(token.target, aliceWallet.address, bobWallet.address, 100);
       expect(success).to.be.equal(true);
       expect(balance).to.be.equal(0);
     });
@@ -30,7 +30,7 @@ describe('UtilityChecker.checkFreeze', () => {
       await token.connect(tokenAgent).setAddressFrozen(bobWallet.address, true);
 
       const utilityChecker = await ethers.deployContract('UtilityChecker');
-      const [success, balance] = await utilityChecker.checkFreeze(token.target, aliceWallet.address, bobWallet.address, 100);
+      const [success, balance] = await utilityChecker.getFreezeStatus(token.target, aliceWallet.address, bobWallet.address, 100);
       expect(success).to.be.equal(true);
       expect(balance).to.be.equal(0);
     });
@@ -47,7 +47,7 @@ describe('UtilityChecker.checkFreeze', () => {
       await token.connect(tokenAgent).freezePartialTokens(aliceWallet.address, initialBalance - 10n);
 
       const utilityChecker = await ethers.deployContract('UtilityChecker');
-      const [success, balance] = await utilityChecker.checkFreeze(token.target, aliceWallet.address, bobWallet.address, 100);
+      const [success, balance] = await utilityChecker.getFreezeStatus(token.target, aliceWallet.address, bobWallet.address, 100);
       expect(success).to.be.equal(true);
       expect(balance).to.be.equal(10);
     });
@@ -63,7 +63,7 @@ describe('UtilityChecker.checkFreeze', () => {
       const initialBalance = await token.balanceOf(aliceWallet.address);
 
       const utilityChecker = await ethers.deployContract('UtilityChecker');
-      const [success, balance] = await utilityChecker.checkFreeze(token.target, aliceWallet.address, bobWallet.address, 100);
+      const [success, balance] = await utilityChecker.getFreezeStatus(token.target, aliceWallet.address, bobWallet.address, 100);
       expect(success).to.be.equal(false);
       expect(balance).to.be.equal(initialBalance);
     });

@@ -29,7 +29,7 @@ async function addClaim(
   await identity.connect(wallet).addClaim(claim.topic, claim.scheme, claim.issuer, claim.signature, claim.data, '');
 }
 
-describe('UtilityChecker.checkVerifiedDetails', () => {
+describe('UtilityChecker.getVerifiedDetails', () => {
   it('should return false when the identity is registered with topics', async () => {
     const {
       suite: { identityRegistry, token },
@@ -40,7 +40,7 @@ describe('UtilityChecker.checkVerifiedDetails', () => {
     await identityRegistry.connect(tokenAgent).registerIdentity(charlieWallet.address, charlieIdentity.target, 0);
 
     const eligibilityChecker = await ethers.deployContract('UtilityChecker');
-    const results = await eligibilityChecker.checkVerifiedDetails(token.target, charlieWallet.address);
+    const results = await eligibilityChecker.getVerifiedDetails(token.target, charlieWallet.address);
     expect(results.length).to.be.equal(1);
     const result = results[0];
     expect(result[0]).to.be.equal(ethers.ZeroAddress);
@@ -60,7 +60,7 @@ describe('UtilityChecker.checkVerifiedDetails', () => {
     await Promise.all(topics.map(topic => claimTopicsRegistry.removeClaimTopic(topic)));
 
     const eligibilityChecker = await ethers.deployContract('UtilityChecker');
-    const results = await eligibilityChecker.checkVerifiedDetails(token.target, charlieWallet.address);
+    const results = await eligibilityChecker.getVerifiedDetails(token.target, charlieWallet.address);
     expect(results.length).to.be.equal(0);
   });
 
@@ -71,7 +71,7 @@ describe('UtilityChecker.checkVerifiedDetails', () => {
     } = await loadFixture(deployFullSuiteFixture);
 
     const eligibilityChecker = await ethers.deployContract('UtilityChecker');
-    const results = await eligibilityChecker.checkVerifiedDetails(token.target, aliceWallet.address);
+    const results = await eligibilityChecker.getVerifiedDetails(token.target, aliceWallet.address);
     expect(results.length).to.be.equal(1);
 
     const topics = await claimTopicsRegistry.getClaimTopics();
@@ -107,7 +107,7 @@ describe('UtilityChecker.checkVerifiedDetails', () => {
     await addClaim(claimIssuerContract, claimIssuerSigningKey, claimTopics[1], aliceWallet, aliceIdentity);
 
     const eligibilityChecker = await ethers.deployContract('UtilityChecker');
-    const results = await eligibilityChecker.checkVerifiedDetails(token.target, aliceWallet.address);
+    const results = await eligibilityChecker.getVerifiedDetails(token.target, aliceWallet.address);
 
     expect(results.length).to.be.equal(3);
     const topics = await claimTopicsRegistry.getClaimTopics();
