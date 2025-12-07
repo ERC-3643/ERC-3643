@@ -7,6 +7,7 @@ import { TREXFactoryHelper } from "./TREXFactoryHelper.sol";
 import { IdFactory } from "@onchain-id/solidity/contracts/factory/IdFactory.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { TREXFactory } from "contracts/factory/TREXFactory.sol";
+import { ITREXImplementationAuthority } from "contracts/proxy/authority/ITREXImplementationAuthority.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
 import { Test } from "forge-std/Test.sol";
 
@@ -34,7 +35,7 @@ contract TREXFactorySetup is Test {
 
     /// @notice Sets up the complete TREX infrastructure with standard test addresses
     /// Creates a reference Implementation Authority (isReference = true)
-    function setUp() public {
+    function setUp() public virtual {
         // Deploy complete suite (reference Implementation authority = true for main setup)
         deploy(deployer, true);
     }
@@ -90,6 +91,20 @@ contract TREXFactorySetup is Test {
             address(implementationAuthoritySetup.implementations.trustedIssuersRegistry),
             address(implementationAuthoritySetup.implementations.modularCompliance)
         );
+    }
+
+    /// @notice Returns TREXContracts struct using current implementation addresses
+    function getTREXContracts() public view returns (ITREXImplementationAuthority.TREXContracts memory) {
+        (address tokenImpl, address ctrImpl, address irImpl, address irsImpl, address tirImpl, address mcImpl) =
+            getTREXImplementations();
+        return ITREXImplementationAuthority.TREXContracts({
+            tokenImplementation: tokenImpl,
+            ctrImplementation: ctrImpl,
+            irImplementation: irImpl,
+            irsImplementation: irsImpl,
+            tirImplementation: tirImpl,
+            mcImplementation: mcImpl
+        });
     }
 
 }
