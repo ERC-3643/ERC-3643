@@ -3,8 +3,6 @@ pragma solidity 0.8.30;
 
 import { ClaimIssuer } from "@onchain-id/solidity/contracts/ClaimIssuer.sol";
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
-import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProxy.sol";
-import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { TestModule } from "contracts/_testContracts/TestModule.sol";
@@ -24,11 +22,6 @@ contract TransferCheckTest is TREXFactorySetup {
     ModularCompliance public compliance;
     TestModule public testModule;
     address public tokenAgent = makeAddr("tokenAgent");
-
-    // Identity contracts
-    IIdentity public aliceIdentity;
-    IIdentity public bobIdentity;
-    IIdentity public charlieIdentity;
 
     function setUp() public override {
         super.setUp();
@@ -75,13 +68,6 @@ contract TransferCheckTest is TREXFactorySetup {
         token.addAgent(tokenAgent);
         vm.prank(deployer);
         identityRegistry.addAgent(tokenAgent);
-
-        // Create identities for alice, bob, and charlie
-        ImplementationAuthority identityImplementationAuthority =
-            ImplementationAuthority(onchainidSetup.idFactory.implementationAuthority());
-        aliceIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), alice)));
-        bobIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), bob)));
-        charlieIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), charlie)));
 
         // Register alice and bob in IdentityRegistry
         vm.prank(tokenAgent);

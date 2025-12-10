@@ -5,6 +5,7 @@ import { IdentityFactoryHelper } from "./IdentityFactoryHelper.sol";
 import { ImplementationAuthorityHelper } from "./ImplementationAuthorityHelper.sol";
 import { TREXFactoryHelper } from "./TREXFactoryHelper.sol";
 import { IdFactory } from "@onchain-id/solidity/contracts/factory/IdFactory.sol";
+import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { TREXFactory } from "contracts/factory/TREXFactory.sol";
 import { ITREXImplementationAuthority } from "contracts/proxy/authority/ITREXImplementationAuthority.sol";
@@ -33,6 +34,11 @@ contract TREXFactorySetup is Test {
     address public david = makeAddr("david");
     address public another = makeAddr("another");
 
+    //identities for common test addresses
+    IIdentity public aliceIdentity;
+    IIdentity public bobIdentity;
+    IIdentity public charlieIdentity;
+
     /// @notice Sets up the complete TREX infrastructure with standard test addresses
     /// Creates a reference Implementation Authority (isReference = true)
     function setUp() public virtual {
@@ -56,10 +62,17 @@ contract TREXFactorySetup is Test {
         trexFactory =
             TREXFactoryHelper.deploy(implementationAuthoritySetup.implementationAuthority, onchainidSetup.idFactory);
 
-        // transfer ownership to deployer after setting up everything
+        // Transfer ownership to deployer after linking is complete
         Ownable(address(implementationAuthoritySetup.implementationAuthority)).transferOwnership(deployerAddress);
         Ownable(address(trexFactory)).transferOwnership(deployerAddress);
         Ownable(address(onchainidSetup.idFactory)).transferOwnership(deployerAddress);
+
+        // common identities for test addresses (alice, bob, charlie)
+        vm.startPrank(deployerAddress);
+        aliceIdentity = IIdentity(onchainidSetup.idFactory.createIdentity(alice, "alice-salt"));
+        bobIdentity = IIdentity(onchainidSetup.idFactory.createIdentity(bob, "bob-salt"));
+        charlieIdentity = IIdentity(onchainidSetup.idFactory.createIdentity(charlie, "charlie-salt"));
+        vm.stopPrank();
     }
 
     /// @notice Returns the TREX Implementation Authority contract

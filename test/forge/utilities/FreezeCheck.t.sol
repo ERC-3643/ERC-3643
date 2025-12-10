@@ -2,8 +2,6 @@
 pragma solidity 0.8.30;
 
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
-import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProxy.sol";
-import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { ITREXFactory } from "contracts/factory/ITREXFactory.sol";
 import { IdentityRegistry } from "contracts/registry/implementation/IdentityRegistry.sol";
@@ -41,37 +39,21 @@ contract FreezeCheckTest is TREXFactorySetup {
         trexFactory.deployTREXSuite("salt", tokenDetails, claimDetails);
         token = Token(trexFactory.getToken("salt"));
 
-        // Add tokenAgent as an agent to Token
-        vm.prank(deployer);
-        token.addAgent(tokenAgent);
-
-        // Get IdentityRegistry to register identities
+        // Add tokenAgent as an agent to Token and IdentityRegistry
         IERC3643IdentityRegistry ir = token.identityRegistry();
         IdentityRegistry identityRegistry = IdentityRegistry(address(ir));
-
-        // Add tokenAgent as an agent to IdentityRegistry
-        vm.prank(deployer);
+        vm.startPrank(deployer);
+        token.addAgent(tokenAgent);
         identityRegistry.addAgent(tokenAgent);
+        vm.stopPrank();
 
-        // Create identities for alice and bob
-        ImplementationAuthority identityImplementationAuthority =
-            ImplementationAuthority(onchainidSetup.idFactory.implementationAuthority());
-        IIdentity aliceIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), alice)));
-        IIdentity bobIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), bob)));
-
-        // Register alice and bob in IdentityRegistry
-        vm.prank(tokenAgent);
+        // Register alice and bob in IdentityRegistry, mint tokens, and unpause
+        vm.startPrank(tokenAgent);
         identityRegistry.registerIdentity(alice, aliceIdentity, 42);
-        vm.prank(tokenAgent);
         identityRegistry.registerIdentity(bob, bobIdentity, 666);
-
-        // Mint tokens to alice (alice gets 1000)
-        vm.prank(tokenAgent);
         token.mint(alice, 1000);
-
-        // Unpause token (tokens are paused by default)
-        vm.prank(tokenAgent);
         token.unpause();
+        vm.stopPrank();
 
         // Deploy UtilityChecker
         utilityChecker = new UtilityChecker();

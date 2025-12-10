@@ -4,7 +4,6 @@ pragma solidity 0.8.30;
 import { ClaimIssuer } from "@onchain-id/solidity/contracts/ClaimIssuer.sol";
 import { IClaimIssuer } from "@onchain-id/solidity/contracts/interface/IClaimIssuer.sol";
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
-import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProxy.sol";
 import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -47,7 +46,6 @@ contract IdentityRegistryTest is Test {
     TrustedIssuersRegistry public trustedIssuersRegistry;
     IdentityRegistryStorage public identityRegistryStorage;
     TREXImplementationAuthority public implementationAuthority;
-    ImplementationAuthority public identityImplementationAuthority;
     ClaimIssuer public claimIssuerContract;
 
     // Standard test addresses
@@ -107,13 +105,16 @@ contract IdentityRegistryTest is Test {
 
         // Deploy ONCHAINID infrastructure for Identity proxies
         IdentityFactoryHelper.ONCHAINIDSetup memory onchainidSetup = IdentityFactoryHelper.deploy(deployer);
-        address identityImplementationAuthorityAddress = onchainidSetup.idFactory.implementationAuthority();
-        identityImplementationAuthority = ImplementationAuthority(identityImplementationAuthorityAddress);
 
-        // Deploy Identity proxies
-        aliceIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), alice)));
-        bobIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), bob)));
-        charlieIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), charlie)));
+        // Transfer IdFactory ownership to deployer (it's initially owned by test contract)
+        Ownable(address(onchainidSetup.idFactory)).transferOwnership(deployer);
+
+        // create identities using IdFactory
+        vm.startPrank(deployer);
+        aliceIdentity = IIdentity(onchainidSetup.idFactory.createIdentity(alice, "alice-salt"));
+        bobIdentity = IIdentity(onchainidSetup.idFactory.createIdentity(bob, "bob-salt"));
+        charlieIdentity = IIdentity(onchainidSetup.idFactory.createIdentity(charlie, "charlie-salt"));
+        vm.stopPrank();
 
         // Add claim topic and trusted issuer
         uint256 claimTopic = 1;
@@ -432,12 +433,11 @@ contract IdentityRegistryTest is Test {
         uint256 topic = topics[0];
 
         // Remove existing trusted issuer and add both tricky and normal issuer
-        vm.prank(deployer);
+        vm.startPrank(deployer);
         trustedIssuersRegistry.removeTrustedIssuer(claimIssuerContract);
-        vm.prank(deployer);
         trustedIssuersRegistry.addTrustedIssuer(IClaimIssuer(address(trickyClaimIssuer)), topics);
-        vm.prank(deployer);
         trustedIssuersRegistry.addTrustedIssuer(claimIssuerContract, topics);
+        vm.stopPrank();
 
         // Get alice's existing claim
         bytes32[] memory claimIds = aliceIdentity.getClaimIdsByTopic(topic);
@@ -445,16 +445,13 @@ contract IdentityRegistryTest is Test {
             aliceIdentity.getClaim(claimIds[0]);
 
         // Remove the existing claim and add both tricky and normal claims
-        vm.prank(alice);
+        vm.startPrank(alice);
         aliceIdentity.removeClaim(claimIds[0]);
-
         // Add tricky claim (will throw error)
-        vm.prank(alice);
         aliceIdentity.addClaim(topic, 1, address(trickyClaimIssuer), "0x00", "0x00", "");
-
         // Add normal claim (will work)
-        vm.prank(alice);
         aliceIdentity.addClaim(topic, scheme, issuer, sig, data, uri);
+        vm.stopPrank();
 
         // Should still be verified (normal claim works)
         assertTrue(identityRegistry.isVerified(alice));

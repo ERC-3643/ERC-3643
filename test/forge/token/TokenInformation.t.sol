@@ -2,8 +2,6 @@
 pragma solidity 0.8.30;
 
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
-import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProxy.sol";
-import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Paused, Unpaused, UpdatedTokenInformation } from "contracts/ERC-3643/IERC3643.sol";
 import { EmptyString } from "contracts/errors/InvalidArgumentErrors.sol";
@@ -101,14 +99,11 @@ contract TokenInformationTest is TokenTestBase {
 
     /// @notice Should set the onchainID
     function test_setOnchainID_Success() public {
-        // Create an identity using the helper
-        ImplementationAuthority identityImplementationAuthority =
-            ImplementationAuthority(onchainidSetup.idFactory.implementationAuthority());
-        IIdentity newIdentity =
-            IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), deployer)));
-
-        vm.prank(deployer);
+        // create an identity using IdFactory
+        vm.startPrank(deployer);
+        IIdentity newIdentity = IIdentity(onchainidSetup.idFactory.createIdentity(deployer, "deployer-salt"));
         token.setOnchainID(address(newIdentity));
+        vm.stopPrank();
 
         assertEq(token.onchainID(), address(newIdentity));
     }

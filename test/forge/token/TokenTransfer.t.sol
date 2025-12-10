@@ -2,8 +2,6 @@
 pragma solidity 0.8.30;
 
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
-import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProxy.sol";
-import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -32,8 +30,6 @@ contract TokenTransferTest is TokenTestBase {
 
     // Token suite components
     IdentityRegistry public identityRegistry;
-    IIdentity public aliceIdentity;
-    IIdentity public bobIdentity;
 
     function setUp() public override {
         super.setUp();
@@ -42,35 +38,20 @@ contract TokenTransferTest is TokenTestBase {
         IERC3643IdentityRegistry ir = token.identityRegistry();
         identityRegistry = IdentityRegistry(address(ir));
 
-        // Create identities
-        ImplementationAuthority identityImplementationAuthority =
-            ImplementationAuthority(onchainidSetup.idFactory.implementationAuthority());
-        aliceIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), alice)));
-        bobIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), bob)));
-
         // Add tokenAgent as an agent
-        vm.prank(deployer);
+        vm.startPrank(deployer);
         token.addAgent(tokenAgent);
-
-        // Add tokenAgent as an agent to IdentityRegistry
-        vm.prank(deployer);
         identityRegistry.addAgent(tokenAgent);
+        vm.stopPrank();
 
-        // Register alice and bob in IdentityRegistry
-        vm.prank(tokenAgent);
+        // Register alice and bob in IdentityRegistry and mint tokens
+        vm.startPrank(tokenAgent);
         identityRegistry.registerIdentity(alice, aliceIdentity, 42);
-        vm.prank(tokenAgent);
         identityRegistry.registerIdentity(bob, bobIdentity, 666);
-
-        // Mint tokens alice=1000, bob=500)
-        vm.prank(tokenAgent);
         token.mint(alice, 1000);
-        vm.prank(tokenAgent);
         token.mint(bob, 500);
-
-        // Unpause token
-        vm.prank(tokenAgent);
         token.unpause();
+        vm.stopPrank();
     }
 
     /// @notice Helper to deploy TestModule + ModularCompliance setup for compliance tests

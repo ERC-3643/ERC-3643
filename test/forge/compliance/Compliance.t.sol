@@ -3,8 +3,6 @@
 pragma solidity 0.8.30;
 
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
-import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProxy.sol";
-import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -103,10 +101,10 @@ contract ComplianceTest is TREXFactorySetup {
         complianceBeta = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
 
         // Transfer ownership of compliance contracts to deployer (they're owned by test contract initially)
-        vm.prank(address(this));
+        vm.startPrank(address(this));
         compliance.transferOwnership(deployer);
-        vm.prank(address(this));
         complianceBeta.transferOwnership(deployer);
+        vm.stopPrank();
 
         // Bind compliance to token
         vm.prank(deployer);
@@ -114,26 +112,18 @@ contract ComplianceTest is TREXFactorySetup {
 
         // Add tokenAgent as an agent to Token and IdentityRegistry (for burn operations)
         IERC3643IdentityRegistry ir = token.identityRegistry();
-        vm.prank(deployer);
+        vm.startPrank(deployer);
         token.addAgent(tokenAgent);
-        vm.prank(deployer);
         IdentityRegistry(address(ir)).addAgent(tokenAgent);
+        vm.stopPrank();
 
         // Register alice and bob identities and mint tokens (for tests that need them)
-        ImplementationAuthority identityImplementationAuthority =
-            ImplementationAuthority(onchainidSetup.idFactory.implementationAuthority());
-        IIdentity aliceIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), alice)));
-        IIdentity bobIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), bob)));
-
-        vm.prank(tokenAgent);
+        vm.startPrank(tokenAgent);
         IdentityRegistry(address(ir)).registerIdentity(alice, aliceIdentity, 42);
-        vm.prank(tokenAgent);
         IdentityRegistry(address(ir)).registerIdentity(bob, bobIdentity, 666);
-
-        vm.prank(tokenAgent);
         token.mint(alice, 1000);
-        vm.prank(tokenAgent);
         token.mint(bob, 500);
+        vm.stopPrank();
     }
 
     // ============================================

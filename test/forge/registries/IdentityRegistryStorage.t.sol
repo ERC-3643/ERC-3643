@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
-import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProxy.sol";
 import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -42,7 +41,6 @@ contract IdentityRegistryStorageTest is Test {
     // Contracts
     IdentityRegistryStorage public identityRegistryStorage;
     TREXImplementationAuthority public implementationAuthority;
-    ImplementationAuthority public identityImplementationAuthority; // For Identity proxies
 
     // Standard test addresses
     address public deployer = makeAddr("deployer");
@@ -74,13 +72,15 @@ contract IdentityRegistryStorageTest is Test {
 
         // Deploy ONCHAINID infrastructure for Identity proxies
         IdentityFactoryHelper.ONCHAINIDSetup memory onchainidSetup = IdentityFactoryHelper.deploy(deployer);
-        // Get the ImplementationAuthority from IdFactory
-        address identityImplementationAuthorityAddress = onchainidSetup.idFactory.implementationAuthority();
-        identityImplementationAuthority = ImplementationAuthority(identityImplementationAuthorityAddress);
 
-        // Deploy Identity proxies for bob and charlie
-        bobIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), bob)));
-        charlieIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), charlie)));
+        // Transfer IdFactory ownership to deployer (it's initially owned by test contract)
+        Ownable(address(onchainidSetup.idFactory)).transferOwnership(deployer);
+
+        // Create identities using IdFactory
+        vm.startPrank(deployer);
+        bobIdentity = IIdentity(onchainidSetup.idFactory.createIdentity(bob, "bob-salt"));
+        charlieIdentity = IIdentity(onchainidSetup.idFactory.createIdentity(charlie, "charlie-salt"));
+        vm.stopPrank();
 
         // Note: In Hardhat fixture, identityRegistry.target is bound to storage in setUp
         // For Foundry, we start with 0 bound registries (tests will bind as needed)

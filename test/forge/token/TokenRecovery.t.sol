@@ -2,8 +2,6 @@
 pragma solidity 0.8.30;
 
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
-import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProxy.sol";
-import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { AddressFrozen, RecoverySuccess, TokensFrozen } from "contracts/ERC-3643/IERC3643.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
@@ -23,7 +21,6 @@ contract TokenRecoveryTest is TokenTestBase {
 
     // Token suite components
     IdentityRegistry public identityRegistry;
-    IIdentity public bobIdentity;
 
     function setUp() public override {
         super.setUp();
@@ -31,11 +28,6 @@ contract TokenRecoveryTest is TokenTestBase {
         // Get IdentityRegistry
         IERC3643IdentityRegistry ir = token.identityRegistry();
         identityRegistry = IdentityRegistry(address(ir));
-
-        // Create bob identity
-        ImplementationAuthority identityImplementationAuthority =
-            ImplementationAuthority(onchainidSetup.idFactory.implementationAuthority());
-        bobIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), bob)));
 
         // Add tokenAgent as an agent
         vm.prank(deployer);

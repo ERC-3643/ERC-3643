@@ -4,8 +4,6 @@ pragma solidity 0.8.30;
 import { ClaimIssuer } from "@onchain-id/solidity/contracts/ClaimIssuer.sol";
 import { IClaimIssuer } from "@onchain-id/solidity/contracts/interface/IClaimIssuer.sol";
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
-import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProxy.sol";
-import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { IERC3643ClaimTopicsRegistry } from "contracts/ERC-3643/IERC3643ClaimTopicsRegistry.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { IERC3643TrustedIssuersRegistry } from "contracts/ERC-3643/IERC3643TrustedIssuersRegistry.sol";
@@ -24,10 +22,6 @@ contract EligibilityCheckTest is TREXFactorySetup {
     IERC3643TrustedIssuersRegistry public trustedIssuersRegistry;
     address public tokenAgent = makeAddr("tokenAgent");
     address public claimIssuerOwner = makeAddr("claimIssuerOwner");
-
-    // Identity contracts
-    IIdentity public aliceIdentity;
-    IIdentity public charlieIdentity;
 
     // Claim issuer setup
     ClaimIssuer public claimIssuerContract;
@@ -77,16 +71,10 @@ contract EligibilityCheckTest is TREXFactorySetup {
         trustedIssuersRegistry = ir.issuersRegistry();
 
         // Add tokenAgent as an agent to Token and IdentityRegistry
-        vm.prank(deployer);
+        vm.startPrank(deployer);
         token.addAgent(tokenAgent);
-        vm.prank(deployer);
         identityRegistry.addAgent(tokenAgent);
-
-        // Create identities for alice and charlie
-        ImplementationAuthority identityImplementationAuthority =
-            ImplementationAuthority(onchainidSetup.idFactory.implementationAuthority());
-        aliceIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), alice)));
-        charlieIdentity = IIdentity(address(new IdentityProxy(address(identityImplementationAuthority), charlie)));
+        vm.stopPrank();
 
         // Add signing key to ClaimIssuer
         bytes32 signingKeyHash = keccak256(abi.encode(claimIssuerSigningKeyAddress));
