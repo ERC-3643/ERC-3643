@@ -47,7 +47,6 @@ contract ComplianceTest is TREXFactorySetup {
     ModularCompliance public complianceBeta;
     Token public token;
     address public tokenAgent = makeAddr("tokenAgent");
-    address public charlieWallet = charlie; // Alias for compatibility with Hardhat tests
 
     /// @notice Helper to deploy TestModule with proxy
     function _deployTestModuleWithProxy() internal returns (address moduleAddress) {
@@ -71,30 +70,11 @@ contract ComplianceTest is TREXFactorySetup {
         return ModularCompliance(address(proxy));
     }
 
-    /// @notice Setup fixture matching deploySuiteWithModularCompliancesFixture
     function setUp() public override {
         super.setUp();
 
         // Deploy token suite
-        ITREXFactory.TokenDetails memory tokenDetails = ITREXFactory.TokenDetails({
-            owner: deployer,
-            name: "TREX DINO",
-            symbol: "TREXD",
-            decimals: 0,
-            irs: address(0),
-            ONCHAINID: address(0),
-            irAgents: new address[](0),
-            tokenAgents: new address[](0),
-            complianceModules: new address[](0),
-            complianceSettings: new bytes[](0)
-        });
-        ITREXFactory.ClaimDetails memory claimDetails = ITREXFactory.ClaimDetails({
-            claimTopics: new uint256[](0), issuers: new address[](0), issuerClaims: new uint256[][](0)
-        });
-
-        vm.prank(deployer);
-        trexFactory.deployTREXSuite("salt", tokenDetails, claimDetails);
-        token = Token(trexFactory.getToken("salt"));
+        token = _deployToken("salt");
 
         // Deploy two compliance contracts
         compliance = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
@@ -166,32 +146,14 @@ contract ComplianceTest is TREXFactorySetup {
     /// @notice Should set the new compliance when calling as the token
     function test_bindToken_Success_WhenCalledByToken() public {
         // Deploy a fresh token suite (without compliance bound)
-        ITREXFactory.TokenDetails memory tokenDetails = ITREXFactory.TokenDetails({
-            owner: deployer,
-            name: "TREX DINO",
-            symbol: "TREXD",
-            decimals: 0,
-            irs: address(0),
-            ONCHAINID: address(0),
-            irAgents: new address[](0),
-            tokenAgents: new address[](0),
-            complianceModules: new address[](0),
-            complianceSettings: new bytes[](0)
-        });
-        ITREXFactory.ClaimDetails memory claimDetails = ITREXFactory.ClaimDetails({
-            claimTopics: new uint256[](0), issuers: new address[](0), issuerClaims: new uint256[][](0)
-        });
-
-        vm.prank(deployer);
-        trexFactory.deployTREXSuite("salt2", tokenDetails, claimDetails);
-        Token freshToken = Token(trexFactory.getToken("salt2"));
+        Token testToken = _deployToken("salt2");
 
         // Deploy a compliance and bind it
         ModularCompliance compliance = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
         vm.prank(address(this));
         compliance.transferOwnership(deployer);
         vm.prank(deployer);
-        compliance.bindToken(address(freshToken));
+        compliance.bindToken(address(testToken));
 
         // Deploy new compliance (not bound yet)
         ModularCompliance newCompliance = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
@@ -199,22 +161,22 @@ contract ComplianceTest is TREXFactorySetup {
         newCompliance.transferOwnership(deployer);
 
         // Verify new compliance is not bound yet
-        assertFalse(newCompliance.isTokenBound(address(freshToken)));
+        assertFalse(newCompliance.isTokenBound(address(testToken)));
 
         {
             // Token sets new compliance (this should bind it)
             // Event order: TokenBound (new), then the second event ComplianceAdded (token)
             vm.expectEmit(true, false, false, false, address(newCompliance));
-            emit TokenBound(address(freshToken));
+            emit TokenBound(address(testToken));
 
-            vm.expectEmit(true, false, false, false, address(freshToken));
+            vm.expectEmit(true, false, false, false, address(testToken));
             emit ComplianceAdded(address(newCompliance));
 
             vm.prank(deployer);
-            freshToken.setCompliance(address(newCompliance));
+            testToken.setCompliance(address(newCompliance));
         }
 
-        assertTrue(newCompliance.isTokenBound(address(freshToken)));
+        assertTrue(newCompliance.isTokenBound(address(testToken)));
     }
 
     /// @notice Should revert when token address is zero
@@ -448,36 +410,36 @@ contract ComplianceTest is TREXFactorySetup {
 
     /// @notice Should revert when from address is null
     function test_transferred_RevertWhen_FromAddressIsZero() public {
-        _setupComplianceBoundToWallet();
+        Token testToken = _setupComplianceBoundToWallet();
 
-        vm.prank(charlieWallet);
+        vm.prank(address(testToken));
         vm.expectRevert(ZeroAddress.selector);
         compliance.transferred(address(0), bob, 10);
     }
 
     /// @notice Should revert when to address is null
     function test_transferred_RevertWhen_ToAddressIsZero() public {
-        _setupComplianceBoundToWallet();
+        Token testToken = _setupComplianceBoundToWallet();
 
-        vm.prank(charlieWallet);
+        vm.prank(address(testToken));
         vm.expectRevert(ZeroAddress.selector);
         compliance.transferred(alice, address(0), 10);
     }
 
     /// @notice Should revert when amount is zero
     function test_transferred_RevertWhen_AmountIsZero() public {
-        _setupComplianceBoundToWallet();
+        Token testToken = _setupComplianceBoundToWallet();
 
-        vm.prank(charlieWallet);
+        vm.prank(address(testToken));
         vm.expectRevert(ZeroValue.selector);
         compliance.transferred(alice, bob, 0);
     }
 
     /// @notice Should update the modules when amount is greater than zero
     function test_transferred_Success_WhenAmountGreaterThanZero() public {
-        _setupComplianceBoundToWallet();
+        Token testToken = _setupComplianceBoundToWallet();
 
-        vm.prank(charlieWallet);
+        vm.prank(address(testToken));
         compliance.transferred(alice, bob, 10);
     }
 
@@ -494,39 +456,39 @@ contract ComplianceTest is TREXFactorySetup {
 
     /// @notice Should revert when to address is null
     function test_created_RevertWhen_ToAddressIsZero() public {
-        _setupComplianceBoundToWallet();
+        Token testToken = _setupComplianceBoundToWallet();
 
-        vm.prank(charlieWallet);
+        vm.prank(address(testToken));
         vm.expectRevert(ZeroAddress.selector);
         compliance.created(address(0), 10);
     }
 
     /// @notice Should revert when amount is zero
     function test_created_RevertWhen_AmountIsZero() public {
-        _setupComplianceBoundToWallet();
+        Token testToken = _setupComplianceBoundToWallet();
 
-        vm.prank(charlieWallet);
+        vm.prank(address(testToken));
         vm.expectRevert(ZeroValue.selector);
         compliance.created(bob, 0);
     }
 
     /// @notice Should update the modules when amount is greater than zero
     function test_created_Success_WhenAmountGreaterThanZero() public {
-        _setupComplianceBoundToWallet();
+        Token testToken = _setupComplianceBoundToWallet();
 
-        vm.prank(charlieWallet);
+        vm.prank(address(testToken));
         compliance.created(bob, 10);
     }
 
     /// @notice Should call moduleMintAction on all bound modules
     function test_created_Success_CallsModuleMintAction() public {
-        _setupComplianceBoundToWallet();
+        Token testToken = _setupComplianceBoundToWallet();
 
         address moduleAddress = _deployTestModuleWithProxy();
         vm.prank(deployer);
         compliance.addModule(moduleAddress);
 
-        vm.prank(charlieWallet);
+        vm.prank(address(testToken));
         compliance.created(bob, 100);
     }
 
@@ -543,39 +505,39 @@ contract ComplianceTest is TREXFactorySetup {
 
     /// @notice Should revert when from address is null
     function test_destroyed_RevertWhen_FromAddressIsZero() public {
-        _setupComplianceBoundToWallet();
+        Token testToken = _setupComplianceBoundToWallet();
 
-        vm.prank(charlieWallet);
+        vm.prank(address(testToken));
         vm.expectRevert(ZeroAddress.selector);
         compliance.destroyed(address(0), 10);
     }
 
     /// @notice Should revert when amount is zero
     function test_destroyed_RevertWhen_AmountIsZero() public {
-        _setupComplianceBoundToWallet();
+        Token testToken = _setupComplianceBoundToWallet();
 
-        vm.prank(charlieWallet);
+        vm.prank(address(testToken));
         vm.expectRevert(ZeroValue.selector);
         compliance.destroyed(alice, 0);
     }
 
     /// @notice Should update the modules when amount is greater than zero
     function test_destroyed_Success_WhenAmountGreaterThanZero() public {
-        _setupComplianceBoundToWallet();
+        Token testToken = _setupComplianceBoundToWallet();
 
-        vm.prank(charlieWallet);
+        vm.prank(address(testToken));
         compliance.destroyed(alice, 10);
     }
 
     /// @notice Should call moduleBurnAction on all bound modules
     function test_destroyed_Success_CallsModuleBurnAction() public {
-        _setupComplianceBoundToWallet();
+        Token testToken = _setupComplianceBoundToWallet();
 
         address moduleAddress = _deployTestModuleWithProxy();
         vm.prank(deployer);
         compliance.addModule(moduleAddress);
 
-        vm.prank(charlieWallet);
+        vm.prank(address(testToken));
         compliance.destroyed(alice, 100);
     }
 
@@ -810,8 +772,34 @@ contract ComplianceTest is TREXFactorySetup {
     // Helper Functions
     // ============================================
 
-    /// @notice Helper to setup compliance bound to wallet (matching deploySuiteWithModuleComplianceBoundToWallet)
-    function _setupComplianceBoundToWallet() internal {
+    /// @notice Helper to deploy a token suite
+    /// @param salt The salt for CREATE2 deployment
+    /// @return testToken The deployed token
+    function _deployToken(string memory salt) internal returns (Token testToken) {
+        ITREXFactory.TokenDetails memory tokenDetails = ITREXFactory.TokenDetails({
+            owner: deployer,
+            name: "TREX DINO",
+            symbol: "TREXD",
+            decimals: 0,
+            irs: address(0),
+            ONCHAINID: address(0),
+            irAgents: new address[](0),
+            tokenAgents: new address[](0),
+            complianceModules: new address[](0),
+            complianceSettings: new bytes[](0)
+        });
+        ITREXFactory.ClaimDetails memory claimDetails = ITREXFactory.ClaimDetails({
+            claimTopics: new uint256[](0), issuers: new address[](0), issuerClaims: new uint256[][](0)
+        });
+
+        vm.prank(deployer);
+        trexFactory.deployTREXSuite(salt, tokenDetails, claimDetails);
+        testToken = Token(trexFactory.getToken(salt));
+    }
+
+    /// @notice Helper to setup compliance bound to token
+    /// @return testToken The deployed token bound to the compliance
+    function _setupComplianceBoundToWallet() internal returns (Token testToken) {
         // Deploy new compliance for this test
         compliance = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
         vm.prank(address(this));
@@ -820,14 +808,17 @@ contract ComplianceTest is TREXFactorySetup {
         // Deploy and add modules
         address moduleA = _deployTestModuleWithProxy();
         address moduleB = _deployTestModuleWithProxy();
-        vm.prank(deployer);
+        vm.startPrank(deployer);
         compliance.addModule(moduleA);
-        vm.prank(deployer);
         compliance.addModule(moduleB);
+        vm.stopPrank();
 
-        // Bind compliance to charlieWallet (as a wallet address, not token)
+        // Deploy a token and bind compliance to it
+        testToken = _deployToken("compliance-salt");
+
+        // Bind compliance to token
         vm.prank(deployer);
-        compliance.bindToken(charlieWallet);
+        testToken.setCompliance(address(compliance));
     }
 
 }
