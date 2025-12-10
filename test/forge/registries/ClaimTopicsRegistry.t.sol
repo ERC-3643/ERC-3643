@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { IERC3643ClaimTopicsRegistry } from "contracts/ERC-3643/IERC3643ClaimTopicsRegistry.sol";
+import { ClaimTopicAdded, ClaimTopicRemoved } from "contracts/ERC-3643/IERC3643ClaimTopicsRegistry.sol";
 import { ClaimTopicsRegistryProxy } from "contracts/proxy/ClaimTopicsRegistryProxy.sol";
 import { ITREXImplementationAuthority } from "contracts/proxy/authority/ITREXImplementationAuthority.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
@@ -18,10 +19,6 @@ contract ClaimTopicsRegistryTest is Test {
 
     // Error declaration, from OpenZeppelin Initializable
     error InvalidInitialization();
-
-    // Event declarations for expectEmit
-    event ClaimTopicAdded(uint256 indexed _claimTopic);
-    event ClaimTopicRemoved(uint256 indexed _claimTopic);
 
     // Contracts
     ClaimTopicsRegistry public claimTopicsRegistry;

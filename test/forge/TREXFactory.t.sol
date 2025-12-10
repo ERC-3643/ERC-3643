@@ -19,15 +19,13 @@ import {
 } from "contracts/factory/TREXFactory.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
 import { OwnableOnceNext2StepUpgradeable } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
+import { OwnershipTransferStarted } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
 import { Token } from "contracts/token/Token.sol";
 import { Test } from "forge-std/Test.sol";
 import { IdentityFactoryHelper } from "test/forge/helpers/IdentityFactoryHelper.sol";
 import { TREXFactorySetup } from "test/forge/helpers/TREXFactorySetup.sol";
 
 contract TREXFactoryTest is TREXFactorySetup {
-
-    // Event signature for testing
-    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
 
     // Helper function to create empty TokenDetails
     function _createEmptyTokenDetails() internal view returns (ITREXFactory.TokenDetails memory) {

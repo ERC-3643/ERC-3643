@@ -8,11 +8,14 @@ import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/Im
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { IERC3643 } from "contracts/ERC-3643/IERC3643.sol";
+import { ComplianceAdded } from "contracts/ERC-3643/IERC3643.sol";
 import { IERC3643Compliance } from "contracts/ERC-3643/IERC3643Compliance.sol";
+import { TokenBound, TokenUnbound } from "contracts/ERC-3643/IERC3643Compliance.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { ModuleNotPnP } from "contracts/_testContracts/ModuleNotPnP.sol";
 import { TestModule } from "contracts/_testContracts/TestModule.sol";
 import { IModularCompliance } from "contracts/compliance/modular/IModularCompliance.sol";
+import { ModuleAdded, ModuleInteraction, ModuleRemoved } from "contracts/compliance/modular/IModularCompliance.sol";
 import { ModularCompliance } from "contracts/compliance/modular/ModularCompliance.sol";
 import {
     MaxModulesReached,
@@ -33,6 +36,7 @@ import { ITREXFactory } from "contracts/factory/ITREXFactory.sol";
 import { ModularComplianceProxy } from "contracts/proxy/ModularComplianceProxy.sol";
 import { IdentityRegistry } from "contracts/registry/implementation/IdentityRegistry.sol";
 import { OwnableOnceNext2StepUpgradeable } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
+import { OwnershipTransferStarted } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
 import { Token } from "contracts/token/Token.sol";
 import { InterfaceIdCalculator } from "contracts/utils/InterfaceIdCalculator.sol";
 import { IdentityFactoryHelper } from "test/forge/helpers/IdentityFactoryHelper.sol";
@@ -42,15 +46,6 @@ import { TREXFactorySetup } from "test/forge/helpers/TREXFactorySetup.sol";
 error InvalidInitialization();
 
 contract ComplianceTest is TREXFactorySetup {
-
-    // Event declarations for expectEmit
-    event ComplianceAdded(address indexed _compliance);
-    event TokenBound(address _token);
-    event TokenUnbound(address _token);
-    event ModuleAdded(address indexed _module);
-    event ModuleRemoved(address indexed _module);
-    event ModuleInteraction(address indexed _target, bytes4 _selector);
-    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
 
     ModularCompliance public compliance;
     ModularCompliance public complianceBeta;

@@ -8,6 +8,11 @@ import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProx
 import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {
+    ClaimTopicsRegistrySet,
+    IdentityStorageSet,
+    TrustedIssuersRegistrySet
+} from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { ClaimIssuerTrick } from "contracts/_testContracts/ClaimIssuerTrick.sol";
 import { ZeroAddress } from "contracts/errors/InvalidArgumentErrors.sol";
 import { CallerDoesNotHaveAgentRole } from "contracts/errors/RoleErrors.sol";
@@ -24,6 +29,10 @@ import {
 } from "contracts/registry/implementation/IdentityRegistry.sol";
 import { IdentityRegistryStorage } from "contracts/registry/implementation/IdentityRegistryStorage.sol";
 import { TrustedIssuersRegistry } from "contracts/registry/implementation/TrustedIssuersRegistry.sol";
+import {
+    EligibilityChecksDisabled,
+    EligibilityChecksEnabled
+} from "contracts/registry/interface/IIdentityRegistry.sol";
 import { InterfaceIdCalculator } from "contracts/utils/InterfaceIdCalculator.sol";
 import { Test } from "forge-std/Test.sol";
 import { IdentityFactoryHelper } from "test/forge/helpers/IdentityFactoryHelper.sol";
@@ -33,13 +42,6 @@ contract IdentityRegistryTest is Test {
 
     // Error declaration, from OpenZeppelin Initializable
     error InvalidInitialization();
-
-    // Event declarations for expectEmit
-    event IdentityStorageSet(address indexed _identityRegistryStorage);
-    event ClaimTopicsRegistrySet(address indexed _claimTopicsRegistry);
-    event TrustedIssuersRegistrySet(address indexed _trustedIssuersRegistry);
-    event EligibilityChecksDisabled();
-    event EligibilityChecksEnabled();
 
     // Contracts
     IdentityRegistry public identityRegistry;

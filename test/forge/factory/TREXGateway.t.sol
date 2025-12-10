@@ -10,6 +10,16 @@ import { ZeroAddress } from "contracts/errors/InvalidArgumentErrors.sol";
 import { SenderIsNotAdmin } from "contracts/errors/RoleErrors.sol";
 import { ITREXFactory } from "contracts/factory/ITREXFactory.sol";
 import { ITREXGateway } from "contracts/factory/ITREXGateway.sol";
+import {
+    DeployerAdded,
+    DeployerRemoved,
+    DeploymentFeeEnabled,
+    DeploymentFeeSet,
+    FactorySet,
+    FeeDiscountApplied,
+    GatewaySuiteDeploymentProcessed,
+    PublicDeploymentStatusSet
+} from "contracts/factory/ITREXGateway.sol";
 import { TREXFactory } from "contracts/factory/TREXFactory.sol";
 import { TREXGateway } from "contracts/factory/TREXGateway.sol";
 import {
@@ -26,17 +36,6 @@ import {
 } from "contracts/factory/TREXGateway.sol";
 import { InterfaceIdCalculator } from "contracts/utils/InterfaceIdCalculator.sol";
 import { TREXFactorySetup } from "test/forge/helpers/TREXFactorySetup.sol";
-
-// Event declarations for expectEmit
-event FactorySet(address indexed _factory);
-event PublicDeploymentStatusSet(bool indexed _publicDeploymentStatus);
-event DeploymentFeeSet(uint256 indexed _fee, address indexed _feeToken, address indexed _feeCollector);
-event DeploymentFeeEnabled(bool indexed _isEnabled);
-event DeployerAdded(address indexed _deployer);
-event DeployerRemoved(address indexed _deployer);
-event FeeDiscountApplied(address indexed _deployer, uint16 _discount);
-event GatewaySuiteDeploymentProcessed(address indexed _requester, address _intendedOwner, uint256 _feeApplied);
-event Transfer(address indexed from, address indexed to, uint256 value);
 
 contract TREXGatewayTest is TREXFactorySetup {
 

@@ -5,13 +5,10 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ZeroAddress } from "contracts/errors/InvalidArgumentErrors.sol";
 import { AccountAlreadyHasRole, AccountDoesNotHaveRole } from "contracts/errors/RoleErrors.sol";
 import { AgentRole } from "contracts/roles/AgentRole.sol";
+import { AgentAdded, AgentRemoved } from "contracts/roles/AgentRole.sol";
 import { Test } from "forge-std/Test.sol";
 
 contract AgentRoleTest is Test {
-
-    // Event declarations for expectEmit
-    event AgentAdded(address indexed _agent);
-    event AgentRemoved(address indexed _agent);
 
     // Contracts
     AgentRole public agentRole;

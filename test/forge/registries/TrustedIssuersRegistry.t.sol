@@ -5,6 +5,11 @@ import { ClaimIssuer } from "@onchain-id/solidity/contracts/ClaimIssuer.sol";
 import { IClaimIssuer } from "@onchain-id/solidity/contracts/interface/IClaimIssuer.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {
+    ClaimTopicsUpdated,
+    TrustedIssuerAdded,
+    TrustedIssuerRemoved
+} from "contracts/ERC-3643/IERC3643TrustedIssuersRegistry.sol";
 import { ZeroAddress } from "contracts/errors/InvalidArgumentErrors.sol";
 import { TrustedIssuersRegistryProxy } from "contracts/proxy/TrustedIssuersRegistryProxy.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
@@ -26,11 +31,6 @@ contract TrustedIssuersRegistryTest is Test {
 
     // Error declaration, from OpenZeppelin Initializable
     error InvalidInitialization();
-
-    // Event declarations for expectEmit
-    event TrustedIssuerAdded(address indexed _trustedIssuer, uint256[] _claimTopics);
-    event TrustedIssuerRemoved(address indexed _trustedIssuer);
-    event ClaimTopicsUpdated(address indexed _trustedIssuer, uint256[] _claimTopics);
 
     // Contracts
     TrustedIssuersRegistry public trustedIssuersRegistry;
@@ -217,7 +217,7 @@ contract TrustedIssuersRegistryTest is Test {
         // Remove another
         vm.prank(deployer);
         vm.expectEmit(true, false, false, false);
-        emit TrustedIssuerRemoved(address(anotherClaimIssuer));
+        emit TrustedIssuerRemoved(IClaimIssuer(address(anotherClaimIssuer)));
         trustedIssuersRegistry.removeTrustedIssuer(anotherClaimIssuer);
 
         // Verify another is no longer trusted
@@ -302,7 +302,7 @@ contract TrustedIssuersRegistryTest is Test {
         // Update claim topics
         vm.prank(deployer);
         vm.expectEmit(true, false, false, false);
-        emit ClaimTopicsUpdated(address(claimIssuerContract), newTopics);
+        emit ClaimTopicsUpdated(IClaimIssuer(address(claimIssuerContract)), newTopics);
         trustedIssuersRegistry.updateIssuerClaimTopics(claimIssuerContract, newTopics);
 
         // Verify new topics are set
