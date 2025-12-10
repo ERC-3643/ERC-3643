@@ -10,6 +10,14 @@ import { TREXFactory } from "contracts/factory/TREXFactory.sol";
 import { ModularComplianceProxy } from "contracts/proxy/ModularComplianceProxy.sol";
 import { IAFactory } from "contracts/proxy/authority/IAFactory.sol";
 import { ITREXImplementationAuthority } from "contracts/proxy/authority/ITREXImplementationAuthority.sol";
+import {
+    IAFactorySet,
+    ImplementationAuthorityChanged,
+    TREXFactorySet,
+    TREXVersionAdded,
+    TREXVersionFetched,
+    VersionUpdated
+} from "contracts/proxy/authority/ITREXImplementationAuthority.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
 import {
     CallerNotOwnerOfAllImpactedContracts,
@@ -29,16 +37,6 @@ import { ImplementationAuthorityHelper } from "test/forge/helpers/Implementation
 import { TREXFactorySetup } from "test/forge/helpers/TREXFactorySetup.sol";
 
 contract TREXImplementationAuthorityTest is TREXFactorySetup {
-
-    // Event declarations for expectEmit
-    event TREXFactorySet(address indexed _trexFactory);
-    event IAFactorySet(address indexed _iaFactory);
-    event TREXVersionFetched(ITREXImplementationAuthority.Version indexed _version);
-    event TREXVersionAdded(
-        ITREXImplementationAuthority.Version indexed _version, ITREXImplementationAuthority.TREXContracts _trex
-    );
-    event VersionUpdated(ITREXImplementationAuthority.Version indexed _version);
-    event ImplementationAuthorityChanged(address indexed _token, address indexed _newImplementationAuthority);
 
     // Token suite deployed in setUp()
     address public tokenAddress;

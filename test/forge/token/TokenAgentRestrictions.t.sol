@@ -4,24 +4,13 @@ pragma solidity 0.8.30;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ITREXFactory } from "contracts/factory/ITREXFactory.sol";
 import { IToken } from "contracts/token/IToken.sol";
+import { AgentRestrictionsSet } from "contracts/token/IToken.sol";
 import { Token } from "contracts/token/Token.sol";
 import { AddressNotAgent } from "contracts/token/Token.sol";
 import { TokenRoles } from "contracts/token/TokenStructs.sol";
 import { TREXFactorySetup } from "test/forge/helpers/TREXFactorySetup.sol";
 
 contract TokenAgentRestrictionsTest is TREXFactorySetup {
-
-    // Event declaration for expectEmit
-    event AgentRestrictionsSet(
-        address indexed _agent,
-        bool _disableMint,
-        bool _disableBurn,
-        bool _disableAddressFreeze,
-        bool _disableForceTransfer,
-        bool _disablePartialFreeze,
-        bool _disablePause,
-        bool _disableRecovery
-    );
 
     // Token suite deployed in setUp()
     address public tokenAddress;

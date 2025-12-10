@@ -5,6 +5,7 @@ import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.so
 import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProxy.sol";
 import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Paused, Unpaused, UpdatedTokenInformation } from "contracts/ERC-3643/IERC3643.sol";
 import { EmptyString } from "contracts/errors/InvalidArgumentErrors.sol";
 import { ITREXFactory } from "contracts/factory/ITREXFactory.sol";
 import { ModularComplianceProxy } from "contracts/proxy/ModularComplianceProxy.sol";
@@ -22,11 +23,6 @@ import { InterfaceIdCalculator } from "contracts/utils/InterfaceIdCalculator.sol
 import { TREXFactorySetup } from "test/forge/helpers/TREXFactorySetup.sol";
 
 contract TokenInformationTest is TREXFactorySetup {
-
-    // Event declarations for expectEmit
-    event UpdatedTokenInformation(string _name, string _symbol, uint8 _decimals, string _version, address _onchainID);
-    event Paused(address indexed account);
-    event Unpaused(address indexed account);
 
     // Token suite deployed in setUp()
     address public tokenAddress;

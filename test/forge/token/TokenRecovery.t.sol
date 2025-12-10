@@ -5,6 +5,7 @@ import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.so
 import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProxy.sol";
 import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { AddressFrozen, RecoverySuccess, TokensFrozen } from "contracts/ERC-3643/IERC3643.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { ITREXFactory } from "contracts/factory/ITREXFactory.sol";
 import { IdentityRegistry } from "contracts/registry/implementation/IdentityRegistry.sol";
@@ -19,11 +20,6 @@ import { TokenRoles } from "contracts/token/TokenStructs.sol";
 import { TREXFactorySetup } from "test/forge/helpers/TREXFactorySetup.sol";
 
 contract TokenRecoveryTest is TREXFactorySetup {
-
-    // Event declarations for expectEmit
-    event RecoverySuccess(address indexed _lostWallet, address indexed _newWallet, address indexed _investorOnchainID);
-    event TokensFrozen(address indexed _userAddress, uint256 _amount);
-    event AddressFrozen(address indexed _userAddress, bool _freeze, address indexed _initiator);
 
     // Token suite deployed in setUp()
     address public tokenAddress;

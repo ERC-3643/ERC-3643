@@ -7,6 +7,14 @@ import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/Im
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {
+    CountryModified,
+    IdentityModified,
+    IdentityRegistryBound,
+    IdentityRegistryUnbound,
+    IdentityStored,
+    IdentityUnstored
+} from "contracts/ERC-3643/IERC3643IdentityRegistryStorage.sol";
 import { ZeroAddress } from "contracts/errors/InvalidArgumentErrors.sol";
 import { CallerDoesNotHaveAgentRole } from "contracts/errors/RoleErrors.sol";
 import { ClaimTopicsRegistryProxy } from "contracts/proxy/ClaimTopicsRegistryProxy.sol";
@@ -30,14 +38,6 @@ import { IdentityFactoryHelper } from "test/forge/helpers/IdentityFactoryHelper.
 import { ImplementationAuthorityHelper } from "test/forge/helpers/ImplementationAuthorityHelper.sol";
 
 contract IdentityRegistryStorageTest is Test {
-
-    // Event declarations for expectEmit
-    event IdentityStored(address indexed _userAddress, address indexed _identity);
-    event IdentityModified(address indexed _oldIdentity, address indexed _newIdentity);
-    event CountryModified(address indexed _investorAddress, uint16 indexed _country);
-    event IdentityUnstored(address indexed _userAddress, address indexed _identity);
-    event IdentityRegistryBound(address indexed _identityRegistry);
-    event IdentityRegistryUnbound(address indexed _identityRegistry);
 
     // Contracts
     IdentityRegistryStorage public identityRegistryStorage;

@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import { ClaimIssuer } from "@onchain-id/solidity/contracts/ClaimIssuer.sol";
 import { IClaimIssuer } from "@onchain-id/solidity/contracts/interface/IClaimIssuer.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {
     ClaimTopicsUpdated,
@@ -28,9 +29,6 @@ import { Test } from "forge-std/Test.sol";
 import { ImplementationAuthorityHelper } from "test/forge/helpers/ImplementationAuthorityHelper.sol";
 
 contract TrustedIssuersRegistryTest is Test {
-
-    // Error declaration, from OpenZeppelin Initializable
-    error InvalidInitialization();
 
     // Contracts
     TrustedIssuersRegistry public trustedIssuersRegistry;

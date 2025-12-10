@@ -6,12 +6,14 @@ import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProx
 import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { TokensFrozen, TokensUnfrozen } from "contracts/ERC-3643/IERC3643.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { TestModule } from "contracts/_testContracts/TestModule.sol";
 import { ModularCompliance } from "contracts/compliance/modular/ModularCompliance.sol";
 import { ModuleProxy } from "contracts/compliance/modular/modules/ModuleProxy.sol";
 import { ITREXFactory } from "contracts/factory/ITREXFactory.sol";
 import { IdentityRegistry } from "contracts/registry/implementation/IdentityRegistry.sol";
+import { DefaultAllowance, DefaultAllowanceDisabled, DefaultAllowanceEnabled } from "contracts/token/IToken.sol";
 import {
     AgentNotAuthorized,
     AmountAboveFrozenTokens,
@@ -27,14 +29,10 @@ import { TREXFactorySetup } from "test/forge/helpers/TREXFactorySetup.sol";
 
 contract TokenTransferTest is TREXFactorySetup {
 
-    // Event declarations for expectEmit
+    // ERC20 events (cannot be imported from interface, must be declared)
+    // These match the IERC20 interface definition
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
-    event TokensFrozen(address indexed _userAddress, uint256 _amount);
-    event TokensUnfrozen(address indexed _userAddress, uint256 _amount);
-    event DefaultAllowance(address indexed _target, bool _status);
-    event DefaultAllowanceEnabled(address indexed _user);
-    event DefaultAllowanceDisabled(address indexed _user);
 
     // Token suite deployed in setUp()
     address public tokenAddress;
