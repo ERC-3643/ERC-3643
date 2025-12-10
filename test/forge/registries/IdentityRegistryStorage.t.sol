@@ -5,6 +5,7 @@ import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.so
 import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProxy.sol";
 import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { ZeroAddress } from "contracts/errors/InvalidArgumentErrors.sol";
 import { CallerDoesNotHaveAgentRole } from "contracts/errors/RoleErrors.sol";
@@ -29,9 +30,6 @@ import { IdentityFactoryHelper } from "test/forge/helpers/IdentityFactoryHelper.
 import { ImplementationAuthorityHelper } from "test/forge/helpers/ImplementationAuthorityHelper.sol";
 
 contract IdentityRegistryStorageTest is Test {
-
-    // Error declaration, from OpenZeppelin Initializable
-    error InvalidInitialization();
 
     // Event declarations for expectEmit
     event IdentityStored(address indexed _userAddress, address indexed _identity);
@@ -93,7 +91,7 @@ contract IdentityRegistryStorageTest is Test {
     /// @notice Should revert when contract was already initialized
     function test_init_RevertWhen_AlreadyInitialized() public {
         vm.prank(deployer);
-        vm.expectRevert(InvalidInitialization.selector);
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         identityRegistryStorage.init();
     }
 

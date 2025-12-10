@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { IERC3643ClaimTopicsRegistry } from "contracts/ERC-3643/IERC3643ClaimTopicsRegistry.sol";
 import { ClaimTopicAdded, ClaimTopicRemoved } from "contracts/ERC-3643/IERC3643ClaimTopicsRegistry.sol";
@@ -16,9 +17,6 @@ import { Test } from "forge-std/Test.sol";
 import { ImplementationAuthorityHelper } from "test/forge/helpers/ImplementationAuthorityHelper.sol";
 
 contract ClaimTopicsRegistryTest is Test {
-
-    // Error declaration, from OpenZeppelin Initializable
-    error InvalidInitialization();
 
     // Contracts
     ClaimTopicsRegistry public claimTopicsRegistry;
@@ -51,7 +49,7 @@ contract ClaimTopicsRegistryTest is Test {
     /// @notice Should revert when contract was already initialized
     function test_init_RevertWhen_AlreadyInitialized() public {
         vm.prank(deployer);
-        vm.expectRevert(InvalidInitialization.selector);
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         claimTopicsRegistry.init();
     }
 

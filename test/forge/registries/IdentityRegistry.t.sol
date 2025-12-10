@@ -7,6 +7,7 @@ import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.so
 import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProxy.sol";
 import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {
     ClaimTopicsRegistrySet,
@@ -39,9 +40,6 @@ import { IdentityFactoryHelper } from "test/forge/helpers/IdentityFactoryHelper.
 import { ImplementationAuthorityHelper } from "test/forge/helpers/ImplementationAuthorityHelper.sol";
 
 contract IdentityRegistryTest is Test {
-
-    // Error declaration, from OpenZeppelin Initializable
-    error InvalidInitialization();
 
     // Contracts
     IdentityRegistry public identityRegistry;
@@ -201,7 +199,7 @@ contract IdentityRegistryTest is Test {
     /// @notice Should prevent to initialize again
     function test_init_RevertWhen_AlreadyInitialized() public {
         vm.prank(deployer);
-        vm.expectRevert(InvalidInitialization.selector);
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         identityRegistry.init(address(0), address(0), address(0));
     }
 

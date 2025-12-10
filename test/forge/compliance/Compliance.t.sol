@@ -7,6 +7,7 @@ import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProx
 import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { IERC3643 } from "contracts/ERC-3643/IERC3643.sol";
 import { ComplianceAdded } from "contracts/ERC-3643/IERC3643.sol";
 import { IERC3643Compliance } from "contracts/ERC-3643/IERC3643Compliance.sol";
@@ -41,9 +42,6 @@ import { Token } from "contracts/token/Token.sol";
 import { InterfaceIdCalculator } from "contracts/utils/InterfaceIdCalculator.sol";
 import { IdentityFactoryHelper } from "test/forge/helpers/IdentityFactoryHelper.sol";
 import { TREXFactorySetup } from "test/forge/helpers/TREXFactorySetup.sol";
-
-// Error for InvalidInitialization (OpenZeppelin v5 doesn't export this)
-error InvalidInitialization();
 
 contract ComplianceTest is TREXFactorySetup {
 
@@ -144,7 +142,7 @@ contract ComplianceTest is TREXFactorySetup {
 
     /// @notice Should prevent calling init twice
     function test_init_RevertWhen_CalledTwice() public {
-        vm.expectRevert(InvalidInitialization.selector);
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         compliance.init();
     }
 
