@@ -2,47 +2,16 @@
 pragma solidity 0.8.30;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { ITREXFactory } from "contracts/factory/ITREXFactory.sol";
 import { IToken } from "contracts/token/IToken.sol";
 import { AgentRestrictionsSet } from "contracts/token/IToken.sol";
-import { Token } from "contracts/token/Token.sol";
 import { AddressNotAgent } from "contracts/token/Token.sol";
 import { TokenRoles } from "contracts/token/TokenStructs.sol";
-import { TREXFactorySetup } from "test/forge/helpers/TREXFactorySetup.sol";
+import { TokenTestBase } from "test/forge/token/TokenTestBase.sol";
 
-contract TokenAgentRestrictionsTest is TREXFactorySetup {
-
-    // Token suite deployed in setUp()
-    address public tokenAddress;
-    Token public token;
-
-    // Additional test addresses
-    address public tokenAgent = makeAddr("tokenAgent");
+contract TokenAgentRestrictionsTest is TokenTestBase {
 
     function setUp() public override {
         super.setUp();
-
-        // Deploy token suite
-        ITREXFactory.TokenDetails memory tokenDetails = ITREXFactory.TokenDetails({
-            owner: deployer,
-            name: "TREX DINO",
-            symbol: "TREXD",
-            decimals: 0,
-            irs: address(0),
-            ONCHAINID: address(0),
-            irAgents: new address[](0),
-            tokenAgents: new address[](0),
-            complianceModules: new address[](0),
-            complianceSettings: new bytes[](0)
-        });
-        ITREXFactory.ClaimDetails memory claimDetails = ITREXFactory.ClaimDetails({
-            claimTopics: new uint256[](0), issuers: new address[](0), issuerClaims: new uint256[][](0)
-        });
-
-        vm.prank(deployer);
-        trexFactory.deployTREXSuite("salt", tokenDetails, claimDetails);
-        tokenAddress = trexFactory.getToken("salt");
-        token = Token(tokenAddress);
 
         // Add tokenAgent as an agent
         vm.prank(deployer);

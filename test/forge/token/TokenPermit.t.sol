@@ -1,23 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ITREXFactory } from "contracts/factory/ITREXFactory.sol";
-import { Token } from "contracts/token/Token.sol";
 import { ERC2612ExpiredSignature, ERC2612InvalidSigner } from "contracts/token/TokenPermit.sol";
-import { TREXFactorySetup } from "test/forge/helpers/TREXFactorySetup.sol";
+import { TokenTestBase } from "test/forge/token/TokenTestBase.sol";
 
-contract TokenPermitTest is TREXFactorySetup {
+contract TokenPermitTest is TokenTestBase {
 
     uint256 constant VALUE = 42;
     uint256 constant NONCE = 0;
     uint256 constant MAX_DEADLINE = type(uint256).max;
 
-    // Token suite deployed in setUp()
-    address public tokenAddress;
-    Token public token;
-
     // Additional test addresses
-    address public tokenAgent = makeAddr("tokenAgent");
     uint256 public alicePrivateKey = 0x1; // Private key for alice
     address public aliceSigner = vm.addr(alicePrivateKey); // alice address from private key
     uint256 public bobPrivateKey = 0x2; // Private key for bob
@@ -25,28 +18,6 @@ contract TokenPermitTest is TREXFactorySetup {
 
     function setUp() public override {
         super.setUp();
-
-        // Deploy token suite
-        ITREXFactory.TokenDetails memory tokenDetails = ITREXFactory.TokenDetails({
-            owner: deployer,
-            name: "TREX DINO",
-            symbol: "TREXD",
-            decimals: 0,
-            irs: address(0),
-            ONCHAINID: address(0),
-            irAgents: new address[](0),
-            tokenAgents: new address[](0),
-            complianceModules: new address[](0),
-            complianceSettings: new bytes[](0)
-        });
-        ITREXFactory.ClaimDetails memory claimDetails = ITREXFactory.ClaimDetails({
-            claimTopics: new uint256[](0), issuers: new address[](0), issuerClaims: new uint256[][](0)
-        });
-
-        vm.prank(deployer);
-        trexFactory.deployTREXSuite("salt", tokenDetails, claimDetails);
-        tokenAddress = trexFactory.getToken("salt");
-        token = Token(tokenAddress);
 
         // Add tokenAgent as an agent
         vm.prank(deployer);

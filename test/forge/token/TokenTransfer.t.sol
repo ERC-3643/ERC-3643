@@ -6,6 +6,7 @@ import { IdentityProxy } from "@onchain-id/solidity/contracts/proxy/IdentityProx
 import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { TokensFrozen, TokensUnfrozen } from "contracts/ERC-3643/IERC3643.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { TestModule } from "contracts/_testContracts/TestModule.sol";
@@ -25,49 +26,17 @@ import {
 } from "contracts/token/Token.sol";
 import { Token } from "contracts/token/Token.sol";
 import { TokenRoles } from "contracts/token/TokenStructs.sol";
-import { TREXFactorySetup } from "test/forge/helpers/TREXFactorySetup.sol";
+import { TokenTestBase } from "test/forge/token/TokenTestBase.sol";
 
-contract TokenTransferTest is TREXFactorySetup {
+contract TokenTransferTest is TokenTestBase {
 
-    // ERC20 events (cannot be imported from interface, must be declared)
-    // These match the IERC20 interface definition
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    // Token suite deployed in setUp()
-    address public tokenAddress;
-    Token public token;
+    // Token suite components
     IdentityRegistry public identityRegistry;
     IIdentity public aliceIdentity;
     IIdentity public bobIdentity;
 
-    // Additional test addresses
-    address public tokenAgent = makeAddr("tokenAgent");
-
     function setUp() public override {
         super.setUp();
-
-        // Deploy token suite
-        ITREXFactory.TokenDetails memory tokenDetails = ITREXFactory.TokenDetails({
-            owner: deployer,
-            name: "TREX DINO",
-            symbol: "TREXD",
-            decimals: 0,
-            irs: address(0),
-            ONCHAINID: address(0),
-            irAgents: new address[](0),
-            tokenAgents: new address[](0),
-            complianceModules: new address[](0),
-            complianceSettings: new bytes[](0)
-        });
-        ITREXFactory.ClaimDetails memory claimDetails = ITREXFactory.ClaimDetails({
-            claimTopics: new uint256[](0), issuers: new address[](0), issuerClaims: new uint256[][](0)
-        });
-
-        vm.prank(deployer);
-        trexFactory.deployTREXSuite("salt", tokenDetails, claimDetails);
-        tokenAddress = trexFactory.getToken("salt");
-        token = Token(tokenAddress);
 
         // Get IdentityRegistry
         IERC3643IdentityRegistry ir = token.identityRegistry();
@@ -135,7 +104,7 @@ contract TokenTransferTest is TREXFactorySetup {
     function test_approve_Success() public {
         vm.prank(alice);
         vm.expectEmit(true, true, false, false, address(token));
-        emit Approval(alice, another, 100);
+        emit IERC20.Approval(alice, another, 100);
         token.approve(another, 100);
 
         assertEq(token.allowance(alice, another), 100);
@@ -150,7 +119,7 @@ contract TokenTransferTest is TREXFactorySetup {
 
         vm.prank(alice);
         vm.expectEmit(true, true, false, false, address(token));
-        emit Approval(alice, another, 200);
+        emit IERC20.Approval(alice, another, 200);
         token.increaseAllowance(another, 100);
 
         assertEq(token.allowance(alice, another), 200);
@@ -165,7 +134,7 @@ contract TokenTransferTest is TREXFactorySetup {
 
         vm.prank(alice);
         vm.expectEmit(true, true, false, false, address(token));
-        emit Approval(alice, another, 50);
+        emit IERC20.Approval(alice, another, 50);
         token.decreaseAllowance(another, 100);
 
         assertEq(token.allowance(alice, another), 50);
@@ -251,7 +220,7 @@ contract TokenTransferTest is TREXFactorySetup {
     function test_transfer_Success() public {
         vm.prank(alice);
         vm.expectEmit(true, true, false, false, address(token));
-        emit Transfer(alice, bob, 100);
+        emit IERC20.Transfer(alice, bob, 100);
         token.transfer(bob, 100);
     }
 
@@ -268,9 +237,9 @@ contract TokenTransferTest is TREXFactorySetup {
 
         vm.prank(alice);
         vm.expectEmit(true, true, false, false, address(token));
-        emit Transfer(alice, bob, 100);
+        emit IERC20.Transfer(alice, bob, 100);
         vm.expectEmit(true, true, false, false, address(token));
-        emit Transfer(alice, bob, 200);
+        emit IERC20.Transfer(alice, bob, 200);
         token.batchTransfer(toList, amounts);
     }
 
@@ -357,7 +326,7 @@ contract TokenTransferTest is TREXFactorySetup {
 
         vm.prank(another);
         vm.expectEmit(true, true, false, false, address(token));
-        emit Transfer(alice, bob, 100);
+        emit IERC20.Transfer(alice, bob, 100);
         token.transferFrom(alice, bob, 100);
 
         assertEq(token.allowance(alice, another), 0);
@@ -422,7 +391,7 @@ contract TokenTransferTest is TREXFactorySetup {
 
         vm.prank(tokenAgent);
         vm.expectEmit(true, true, false, false, address(token));
-        emit Transfer(alice, bob, 100);
+        emit IERC20.Transfer(alice, bob, 100);
         token.forcedTransfer(alice, bob, 100);
     }
 
@@ -436,7 +405,7 @@ contract TokenTransferTest is TREXFactorySetup {
         uint256 unfreezeAmount = balance - 150;
         vm.prank(tokenAgent);
         vm.expectEmit(true, true, false, false, address(token));
-        emit Transfer(alice, bob, transferAmount);
+        emit IERC20.Transfer(alice, bob, transferAmount);
         token.forcedTransfer(alice, bob, transferAmount);
 
         // Check unfrozen tokens separately (event order may vary)
@@ -543,7 +512,7 @@ contract TokenTransferTest is TREXFactorySetup {
         uint256 burnAmount = balance - 50;
         vm.prank(tokenAgent);
         vm.expectEmit(true, true, false, false, address(token));
-        emit Transfer(alice, address(0), burnAmount);
+        emit IERC20.Transfer(alice, address(0), burnAmount);
         token.burn(alice, burnAmount);
 
         // Check frozen tokens (event order may vary)
@@ -654,7 +623,7 @@ contract TokenTransferTest is TREXFactorySetup {
 
         vm.prank(bob);
         vm.expectEmit(true, true, false, false, address(token));
-        emit Transfer(alice, bob, 100);
+        emit IERC20.Transfer(alice, bob, 100);
         token.transferFrom(alice, bob, 100);
     }
 
@@ -683,7 +652,7 @@ contract TokenTransferTest is TREXFactorySetup {
         // Verify default allowance is re-enabled
         vm.prank(bob);
         vm.expectEmit(true, true, false, false, address(token));
-        emit Transfer(alice, bob, 100);
+        emit IERC20.Transfer(alice, bob, 100);
         token.transferFrom(alice, bob, 100);
     }
 
