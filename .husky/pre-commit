@@ -1,6 +1,0 @@
-npm run lint
-# Coverage checks disabled until tests are migrated
-# TODO: Re-enable after migrating tests to Foundry
-# .github/scripts/forge_coverage.sh
-# .github/scripts/hardhat_coverage.sh
-

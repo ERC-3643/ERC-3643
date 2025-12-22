@@ -1,8 +1,7 @@
 [profile.default]
 src = "contracts"
 out = "out"
-script = "scripts"
-test = "test/forge"
+test = "test"
 libs = ["dependencies"]
 via-ir = true
 

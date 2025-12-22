@@ -43,83 +43,58 @@ The T-REX protocol consists of several key components:
 ## Getting Started
 
 1. Clone the repository: `git clone https://github.com/ERC-3643/ERC-3643.git`
-2. Install dependencies: `npm ci`
-3. Compile the contracts: `npm run build` (Foundry) or `npm run build:hardhat` (Hardhat)
-4. Run tests: `npm run test` (Foundry) or `npm run test:hardhat` (Hardhat)
+2. Install [Foundry](https://getfoundry.sh/) if you haven't already
+3. Install dependencies: `forge soldeer install`
+4. Compile the contracts: `forge build`
+5. Run tests: `forge test`
 
 ## Development
 
-This project supports both **Foundry** and **Hardhat** for development and testing. Both frameworks are fully integrated and can be used interchangeably.
+This project uses **Foundry** for development and testing.
 
 ### Prerequisites
 
-- **Node.js** (v20.x or later recommended)
-- **Foundry** (for Foundry commands) - Install from [getfoundry.sh](https://getfoundry.sh/)
-- **npm** or **yarn**
+- **Foundry** - Install from [getfoundry.sh](https://getfoundry.sh/)
 
 ### Installation
 
 ```bash
-# Install all dependencies (including Soldeer dependencies)
-npm install
+# Install Foundry dependencies via Soldeer
+forge soldeer install
 ```
-
-This will automatically:
-
-- Install npm dependencies
-- Install Foundry dependencies via Soldeer
 
 ### Build Commands
 
-#### Foundry
-
 ```bash
-npm run build              # Compile contracts with Foundry
-```
-
-#### Hardhat
-
-```bash
-npm run build:hardhat      # Compile contracts with Hardhat
+forge build              # Compile contracts
 ```
 
 ### Testing
 
-#### Foundry
-
 ```bash
-npm run test               # Run Foundry tests with gas report
-```
-
-#### Hardhat
-
-```bash
-npm run test:hardhat       # Run Hardhat TypeScript tests
+forge test               # Run tests
+forge test --gas-report  # Run tests with gas report
 ```
 
 ### Coverage
 
-#### Foundry
-
 ```bash
-npm run coverage           # Generate coverage report with Foundry
-npm run coverage:report    # Generate HTML coverage report and open in browser
+forge coverage --no-match-coverage "(test|dependencies|scripts)" --ir-minimum
 ```
 
-#### Hardhat
+### Flatten Contracts
 
 ```bash
-npm run coverage:hardhat   # Generate coverage report with Hardhat
+forge flatten <contract-path>  # Flatten a contract
 ```
 
 ### Project Structure
 
 ```
 ├── contracts/             # Solidity contracts
-├── test/
-│   ├── forge/            # Foundry tests (Solidity)
-│   └── hardhat/          # Hardhat tests (TypeScript)
-├── scripts/              # Deployment and utility scripts
+├── test/                 # Foundry tests (Solidity)
+├── foundry.toml          # Foundry configuration
+├── soldeer.lock          # Dependency lock file
 └── docs/                 # Documentation files
 ```
 
