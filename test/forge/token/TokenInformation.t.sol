@@ -141,7 +141,6 @@ contract TokenInformationTest is TokenTestBase {
         // Deploy ModularCompliance proxy (similar to deploySuiteWithModularCompliancesFixture)
         ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
         // Transfer ownership to deployer (compliance is owned by test contract after deployment)
-        vm.prank(address(this));
         Ownable(address(complianceProxy)).transferOwnership(deployer);
 
         // Set compliance

@@ -63,7 +63,6 @@ contract TokenTransferTest is TokenTestBase {
         ModularCompliance compliance = ModularCompliance(address(complianceProxy));
 
         // Transfer ownership to deployer
-        vm.prank(address(this));
         compliance.transferOwnership(deployer);
 
         // Deploy TestModule

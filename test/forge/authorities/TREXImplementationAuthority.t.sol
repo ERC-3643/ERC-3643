@@ -87,12 +87,10 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
         ImplementationAuthorityHelper.ImplementationAuthoritySetup memory otherIASetup =
             ImplementationAuthorityHelper.deploy(true);
 
-        vm.prank(address(this));
         Ownable(address(otherIASetup.implementationAuthority)).transferOwnership(deployer);
 
         TREXFactory otherFactory =
             new TREXFactory(address(otherIASetup.implementationAuthority), address(getIdFactory()));
-        vm.prank(address(this));
         Ownable(address(otherFactory)).transferOwnership(deployer);
 
         vm.prank(deployer);
@@ -104,7 +102,6 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
     function test_setTREXFactory_Success() public {
         // Deploy a new factory using this IA
         TREXFactory newFactory = new TREXFactory(address(getTREXImplementationAuthority()), address(getIdFactory()));
-        vm.prank(address(this));
         Ownable(address(newFactory)).transferOwnership(deployer);
 
         vm.prank(deployer);
@@ -154,13 +151,11 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
     /// @notice Should revert when version was already fetched
     function test_fetchVersion_RevertWhen_AlreadyFetched() public {
         TREXFactory factory = new TREXFactory(address(getTREXImplementationAuthority()), address(getIdFactory()));
-        vm.prank(address(this));
         Ownable(address(factory)).transferOwnership(deployer);
 
         // Deploy non-reference IA
         TREXImplementationAuthority otherIA =
             new TREXImplementationAuthority(false, address(factory), address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         Ownable(address(otherIA)).transferOwnership(deployer);
 
         ITREXImplementationAuthority.Version memory version =
@@ -179,14 +174,12 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
     /// @notice Should fetch and set the versions from the reference contract
     function test_fetchVersion_Success() public {
         TREXFactory factory = new TREXFactory(address(getTREXImplementationAuthority()), address(getIdFactory()));
-        vm.prank(address(this));
         Ownable(address(factory)).transferOwnership(deployer);
 
         // Deploy non-reference IA
         TREXImplementationAuthority otherIA =
             new TREXImplementationAuthority(false, address(factory), address(getTREXImplementationAuthority()));
 
-        vm.prank(address(this));
         Ownable(address(otherIA)).transferOwnership(deployer);
 
         ITREXImplementationAuthority.Version memory version =
@@ -216,13 +209,11 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
     /// @notice Should revert when called on a non-reference contract
     function test_addTREXVersion_RevertWhen_NonReferenceContract() public {
         TREXFactory factory = new TREXFactory(address(getTREXImplementationAuthority()), address(getIdFactory()));
-        vm.prank(address(this));
         Ownable(address(factory)).transferOwnership(deployer);
 
         // Deploy non-reference IA
         TREXImplementationAuthority otherIA =
             new TREXImplementationAuthority(false, address(factory), address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         Ownable(address(otherIA)).transferOwnership(deployer);
 
         ITREXImplementationAuthority.Version memory version =
@@ -301,13 +292,11 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
     /// @notice Should revert when new authority is zero address on non-reference contract
     function test_changeImplementationAuthority_RevertWhen_ZeroAddressOnNonReference() public {
         TREXFactory factory = new TREXFactory(address(getTREXImplementationAuthority()), address(getIdFactory()));
-        vm.prank(address(this));
         Ownable(address(factory)).transferOwnership(deployer);
 
         // Deploy non-reference IA
         TREXImplementationAuthority otherIA =
             new TREXImplementationAuthority(false, address(factory), address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         Ownable(address(otherIA)).transferOwnership(deployer);
 
         vm.prank(deployer);
@@ -335,7 +324,6 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
         ModularComplianceProxy compliance = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
 
         // Transfer compliance ownership to deployer (compliance is owned by test contract after deployment)
-        vm.prank(address(this));
         Ownable(address(compliance)).transferOwnership(deployer);
         vm.prank(deployer);
         Token(tokenAddress).setCompliance(address(compliance));
@@ -361,7 +349,6 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
 
         // Replace compliance with a new one
         ModularComplianceProxy compliance = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         Ownable(address(compliance)).transferOwnership(deployer);
         vm.prank(deployer);
         Token(tokenAddress).setCompliance(address(compliance));
@@ -369,7 +356,6 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
         // Deploy another reference IA with different version
         ImplementationAuthorityHelper.ImplementationAuthoritySetup memory otherIASetup =
             ImplementationAuthorityHelper.deploy(true);
-        vm.prank(address(this));
         Ownable(address(otherIASetup.implementationAuthority)).transferOwnership(deployer);
 
         ITREXImplementationAuthority.Version memory version =
@@ -403,7 +389,6 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
 
         // Replace compliance with a new one
         ModularComplianceProxy compliance = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         Ownable(address(compliance)).transferOwnership(deployer);
         vm.prank(deployer);
         Token(tokenAddress).setCompliance(address(compliance));
@@ -411,7 +396,6 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
         // Deploy another reference IA - it already has version 4.0.0 set up from deploy()
         ImplementationAuthorityHelper.ImplementationAuthoritySetup memory otherIASetup =
             ImplementationAuthorityHelper.deploy(true);
-        vm.prank(address(this));
         Ownable(address(otherIASetup.implementationAuthority)).transferOwnership(deployer);
 
         // Note: otherIASetup already has version 4.0.0 added and in use from deploy(),
@@ -435,19 +419,16 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
 
         // Replace compliance with a new one
         ModularComplianceProxy compliance = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         Ownable(address(compliance)).transferOwnership(deployer);
         vm.prank(deployer);
         Token(tokenAddress).setCompliance(address(compliance));
 
         // Deploy non-reference IA that fetched version but not deployed by factory
         TREXFactory factory = new TREXFactory(address(getTREXImplementationAuthority()), address(getIdFactory()));
-        vm.prank(address(this));
         Ownable(address(factory)).transferOwnership(deployer);
 
         TREXImplementationAuthority otherIA =
             new TREXImplementationAuthority(false, address(factory), address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         Ownable(address(otherIA)).transferOwnership(deployer);
 
         ITREXImplementationAuthority.Version memory version =

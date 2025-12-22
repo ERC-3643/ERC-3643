@@ -31,7 +31,7 @@ contract ComplianceCheckTest is Test {
         compliance = ModularCompliance(address(complianceProxy));
 
         // Transfer ownership to deployer
-        vm.prank(address(this)); // Proxy is owned by the deployer (test contract)
+        // Proxy is owned by the deployer (test contract)
         compliance.transferOwnership(deployer);
 
         // Deploy TestModule implementation

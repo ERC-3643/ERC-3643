@@ -139,7 +139,6 @@ contract TransferCheckTest is TREXFactorySetup {
         compliance = ModularCompliance(address(complianceProxy));
 
         // Transfer ownership to deployer
-        vm.prank(address(this));
         compliance.transferOwnership(deployer);
 
         // Set compliance on token

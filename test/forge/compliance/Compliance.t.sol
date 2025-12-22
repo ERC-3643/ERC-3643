@@ -131,7 +131,6 @@ contract ComplianceTest is TREXFactorySetup {
     function test_bindToken_RevertWhen_AlreadyBoundAndNotToken() public {
         // Deploy new compliance and bind it to token
         ModularCompliance newCompliance = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         newCompliance.transferOwnership(deployer);
 
         vm.prank(deployer);
@@ -150,14 +149,12 @@ contract ComplianceTest is TREXFactorySetup {
 
         // Deploy a compliance and bind it
         ModularCompliance compliance = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         compliance.transferOwnership(deployer);
         vm.prank(deployer);
         compliance.bindToken(address(testToken));
 
         // Deploy new compliance (not bound yet)
         ModularCompliance newCompliance = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         newCompliance.transferOwnership(deployer);
 
         // Verify new compliance is not bound yet
@@ -182,7 +179,6 @@ contract ComplianceTest is TREXFactorySetup {
     /// @notice Should revert when token address is zero
     function test_bindToken_RevertWhen_TokenAddressIsZero() public {
         ModularCompliance newCompliance = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         newCompliance.transferOwnership(deployer);
 
         vm.prank(deployer);
@@ -204,7 +200,6 @@ contract ComplianceTest is TREXFactorySetup {
     /// @notice Should revert when token is zero address
     function test_unbindToken_RevertWhen_TokenIsZeroAddress() public {
         ModularCompliance newCompliance = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         newCompliance.transferOwnership(deployer);
 
         vm.prank(deployer);
@@ -215,7 +210,6 @@ contract ComplianceTest is TREXFactorySetup {
     /// @notice Should revert when token is not bound
     function test_unbindToken_RevertWhen_TokenNotBound() public {
         ModularCompliance newCompliance = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         newCompliance.transferOwnership(deployer);
 
         vm.prank(deployer);
@@ -741,7 +735,6 @@ contract ComplianceTest is TREXFactorySetup {
     /// @notice Should set next owner to caller when set first owner
     function test_OwnableOnceNext2StepUpgradeable_SetsNextOwner_WhenSetFirstOwner() public {
         ModularCompliance newCompliance = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         newCompliance.transferOwnership(alice);
 
         assertEq(newCompliance.owner(), alice);
@@ -750,7 +743,6 @@ contract ComplianceTest is TREXFactorySetup {
     /// @notice Should set owner to next owner in 2 steps
     function test_OwnableOnceNext2StepUpgradeable_SetsOwnerIn2Steps() public {
         ModularCompliance newCompliance = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         newCompliance.transferOwnership(alice);
 
         vm.expectEmit(true, true, false, false, address(newCompliance));
@@ -802,7 +794,6 @@ contract ComplianceTest is TREXFactorySetup {
     function _setupComplianceBoundToWallet() internal returns (Token testToken) {
         // Deploy new compliance for this test
         compliance = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
-        vm.prank(address(this));
         compliance.transferOwnership(deployer);
 
         // Deploy and add modules

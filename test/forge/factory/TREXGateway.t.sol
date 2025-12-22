@@ -69,7 +69,7 @@ contract TREXGatewayTest is TREXFactorySetup {
     function _deployGateway(address factory, bool publicDeploymentStatus) internal returns (TREXGateway) {
         TREXGateway gateway_ = new TREXGateway(factory, publicDeploymentStatus);
         // Transfer ownership to deployer
-        vm.prank(address(this)); // Test contract is the initial owner so we transfer ownershhip to deployer
+        // Test contract is the initial owner so we transfer ownershhip to deployer
         gateway_.transferOwnership(deployer);
         return gateway_;
     }
@@ -949,7 +949,6 @@ contract TREXGatewayTest is TREXFactorySetup {
         trexFactory.transferOwnership(address(gateway));
 
         TestERC20 feeToken = new TestERC20("FeeToken", "FT");
-        vm.prank(address(this));
         feeToken.mint(another, 100000);
 
         vm.prank(deployer);
@@ -980,7 +979,6 @@ contract TREXGatewayTest is TREXFactorySetup {
         trexFactory.transferOwnership(address(gateway));
 
         TestERC20 feeToken = new TestERC20("FeeToken", "FT");
-        vm.prank(address(this));
         feeToken.mint(another, 100000);
 
         vm.prank(deployer);
@@ -1017,7 +1015,6 @@ contract TREXGatewayTest is TREXFactorySetup {
         gateway.addDeployer(another);
 
         TestERC20 feeToken = new TestERC20("FeeToken", "FT");
-        vm.prank(address(this));
         feeToken.mint(another, 100000);
 
         vm.prank(deployer);
@@ -1092,7 +1089,6 @@ contract TREXGatewayTest is TREXFactorySetup {
         gateway.addDeployer(another);
 
         TestERC20 feeToken = new TestERC20("FeeToken", "FT");
-        vm.prank(address(this));
         feeToken.mint(another, 100000);
 
         vm.prank(deployer);
@@ -1126,7 +1122,6 @@ contract TREXGatewayTest is TREXFactorySetup {
         gateway.addDeployer(another);
 
         TestERC20 feeToken = new TestERC20("FeeToken", "FT");
-        vm.prank(address(this));
         feeToken.mint(another, 100000);
 
         vm.prank(deployer);
@@ -1261,7 +1256,6 @@ contract TREXGatewayTest is TREXFactorySetup {
         trexFactory.transferOwnership(address(gateway));
 
         TestERC20 feeToken = new TestERC20("FeeToken", "FT");
-        vm.prank(address(this));
         feeToken.mint(another, 500000);
 
         vm.prank(deployer);
@@ -1302,7 +1296,6 @@ contract TREXGatewayTest is TREXFactorySetup {
         trexFactory.transferOwnership(address(gateway));
 
         TestERC20 feeToken = new TestERC20("FeeToken", "FT");
-        vm.prank(address(this));
         feeToken.mint(another, 500000);
 
         vm.prank(deployer);
