@@ -3,7 +3,7 @@
 FAIL=0
 
 echo "Generating coverage report..."
-COVERAGE_OUTPUT=$(npm run coverage 2>&1)
+COVERAGE_OUTPUT=$(forge coverage --ir-minimum 2>&1)
           
 # Display the coverage report
 echo "=== Coverage Report ==="
@@ -16,6 +16,8 @@ if [ -z "$TOTAL_LINE" ]; then
     exit 1
 fi
 
+# Extract percentages from the Total line
+# Format: | Total | 85.41% (1153/1350) | 84.95% (1095/1289) | 29.48% (125/424) | 87.74% (272/310) |
 LINE_COV=$(echo "$TOTAL_LINE" | awk -F'|' '{print $3}' | grep -o '[0-9]*\.[0-9]*%' | sed 's/%//')
 STMT_COV=$(echo "$TOTAL_LINE" | awk -F'|' '{print $4}' | grep -o '[0-9]*\.[0-9]*%' | sed 's/%//')
 BRANCH_COV=$(echo "$TOTAL_LINE" | awk -F'|' '{print $5}' | grep -o '[0-9]*\.[0-9]*%' | sed 's/%//')
@@ -48,4 +50,3 @@ if [ $FAIL = 1 ]; then
 else
     echo "✅ Coverage requirements met!"
 fi
-
