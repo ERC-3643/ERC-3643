@@ -233,10 +233,16 @@ contract TREXGatewayTest is TREXFactorySetup {
         vm.prank(deployer);
         trexFactory.transferOwnership(address(gateway));
 
+        // Initially disabled
+        assertFalse(gateway.isDeploymentFeeEnabled());
+
         vm.expectEmit(true, false, false, false, address(gateway));
         emit DeploymentFeeEnabled(true);
         vm.prank(deployer);
         gateway.enableDeploymentFee(true);
+
+        // Verify it's now enabled
+        assertTrue(gateway.isDeploymentFeeEnabled());
     }
 
     // ============================================
@@ -288,6 +294,12 @@ contract TREXGatewayTest is TREXFactorySetup {
         emit DeploymentFeeSet(10000, address(feeToken), deployer);
         vm.prank(deployer);
         gateway.setDeploymentFee(10000, address(feeToken), deployer);
+
+        // Verify fee was set correctly
+        ITREXGateway.Fee memory fee = gateway.getDeploymentFee();
+        assertEq(fee.fee, 10000);
+        assertEq(fee.feeToken, address(feeToken));
+        assertEq(fee.feeCollector, deployer);
     }
 
     // ============================================
