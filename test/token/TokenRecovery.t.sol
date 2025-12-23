@@ -219,4 +219,43 @@ contract TokenRecoveryTest is TokenTestBase {
         assertEq(token.getFrozenTokens(another), 0);
     }
 
+    /// @notice Should not emit AddressFrozen when new wallet is already frozen
+    function test_recoveryAddress_Success_NewWalletAlreadyFrozen() public {
+        // Freeze old wallet and new wallet
+        vm.prank(tokenAgent);
+        token.setAddressFrozen(bob, true);
+        vm.prank(tokenAgent);
+        token.setAddressFrozen(another, true);
+
+        // Recovery should not emit AddressFrozen for new wallet since it's already frozen
+        vm.prank(tokenAgent);
+        vm.expectEmit(true, true, true, false, address(token));
+        emit AddressFrozen(bob, false, address(token));
+        vm.expectEmit(true, true, true, false, address(token));
+        emit RecoverySuccess(bob, another, address(bobIdentity));
+        token.recoveryAddress(bob, another, address(bobIdentity));
+
+        assertTrue(token.isFrozen(another));
+    }
+
+    /// @notice Should recover when only new wallet is in registry (not lost wallet)
+    function test_recoveryAddress_Success_OnlyNewWalletInRegistry() public {
+        // Delete bob from identity registry but keep another registered
+        vm.prank(tokenAgent);
+        identityRegistry.deleteIdentity(bob);
+
+        // Register another in identity registry
+        vm.prank(tokenAgent);
+        identityRegistry.registerIdentity(another, bobIdentity, 1);
+
+        // Recovery should work because new wallet is in registry
+        vm.prank(tokenAgent);
+        vm.expectEmit(true, true, true, false, address(token));
+        emit RecoverySuccess(bob, another, address(bobIdentity));
+        token.recoveryAddress(bob, another, address(bobIdentity));
+
+        assertEq(token.balanceOf(another), 500);
+        assertTrue(identityRegistry.contains(another));
+    }
+
 }

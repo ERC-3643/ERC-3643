@@ -19,7 +19,7 @@ jobs:
       - name: Build contracts
         run: forge build
       - name: Run test coverage
-        run: forge coverage --no-match-coverage "(test|dependencies|scripts)" --ir-minimum
+        run: forge coverage --no-match-coverage "(^test/|_testContracts/|utils/)" --ir-minimum
       - name: Zip coverage results
         run: zip -r coverage.zip "coverage/" "coverage.json"
       - name: Upload artifacts to release

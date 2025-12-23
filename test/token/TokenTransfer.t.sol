@@ -10,6 +10,7 @@ import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityReg
 import { TestModule } from "contracts/_testContracts/TestModule.sol";
 import { ModularCompliance } from "contracts/compliance/modular/ModularCompliance.sol";
 import { ModuleProxy } from "contracts/compliance/modular/modules/ModuleProxy.sol";
+import { ERC20InvalidReceiver, ERC20InvalidSender, ERC20InvalidSpender } from "contracts/errors/CommonErrors.sol";
 import { ITREXFactory } from "contracts/factory/ITREXFactory.sol";
 import { IdentityRegistry } from "contracts/registry/implementation/IdentityRegistry.sol";
 import { DefaultAllowance, DefaultAllowanceDisabled, DefaultAllowanceEnabled } from "contracts/token/IToken.sol";
@@ -179,7 +180,7 @@ contract TokenTransferTest is TokenTestBase {
         token.transfer(another, 100);
     }
 
-    /// @notice Should revert when transfer breaks compliance rules
+    /// @notice Should revert when transfer breaks compliance rules (covers AND condition: isVerified=true, canTransfer=false)
     function test_transfer_RevertWhen_ComplianceBreaks() public {
         (ModularCompliance compliance, TestModule testModule) = _deployComplianceSetup();
 
@@ -191,6 +192,7 @@ contract TokenTransferTest is TokenTestBase {
         vm.prank(deployer);
         compliance.callModuleFunction(blockModuleCall, address(testModule));
 
+        // bob is verified but compliance blocks transfer (covers isVerified=true && canTransfer=false branch)
         vm.prank(alice);
         vm.expectRevert(TransferNotPossible.selector);
         token.transfer(bob, 100);
@@ -282,7 +284,7 @@ contract TokenTransferTest is TokenTestBase {
         token.transferFrom(alice, another, 100);
     }
 
-    /// @notice Should revert when transfer breaks compliance rules
+    /// @notice Should revert when transfer breaks compliance rules (covers AND condition: isVerified=true, canTransfer=false)
     function test_transferFrom_RevertWhen_ComplianceBreaks() public {
         (ModularCompliance compliance, TestModule testModule) = _deployComplianceSetup();
 
@@ -294,6 +296,7 @@ contract TokenTransferTest is TokenTestBase {
         vm.prank(deployer);
         compliance.callModuleFunction(blockModuleCall, address(testModule));
 
+        // bob is verified but compliance blocks transfer (covers isVerified=true && canTransfer=false branch)
         vm.prank(alice);
         vm.expectRevert(TransferNotPossible.selector);
         token.transferFrom(alice, bob, 100);
@@ -310,6 +313,66 @@ contract TokenTransferTest is TokenTestBase {
         token.transferFrom(alice, bob, 100);
 
         assertEq(token.allowance(alice, another), 0);
+    }
+
+    /// @notice Should decrease allowance when default allowance is NOT enabled (first part of OR condition)
+    function test_transferFrom_DecreasesAllowance_WhenDefaultAllowanceNotEnabled() public {
+        // Ensure default allowance is NOT enabled for another
+        vm.prank(alice);
+        token.approve(another, 200);
+
+        vm.prank(another);
+        token.transferFrom(alice, bob, 100);
+
+        // Allowance should be decreased
+        assertEq(token.allowance(alice, another), 100);
+    }
+
+    /// @notice Should decrease allowance when default allowance enabled but user opted out (second part of OR condition)
+    function test_transferFrom_DecreasesAllowance_WhenUserOptedOut() public {
+        address[] memory targets = new address[](1);
+        targets[0] = another;
+
+        // Enable default allowance for another
+        vm.prank(deployer);
+        token.setAllowanceForAll(true, targets);
+
+        // User opts out
+        vm.prank(alice);
+        token.disableDefaultAllowance();
+
+        // Approve a specific amount
+        vm.prank(alice);
+        token.approve(another, 200);
+
+        // Transfer should decrease allowance because user opted out
+        vm.prank(another);
+        token.transferFrom(alice, bob, 100);
+
+        // Allowance should be decreased (not max)
+        assertEq(token.allowance(alice, another), 100);
+    }
+
+    /// @notice Should NOT decrease allowance when default allowance enabled AND user NOT opted out (covers OR condition: both false)
+    function test_transferFrom_DoesNotDecreaseAllowance_WhenDefaultAllowanceEnabledAndNotOptedOut() public {
+        address[] memory targets = new address[](1);
+        targets[0] = another;
+
+        // Enable default allowance for another
+        vm.prank(deployer);
+        token.setAllowanceForAll(true, targets);
+
+        // User has NOT opted out, so default allowance applies
+        // Approve a specific amount (this is stored but allowance() returns max)
+        vm.prank(alice);
+        token.approve(another, 200);
+
+        // Transfer should NOT decrease allowance because default allowance is enabled and user hasn't opted out
+        vm.prank(another);
+        token.transferFrom(alice, bob, 100);
+
+        // Allowance should return max (default allowance enabled, user not opted out)
+        assertEq(token.allowance(alice, another), type(uint256).max);
     }
 
     // ============ forcedTransfer() Tests ============
@@ -390,6 +453,23 @@ contract TokenTransferTest is TokenTestBase {
 
         // Check unfrozen tokens separately (event order may vary)
         assertEq(token.getFrozenTokens(alice), 50);
+    }
+
+    /// @notice Should transfer without unfreezing when amount is less than or equal to free balance
+    function test_forcedTransfer_Success_NoUnfreezing() public {
+        uint256 balance = token.balanceOf(alice);
+        vm.prank(tokenAgent);
+        token.freezePartialTokens(alice, 200);
+
+        // Transfer amount less than free balance (no unfreezing needed)
+        uint256 transferAmount = balance - 300;
+        vm.prank(tokenAgent);
+        vm.expectEmit(true, true, false, false, address(token));
+        emit IERC20.Transfer(alice, bob, transferAmount);
+        token.forcedTransfer(alice, bob, transferAmount);
+
+        // Frozen tokens should remain unchanged
+        assertEq(token.getFrozenTokens(alice), 200);
     }
 
     // ============ mint() Tests ============
@@ -680,6 +760,103 @@ contract TokenTransferTest is TokenTestBase {
         token.disableDefaultAllowance();
 
         assertEq(token.allowance(alice, bob), 0);
+    }
+
+    /// @notice Should return actual allowance when default allowance is not enabled (covers branch: !_defaultAllowances[_spender])
+    function test_allowance_ReturnsActual_WhenDefaultAllowanceNotEnabled() public {
+        // No default allowance set, should return actual allowance
+        vm.prank(alice);
+        token.approve(bob, 100);
+        assertEq(token.allowance(alice, bob), 100);
+    }
+
+    /// @notice Should revert when array size exceeds 100
+    function test_setAllowanceForAll_RevertWhen_ArraySizeExceeds100() public {
+        address[] memory targets = new address[](101);
+        for (uint256 i = 0; i < 101; i++) {
+            targets[i] = makeAddr(string(abi.encodePacked("target", i)));
+        }
+
+        vm.prank(deployer);
+        vm.expectRevert(abi.encodeWithSelector(bytes4(keccak256("ArraySizeLimited(uint256)")), 100));
+        token.setAllowanceForAll(true, targets);
+    }
+
+    // ============ batchForcedTransfer() Tests ============
+
+    /// @notice Should perform batch forced transfers
+    function test_batchForcedTransfer_Success() public {
+        address[] memory fromList = new address[](2);
+        fromList[0] = alice;
+        fromList[1] = alice;
+        address[] memory toList = new address[](2);
+        toList[0] = bob;
+        toList[1] = bob;
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 100;
+        amounts[1] = 200;
+
+        vm.prank(tokenAgent);
+        vm.expectEmit(true, true, false, false, address(token));
+        emit IERC20.Transfer(alice, bob, 100);
+        vm.expectEmit(true, true, false, false, address(token));
+        emit IERC20.Transfer(alice, bob, 200);
+        token.batchForcedTransfer(fromList, toList, amounts);
+
+        assertEq(token.balanceOf(bob), 500 + 300);
+    }
+
+    // ============ batchMint() Tests ============
+
+    /// @notice Should perform batch minting
+    function test_batchMint_Success() public {
+        address[] memory toList = new address[](2);
+        toList[0] = alice;
+        toList[1] = bob;
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 100;
+        amounts[1] = 200;
+
+        vm.prank(tokenAgent);
+        vm.expectEmit(true, true, false, false, address(token));
+        emit IERC20.Transfer(address(0), alice, 100);
+        vm.expectEmit(true, true, false, false, address(token));
+        emit IERC20.Transfer(address(0), bob, 200);
+        token.batchMint(toList, amounts);
+
+        assertEq(token.balanceOf(alice), 1000 + 100);
+        assertEq(token.balanceOf(bob), 500 + 200);
+    }
+
+    // ============ batchBurn() Tests ============
+
+    /// @notice Should perform batch burning
+    function test_batchBurn_Success() public {
+        address[] memory userAddresses = new address[](2);
+        userAddresses[0] = alice;
+        userAddresses[1] = bob;
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 100;
+        amounts[1] = 200;
+
+        vm.prank(tokenAgent);
+        vm.expectEmit(true, true, false, false, address(token));
+        emit IERC20.Transfer(alice, address(0), 100);
+        vm.expectEmit(true, true, false, false, address(token));
+        emit IERC20.Transfer(bob, address(0), 200);
+        token.batchBurn(userAddresses, amounts);
+
+        assertEq(token.balanceOf(alice), 1000 - 100);
+        assertEq(token.balanceOf(bob), 500 - 200);
+    }
+
+    // ============ Zero Address Checks (via internal functions) ============
+
+    /// @notice Should revert when trying to approve zero address (tests _approve internal)
+    function test_approve_RevertWhen_ZeroSpender() public {
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(ERC20InvalidSpender.selector, address(0)));
+        token.approve(address(0), 100);
     }
 
 }

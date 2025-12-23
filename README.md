@@ -78,8 +78,23 @@ forge test --gas-report  # Run tests with gas report
 
 ### Coverage
 
+Generate coverage reports using the provided script:
+
+```
+bash ./generate_coverage.sh
+
+```
+
+This will generate:
+
+- Terminal summary with coverage percentages
+- LCOV report (`coverage/lcov.info`) for CI/CD integration
+- HTML report (`coverage/lcov-report/index.html`) for interactive viewing
+
+**Note:** For HTML reports, `lcov` must be installed. Install with:
+
 ```bash
-forge coverage --no-match-coverage "(test|dependencies|scripts)" --ir-minimum
+brew install lcov  # macOS
 ```
 
 ### Flatten Contracts

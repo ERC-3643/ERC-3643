@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Generating coverage report..."
-COVERAGE_OUTPUT=$(forge coverage --ir-minimum 2>&1)
+COVERAGE_OUTPUT=$(forge coverage --no-match-coverage "(^test/|_testContracts/|utils/)" --ir-minimum 2>&1)
           
 # Display the coverage report
 echo "=== Coverage Report ==="

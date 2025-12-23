@@ -43,7 +43,7 @@ jobs:
         run: forge build
 
       - name: Run test coverage
-        run: forge coverage --no-match-coverage "(test|dependencies|scripts)" --ir-minimum
+        run: forge coverage --no-match-coverage "(^test/|_testContracts/|utils/)" --ir-minimum
 
       - name: Upload coverage to action results
         uses: actions/upload-artifact@v4

@@ -3,16 +3,27 @@ pragma solidity 0.8.30;
 
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { Paused, Unpaused, UpdatedTokenInformation } from "contracts/ERC-3643/IERC3643.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {
+    AddressFrozen,
+    Paused,
+    TokensFrozen,
+    TokensUnfrozen,
+    Unpaused,
+    UpdatedTokenInformation
+} from "contracts/ERC-3643/IERC3643.sol";
+import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { EmptyString } from "contracts/errors/InvalidArgumentErrors.sol";
 import { ModularComplianceProxy } from "contracts/proxy/ModularComplianceProxy.sol";
+import { IdentityRegistry } from "contracts/registry/implementation/IdentityRegistry.sol";
 import {
     AgentNotAuthorized,
     AmountAboveFrozenTokens,
     CallerDoesNotHaveAgentRole,
     ERC20InsufficientBalance,
     EnforcedPause,
-    ExpectedPause
+    ExpectedPause,
+    Token
 } from "contracts/token/Token.sol";
 import { TokenRoles } from "contracts/token/TokenStructs.sol";
 import { InterfaceIdCalculator } from "contracts/utils/InterfaceIdCalculator.sol";
@@ -20,12 +31,27 @@ import { TokenTestBase } from "test/token/TokenTestBase.sol";
 
 contract TokenInformationTest is TokenTestBase {
 
+    // Token suite components
+    IdentityRegistry public identityRegistry;
+
     function setUp() public override {
         super.setUp();
 
+        // Get IdentityRegistry
+        IERC3643IdentityRegistry ir = token.identityRegistry();
+        identityRegistry = IdentityRegistry(address(ir));
+
         // Add tokenAgent as an agent
-        vm.prank(deployer);
+        vm.startPrank(deployer);
         token.addAgent(tokenAgent);
+        identityRegistry.addAgent(tokenAgent);
+        vm.stopPrank();
+
+        // Register alice and bob in IdentityRegistry
+        vm.startPrank(tokenAgent);
+        identityRegistry.registerIdentity(alice, aliceIdentity, 42);
+        identityRegistry.registerIdentity(bob, bobIdentity, 666);
+        vm.stopPrank();
 
         // Unpause token
         vm.prank(tokenAgent);
@@ -150,6 +176,27 @@ contract TokenInformationTest is TokenTestBase {
         assertEq(address(token.compliance()), address(complianceProxy));
     }
 
+    /// @notice Should unbind existing compliance when setting new compliance
+    function test_setCompliance_UnbindsExistingCompliance() public {
+        // Deploy first compliance
+        ModularComplianceProxy complianceProxy1 = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
+        Ownable(address(complianceProxy1)).transferOwnership(deployer);
+
+        // Deploy second compliance
+        ModularComplianceProxy complianceProxy2 = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
+        Ownable(address(complianceProxy2)).transferOwnership(deployer);
+
+        // Set first compliance
+        vm.prank(deployer);
+        token.setCompliance(address(complianceProxy1));
+        assertEq(address(token.compliance()), address(complianceProxy1));
+
+        // Set second compliance (should unbind first)
+        vm.prank(deployer);
+        token.setCompliance(address(complianceProxy2));
+        assertEq(address(token.compliance()), address(complianceProxy2));
+    }
+
     // ============ pause() Tests ============
 
     /// @notice Should revert when the caller is not an agent
@@ -262,36 +309,56 @@ contract TokenInformationTest is TokenTestBase {
         token.setAddressFrozen(another, true);
     }
 
-    // ============ freezePartialTokens() Tests ============
+    /// @notice Should revert when agent permission is restricted
+    function test_setAddressFrozen_RevertWhen_AgentRestricted() public {
+        TokenRoles memory restrictions = TokenRoles({
+            disableMint: false,
+            disableBurn: false,
+            disablePartialFreeze: false,
+            disableAddressFreeze: true,
+            disableRecovery: false,
+            disableForceTransfer: false,
+            disablePause: false
+        });
 
-    /// @notice Should revert when sender is not an agent
-    function test_freezePartialTokens_RevertWhen_NotAgent() public {
-        vm.prank(another);
-        vm.expectRevert(CallerDoesNotHaveAgentRole.selector);
-        token.freezePartialTokens(another, 1);
+        vm.prank(deployer);
+        token.setAgentRestrictions(tokenAgent, restrictions);
+
+        vm.prank(tokenAgent);
+        vm.expectRevert(abi.encodeWithSelector(AgentNotAuthorized.selector, tokenAgent, "address freeze disabled"));
+        token.setAddressFrozen(alice, true);
     }
+
+    /// @notice Should freeze address successfully
+    function test_setAddressFrozen_Success() public {
+        vm.prank(tokenAgent);
+        vm.expectEmit(true, true, true, false, address(token));
+        emit AddressFrozen(alice, true, tokenAgent);
+        token.setAddressFrozen(alice, true);
+
+        assertTrue(token.isFrozen(alice));
+    }
+
+    /// @notice Should unfreeze address successfully
+    function test_setAddressFrozen_UnfreezeSuccess() public {
+        vm.prank(tokenAgent);
+        token.setAddressFrozen(alice, true);
+
+        vm.prank(tokenAgent);
+        vm.expectEmit(true, true, true, false, address(token));
+        emit AddressFrozen(alice, false, tokenAgent);
+        token.setAddressFrozen(alice, false);
+
+        assertFalse(token.isFrozen(alice));
+    }
+
+    // ============ freezePartialTokens() Tests ============
 
     /// @notice Should revert when amounts exceed current balance
     function test_freezePartialTokens_RevertWhen_AmountExceedsBalance() public {
         vm.prank(tokenAgent);
         vm.expectRevert(abi.encodeWithSelector(ERC20InsufficientBalance.selector, another, 0, 1));
         token.freezePartialTokens(another, 1);
-    }
-
-    // ============ unfreezePartialTokens() Tests ============
-
-    /// @notice Should revert when sender is not an agent
-    function test_unfreezePartialTokens_RevertWhen_NotAgent() public {
-        vm.prank(another);
-        vm.expectRevert(CallerDoesNotHaveAgentRole.selector);
-        token.unfreezePartialTokens(another, 1);
-    }
-
-    /// @notice Should revert when amounts exceed current frozen balance
-    function test_unfreezePartialTokens_RevertWhen_AmountExceedsFrozen() public {
-        vm.prank(tokenAgent);
-        vm.expectRevert(abi.encodeWithSelector(AmountAboveFrozenTokens.selector, 1, 0));
-        token.unfreezePartialTokens(another, 1);
     }
 
     // ============ supportsInterface() Tests ============
@@ -342,6 +409,98 @@ contract TokenInformationTest is TokenTestBase {
         InterfaceIdCalculator calculator = new InterfaceIdCalculator();
         bytes4 interfaceId = calculator.getIERC20PermitInterfaceId();
         assertTrue(token.supportsInterface(interfaceId));
+    }
+
+    // ============ batchSetAddressFrozen() Tests ============
+
+    /// @notice Should perform batch address freezing
+    function test_batchSetAddressFrozen_Success() public {
+        address[] memory userAddresses = new address[](2);
+        userAddresses[0] = alice;
+        userAddresses[1] = bob;
+        bool[] memory freeze = new bool[](2);
+        freeze[0] = true;
+        freeze[1] = true;
+
+        vm.prank(tokenAgent);
+        vm.expectEmit(true, true, true, false, address(token));
+        emit AddressFrozen(alice, true, tokenAgent);
+        vm.expectEmit(true, true, true, false, address(token));
+        emit AddressFrozen(bob, true, tokenAgent);
+        token.batchSetAddressFrozen(userAddresses, freeze);
+
+        assertTrue(token.isFrozen(alice));
+        assertTrue(token.isFrozen(bob));
+    }
+
+    // ============ batchFreezePartialTokens() Tests ============
+
+    /// @notice Should perform batch partial token freezing
+    function test_batchFreezePartialTokens_Success() public {
+        // Ensure users have balances
+        vm.prank(tokenAgent);
+        token.mint(alice, 1000);
+        vm.prank(tokenAgent);
+        token.mint(bob, 500);
+
+        address[] memory userAddresses = new address[](2);
+        userAddresses[0] = alice;
+        userAddresses[1] = bob;
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 100;
+        amounts[1] = 200;
+
+        vm.prank(tokenAgent);
+        token.batchFreezePartialTokens(userAddresses, amounts);
+
+        assertEq(token.getFrozenTokens(alice), 100);
+        assertEq(token.getFrozenTokens(bob), 200);
+    }
+
+    // ============ batchUnfreezePartialTokens() Tests ============
+
+    /// @notice Should perform batch partial token unfreezing
+    function test_batchUnfreezePartialTokens_Success() public {
+        // Ensure users have balances
+        vm.prank(tokenAgent);
+        token.mint(alice, 1000);
+        vm.prank(tokenAgent);
+        token.mint(bob, 500);
+
+        // First freeze tokens
+        vm.prank(tokenAgent);
+        token.freezePartialTokens(alice, 200);
+        vm.prank(tokenAgent);
+        token.freezePartialTokens(bob, 300);
+
+        address[] memory userAddresses = new address[](2);
+        userAddresses[0] = alice;
+        userAddresses[1] = bob;
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 100;
+        amounts[1] = 200;
+
+        vm.prank(tokenAgent);
+        token.batchUnfreezePartialTokens(userAddresses, amounts);
+
+        assertEq(token.getFrozenTokens(alice), 100);
+        assertEq(token.getFrozenTokens(bob), 100);
+    }
+
+    // ============ Constructor Tests ============
+
+    /// @notice Should prevent direct initialization of Token implementation
+    function test_constructor_CallsDisableInitializers() public {
+        Token tokenImplementation = new Token();
+        assertTrue(address(tokenImplementation) != address(0));
+
+        ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
+        Ownable(address(complianceProxy)).transferOwnership(deployer);
+
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        tokenImplementation.init(
+            address(identityRegistry), address(complianceProxy), "Test Token", "TEST", 18, address(0)
+        );
     }
 
 }

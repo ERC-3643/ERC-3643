@@ -147,4 +147,27 @@ contract TokenPermitTest is TokenTestBase {
         token.permit(owner, spender, VALUE, deadline, v, r, s);
     }
 
+    // ============ eip712Domain() Tests ============
+
+    /// @notice Should return correct EIP-712 domain information
+    function test_eip712Domain_ReturnsCorrectValues() public view {
+        (
+            bytes1 fields,
+            string memory name_,
+            string memory version_,
+            uint256 chainId,
+            address verifyingContract,
+            bytes32 salt,
+            uint256[] memory extensions
+        ) = token.eip712Domain();
+
+        assertEq(fields, hex"0f");
+        assertEq(keccak256(bytes(name_)), keccak256(bytes(token.name())));
+        assertEq(keccak256(bytes(version_)), keccak256(bytes(token.version())));
+        assertEq(chainId, block.chainid);
+        assertEq(verifyingContract, address(token));
+        assertEq(salt, bytes32(0));
+        assertEq(extensions.length, 0);
+    }
+
 }
