@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { TestModule } from "contracts/_testContracts/TestModule.sol";
 import { ModularCompliance } from "contracts/compliance/modular/ModularCompliance.sol";
+import { IModule } from "contracts/compliance/modular/modules/IModule.sol";
 import { OnlyBoundComplianceCanCall } from "contracts/errors/ComplianceErrors.sol";
+import { ComplianceNotBound } from "contracts/errors/ComplianceErrors.sol";
+import { IERC173 } from "contracts/roles/IERC173.sol";
 import { Test } from "forge-std/Test.sol";
 
 /// @notice tests for TestModule multicall functionality
@@ -19,6 +24,8 @@ contract TestModuleTest is Test {
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
     address public another = makeAddr("another");
+
+    bytes32 constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
     /// @notice Sets up ModularCompliance and TestModule
     function setUp() public {
@@ -128,6 +135,123 @@ contract TestModuleTest is Test {
         vm.prank(deployer);
         vm.expectRevert(OnlyBoundComplianceCanCall.selector);
         testModule.multicall(multicallData);
+    }
+
+    // ============================================
+    // isComplianceBound Tests
+    // ============================================
+
+    /// @notice Should return true when compliance is bound
+    function test_isComplianceBound_ReturnsTrue_WhenBound() public view {
+        assertTrue(testModule.isComplianceBound(address(compliance)));
+    }
+
+    /// @notice Should return false when compliance is not bound
+    function test_isComplianceBound_ReturnsFalse_WhenNotBound() public {
+        address unboundCompliance = makeAddr("unboundCompliance");
+        assertFalse(testModule.isComplianceBound(unboundCompliance));
+    }
+
+    // ============================================
+    // getNonce Tests
+    // ============================================
+
+    /// @notice Should return zero nonce initially
+    function test_getNonce_ReturnsZero_Initially() public view {
+        assertEq(testModule.getNonce(address(compliance)), 0);
+    }
+
+    /// @notice Should increment nonce when unbinding compliance
+    function test_getNonce_Increments_WhenUnbinding() public {
+        assertEq(testModule.getNonce(address(compliance)), 0);
+
+        vm.prank(address(compliance));
+        testModule.unbindCompliance(address(compliance));
+
+        assertEq(testModule.getNonce(address(compliance)), 1);
+
+        vm.prank(address(compliance));
+        testModule.bindCompliance(address(compliance));
+
+        vm.prank(address(compliance));
+        testModule.unbindCompliance(address(compliance));
+
+        assertEq(testModule.getNonce(address(compliance)), 2);
+    }
+
+    // ============================================
+    // supportsInterface Tests
+    // ============================================
+
+    /// @notice Should return false for unsupported interface
+    function test_supportsInterface_ReturnsFalse_ForUnsupported() public view {
+        bytes4 unsupportedInterfaceId = bytes4(0x12345678);
+        assertFalse(testModule.supportsInterface(unsupportedInterfaceId));
+    }
+
+    /// @notice Should return true for IModule interface
+    function test_supportsInterface_ReturnsTrue_ForIModule() public view {
+        assertTrue(testModule.supportsInterface(type(IModule).interfaceId));
+    }
+
+    /// @notice Should return true for IERC173 interface
+    function test_supportsInterface_ReturnsTrue_ForIERC173() public view {
+        assertTrue(testModule.supportsInterface(type(IERC173).interfaceId));
+    }
+
+    /// @notice Should return true for IERC165 interface
+    function test_supportsInterface_ReturnsTrue_ForIERC165() public view {
+        assertTrue(testModule.supportsInterface(type(IERC165).interfaceId));
+    }
+
+    // ============================================
+    // _authorizeUpgrade Tests (via upgradeToAndCall)
+    // ============================================
+
+    /// @notice Should upgrade module when called by owner (covers _authorizeUpgrade)
+    function test_upgradeToAndCall_Success_CoversAuthorizeUpgrade() public {
+        testModule.transferOwnership(deployer);
+
+        TestModule newImplementation = new TestModule();
+
+        bytes32 slotValueBefore = vm.load(address(testModule), IMPLEMENTATION_SLOT);
+        address oldImplementation = address(uint160(uint256(slotValueBefore)));
+
+        vm.prank(deployer);
+        UUPSUpgradeable(address(testModule)).upgradeToAndCall(address(newImplementation), "");
+
+        bytes32 slotValueAfter = vm.load(address(testModule), IMPLEMENTATION_SLOT);
+        address actualImplementation = address(uint160(uint256(slotValueAfter)));
+
+        assertEq(actualImplementation, address(newImplementation));
+        assertNotEq(actualImplementation, oldImplementation);
+    }
+
+    /// @notice Should revert upgrade when not called by owner
+    function test_upgradeToAndCall_RevertWhen_NotOwner() public {
+        testModule.transferOwnership(deployer);
+
+        TestModule newImplementation = new TestModule();
+
+        vm.prank(alice);
+        vm.expectRevert();
+        UUPSUpgradeable(address(testModule)).upgradeToAndCall(address(newImplementation), "");
+    }
+
+    // ============================================
+    // onlyBoundCompliance Modifier Tests
+    // ============================================
+
+    /// @notice Should succeed when compliance is bound
+    function test_onlyBoundCompliance_Success_WhenBound() public {
+        testModule.invokeOnlyBoundCompliance(address(compliance));
+    }
+
+    /// @notice Should revert when compliance is not bound
+    function test_onlyBoundCompliance_RevertWhen_NotBound() public {
+        address unboundCompliance = makeAddr("unboundCompliance");
+        vm.expectRevert(ComplianceNotBound.selector);
+        testModule.invokeOnlyBoundCompliance(unboundCompliance);
     }
 
 }

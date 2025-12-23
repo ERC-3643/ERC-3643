@@ -159,4 +159,9 @@ contract TestModule is AbstractModuleUpgradeable {
         return "TestModule";
     }
 
+    /**
+     *  @dev Test function to cover onlyBoundCompliance modifier
+     */
+    function invokeOnlyBoundCompliance(address _compliance) external onlyBoundCompliance(_compliance) { }
+
 }
