@@ -3,8 +3,11 @@ pragma solidity 0.8.30;
 
 import { ClaimIssuer } from "@onchain-id/solidity/contracts/ClaimIssuer.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
+import { IERC3643IdentityRegistryStorage } from "contracts/ERC-3643/IERC3643IdentityRegistryStorage.sol";
 import { TestModule } from "contracts/_testContracts/TestModule.sol";
 import { ModuleProxy } from "contracts/compliance/modular/modules/ModuleProxy.sol";
+import { InvalidImplementationAuthority } from "contracts/errors/CommonErrors.sol";
 import { ZeroAddress } from "contracts/errors/InvalidArgumentErrors.sol";
 import { ITREXFactory } from "contracts/factory/ITREXFactory.sol";
 import {
@@ -17,6 +20,7 @@ import {
     TREXFactory,
     TokenAlreadyDeployed
 } from "contracts/factory/TREXFactory.sol";
+import { IdentityRegistryStorageProxy } from "contracts/proxy/IdentityRegistryStorageProxy.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
 import { OwnableOnceNext2StepUpgradeable } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
 import { OwnershipTransferStarted } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
@@ -380,6 +384,56 @@ contract TREXFactoryTest is TREXFactorySetup {
 
         // Verify alice is now the owner
         assertEq(token.owner(), alice, "Alice should be the new owner");
+    }
+
+    /// @notice Should deploy TREX suite when irs is provided (not address(0))
+    function test_deployTREXSuite_Success_WithProvidedIRS() public {
+        // First deploy a TREX suite to get an IRS that's already properly set up
+        ITREXFactory.TokenDetails memory tempTokenDetails = _createEmptyTokenDetails();
+        ITREXFactory.ClaimDetails memory tempClaimDetails = _createEmptyClaimDetails();
+
+        vm.prank(deployer);
+        trexFactory.deployTREXSuite("temp-salt", tempTokenDetails, tempClaimDetails);
+
+        // Get the IRS from the deployed token's identity registry
+        address tempTokenAddress = trexFactory.getToken("temp-salt");
+        Token tempToken = Token(tempTokenAddress);
+        address irAddress = address(tempToken.identityRegistry());
+        IERC3643IdentityRegistry ir = IERC3643IdentityRegistry(irAddress);
+        address deployedIRS = address(ir.identityStorage());
+
+        require(deployedIRS != address(0), "IRS should be deployed");
+
+        // Now use the deployed IRS in a new deployment
+        ITREXFactory.TokenDetails memory tokenDetails = ITREXFactory.TokenDetails({
+            owner: deployer,
+            name: "Token name",
+            symbol: "SYM",
+            decimals: 8,
+            irs: deployedIRS, // Use provided IRS instead of address(0)
+            ONCHAINID: address(0),
+            irAgents: new address[](0),
+            tokenAgents: new address[](0),
+            complianceModules: new address[](0),
+            complianceSettings: new bytes[](0)
+        });
+        ITREXFactory.ClaimDetails memory claimDetails = _createEmptyClaimDetails();
+
+        vm.prank(deployer);
+        trexFactory.deployTREXSuite("salt-irs", tokenDetails, claimDetails);
+
+        address tokenAddress = trexFactory.getToken("salt-irs");
+        assertNotEq(tokenAddress, address(0), "Token should be deployed");
+
+        // Verify both tokens share the same identity registry storage
+        Token newToken = Token(tokenAddress);
+        IERC3643IdentityRegistry newIR = newToken.identityRegistry();
+        IERC3643IdentityRegistry tempIR = tempToken.identityRegistry();
+        assertEq(
+            address(newIR.identityStorage()),
+            address(tempIR.identityStorage()),
+            "Both tokens should share the same identity registry storage"
+        );
     }
 
 }
