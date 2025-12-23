@@ -571,6 +571,20 @@ contract ComplianceTest is TREXFactorySetup {
         compliance.callModuleFunction(callData, moduleAddress);
     }
 
+    /// @notice Should revert when module function call fails
+    function test_callModuleFunction_RevertWhen_ModuleCallFails() public {
+        address moduleAddress = _deployTestModuleWithProxy();
+        vm.prank(deployer);
+        compliance.addModule(moduleAddress);
+
+        // Call a non-existent function to trigger revert
+        bytes memory callData = abi.encodeWithSignature("nonExistentFunction()");
+
+        vm.prank(deployer);
+        vm.expectRevert();
+        compliance.callModuleFunction(callData, moduleAddress);
+    }
+
     // ============================================
     // .addAndSetModule Tests
     // ============================================
