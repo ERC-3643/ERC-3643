@@ -11,6 +11,7 @@ import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol
 import {
     ClaimTopicsRegistrySet,
     IdentityStorageSet,
+    IdentityUpdated,
     TrustedIssuersRegistrySet
 } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { ClaimIssuerTrick } from "contracts/_testContracts/ClaimIssuerTrick.sol";
@@ -244,6 +245,23 @@ contract IdentityRegistryTest is Test {
         vm.prank(another);
         vm.expectRevert(CallerDoesNotHaveAgentRole.selector);
         identityRegistry.updateIdentity(bob, charlieIdentity);
+    }
+
+    /// @notice Should update identity successfully when called by agent
+    function test_updateIdentity_Success() public {
+        // Get bob's current identity
+        IIdentity oldIdentity = identityRegistry.identity(bob);
+        assertEq(address(oldIdentity), address(bobIdentity));
+
+        // Update to charlie's identity
+        vm.expectEmit(true, true, false, false, address(identityRegistry));
+        emit IdentityUpdated(oldIdentity, charlieIdentity);
+        vm.prank(tokenAgent);
+        identityRegistry.updateIdentity(bob, charlieIdentity);
+
+        // Verify identity was updated
+        IIdentity newIdentity = identityRegistry.identity(bob);
+        assertEq(address(newIdentity), address(charlieIdentity));
     }
 
     // ============ updateCountry() Tests ============
