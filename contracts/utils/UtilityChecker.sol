@@ -120,32 +120,42 @@ contract UtilityChecker is IUtilityChecker, OwnableUpgradeable, UUPSUpgradeable 
         IERC3643TrustedIssuersRegistry tokenIssuersRegistry = identityRegistry.issuersRegistry();
         IIdentity identity = identityRegistry.identity(_userAddress);
 
-        uint256 foundClaimTopic;
-        uint256 scheme;
-        address issuer;
-        bytes memory sig;
-        bytes memory data;
-        uint256 topic;
         uint256[] memory requiredClaimTopics = identityRegistry.topicsRegistry().getClaimTopics();
         uint256 topicsCount = requiredClaimTopics.length;
         _details = new EligibilityCheckDetails[](topicsCount);
         for (uint256 claimTopic; claimTopic < topicsCount; claimTopic++) {
-            topic = requiredClaimTopics[claimTopic];
+            uint256 topic = requiredClaimTopics[claimTopic];
             IClaimIssuer[] memory trustedIssuers = tokenIssuersRegistry.getTrustedIssuersForClaimTopic(topic);
+            _processClaimTopic(identity, topic, trustedIssuers, _details, claimTopic);
+        }
+    }
 
-            for (uint256 i; i < trustedIssuers.length; i++) {
-                bytes32 claimId = keccak256(abi.encode(trustedIssuers[i], topic));
-                (foundClaimTopic, scheme, issuer, sig, data,) = identity.getClaim(claimId);
-                if (foundClaimTopic == topic) {
-                    bool pass;
-                    try IClaimIssuer(issuer).isClaimValid(identity, topic, sig, data) returns (bool validity) {
-                        pass = validity;
-                    } catch {
-                        pass = false;
-                    }
-                    _details[claimTopic] =
-                        EligibilityCheckDetails({ issuer: trustedIssuers[i], topic: topic, pass: pass });
+    /// @dev Helper function to process a single claim topic and set eligibility details.
+    ///      This function is extracted to avoid "stack too deep" errors.
+    /// @param _identity The identity contract to check claims against.
+    /// @param _topic The claim topic to verify.
+    /// @param _trustedIssuers Array of trusted issuers for this topic.
+    /// @param _details The details array to update.
+    /// @param _index The index in the details array to update.
+    function _processClaimTopic(
+        IIdentity _identity,
+        uint256 _topic,
+        IClaimIssuer[] memory _trustedIssuers,
+        EligibilityCheckDetails[] memory _details,
+        uint256 _index
+    ) private view {
+        for (uint256 i; i < _trustedIssuers.length; i++) {
+            bytes32 claimId = keccak256(abi.encode(_trustedIssuers[i], _topic));
+            (uint256 foundClaimTopic, uint256 scheme, address issuer, bytes memory sig, bytes memory data,) =
+                _identity.getClaim(claimId);
+            if (foundClaimTopic == _topic) {
+                bool pass;
+                try IClaimIssuer(issuer).isClaimValid(_identity, _topic, sig, data) returns (bool validity) {
+                    pass = validity;
+                } catch {
+                    pass = false;
                 }
+                _details[_index] = EligibilityCheckDetails({ issuer: _trustedIssuers[i], topic: _topic, pass: pass });
             }
         }
     }
