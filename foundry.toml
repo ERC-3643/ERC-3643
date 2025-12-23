@@ -3,7 +3,6 @@ src = "contracts"
 out = "out"
 test = "test"
 libs = ["dependencies"]
-via-ir = true
 
 solc_version = "0.8.30"
 optimizer = true
