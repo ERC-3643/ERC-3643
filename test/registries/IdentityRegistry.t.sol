@@ -6,6 +6,7 @@ import { IClaimIssuer } from "@onchain-id/solidity/contracts/interface/IClaimIss
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
 import { ImplementationAuthority } from "@onchain-id/solidity/contracts/proxy/ImplementationAuthority.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {
@@ -203,6 +204,45 @@ contract IdentityRegistryTest is Test {
         vm.prank(deployer);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         identityRegistry.init(address(0), address(0), address(0));
+    }
+
+    /// @notice Should reject zero address for all parameters when calling init directly
+    function test_init_RevertWhen_ZeroAddress_InitCall() public {
+        // Deploy new implementation
+        IdentityRegistry implementation = new IdentityRegistry();
+
+        vm.expectRevert(ZeroAddress.selector);
+        new ERC1967Proxy(
+            address(implementation),
+            abi.encodeWithSelector(
+                IdentityRegistry.init.selector,
+                address(0), // Zero address for Trusted Issuers Registry
+                address(claimTopicsRegistry),
+                address(identityRegistryStorage)
+            )
+        );
+
+        vm.expectRevert(ZeroAddress.selector);
+        new ERC1967Proxy(
+            address(implementation),
+            abi.encodeWithSelector(
+                IdentityRegistry.init.selector,
+                address(trustedIssuersRegistry),
+                address(0), // Zero address for Claim Topics Registry
+                address(identityRegistryStorage)
+            )
+        );
+
+        vm.expectRevert(ZeroAddress.selector);
+        new ERC1967Proxy(
+            address(implementation),
+            abi.encodeWithSelector(
+                IdentityRegistry.init.selector,
+                address(trustedIssuersRegistry),
+                address(claimTopicsRegistry),
+                address(0) // Zero address for Identity Storage
+            )
+        );
     }
 
     /// @notice Should reject zero address for Trusted Issuers Registry
