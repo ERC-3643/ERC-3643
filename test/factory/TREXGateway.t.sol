@@ -862,6 +862,24 @@ contract TREXGatewayTest is TREXFactorySetup {
         gateway.batchApplyFeeDiscount(deployers, discounts);
     }
 
+    /// @notice Should revert when batch size exceeds 500
+    function test_batchApplyFeeDiscount_RevertWhen_BatchSizeExceeds500() public {
+        gateway = _deployGateway(address(0), false);
+        vm.prank(deployer);
+        trexFactory.transferOwnership(address(gateway));
+
+        address[] memory deployers = new address[](501);
+        uint16[] memory discounts = new uint16[](501);
+        for (uint256 i = 0; i < 501; i++) {
+            deployers[i] = makeAddr(string(abi.encodePacked("deployer", i)));
+            discounts[i] = 5000;
+        }
+
+        vm.prank(deployer);
+        vm.expectRevert(abi.encodeWithSelector(BatchMaxLengthExceeded.selector, 500));
+        gateway.batchApplyFeeDiscount(deployers, discounts);
+    }
+
     /// @notice Should apply discounts to all deployers when called by agent
     function test_batchApplyFeeDiscount_Success_WhenCalledByAgent() public {
         // Deploy a token to use as fee token BEFORE transferring ownership
