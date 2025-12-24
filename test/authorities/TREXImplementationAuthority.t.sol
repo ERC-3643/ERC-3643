@@ -506,4 +506,26 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
         assertTrue(iaFactory.supportsInterface(interfaceId));
     }
 
+    // ============ IAFactory deployIA() Tests ============
+
+    /// @notice Should revert when deployIA is called from non-reference IA
+    /// @dev just the reference implementation authority can call the iaFactory to deploy new implementation authority for a specific token
+    function test_deployIA_RevertWhen_NotFromReferenceIA() public {
+        // Setup TREXFactory and IAFactory
+        vm.prank(deployer);
+        getTREXImplementationAuthority().setTREXFactory(address(trexFactory));
+
+        IAFactory iaFactory = new IAFactory(address(trexFactory));
+
+        // Use a simple address that is not the reference IA
+        // The check at line 90 should fail: trexFactory.getImplementationAuthority() != msg.sender
+        address nonReferenceIA = makeAddr("nonReferenceIA");
+
+        // Try to call deployIA from a non-reference address
+        // This should revert at line 90 because msg.sender != trexFactory.getImplementationAuthority()
+        vm.prank(nonReferenceIA);
+        vm.expectRevert(IAFactory.OnlyReferenceIACanDeploy.selector);
+        iaFactory.deployIA(tokenAddress);
+    }
+
 }
