@@ -136,6 +136,35 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
         getTREXImplementationAuthority().setIAFactory(address(iaFactory));
     }
 
+    /// @notice Should revert when setIAFactory is called on reference contract but factory references different IA
+    /// @dev isReferenceContract() is true but getImplementationAuthority() != address(this)
+    function test_setIAFactory_RevertWhen_FactoryReferencesDifferentIA() public {
+        // Deploy another reference IA and factory using it
+        ImplementationAuthorityHelper.ImplementationAuthoritySetup memory otherIASetup =
+            ImplementationAuthorityHelper.deploy(true);
+        Ownable(address(otherIASetup.implementationAuthority)).transferOwnership(deployer);
+
+        TREXFactory otherFactory =
+            new TREXFactory(address(otherIASetup.implementationAuthority), address(getIdFactory()));
+        Ownable(address(otherFactory)).transferOwnership(deployer);
+
+        // Create a new reference IA with the other factory in constructor
+        // This factory references otherIASetup, not this IA
+        TREXImplementationAuthority newIA = new TREXImplementationAuthority(
+            true, // is reference
+            address(otherFactory), // factory that references a different IA
+            address(0) // no IAFactory
+        );
+        Ownable(address(newIA)).transferOwnership(deployer);
+
+        // Now try to set IAFactory - should revert because otherFactory.getImplementationAuthority() != address(newIA)
+        IAFactory iaFactory = new IAFactory(address(otherFactory));
+
+        vm.prank(deployer);
+        vm.expectRevert(OnlyReferenceContractCanCall.selector);
+        newIA.setIAFactory(address(iaFactory));
+    }
+
     // ============ fetchVersion() Tests ============
 
     /// @notice Should revert when called on the reference contract
@@ -441,6 +470,33 @@ contract TREXImplementationAuthorityTest is TREXFactorySetup {
         vm.prank(deployer);
         vm.expectRevert(InvalidImplementationAuthority.selector);
         getTREXImplementationAuthority().changeImplementationAuthority(tokenAddress, address(otherIA));
+    }
+
+    /// @notice Should succeed when changing to the reference contract itself
+    /// @dev  _newImplementationAuthority == getReferenceContract()
+    function test_changeImplementationAuthority_Success_WithReferenceContract() public {
+        // Setup TREXFactory and IAFactory
+        vm.prank(deployer);
+        getTREXImplementationAuthority().setTREXFactory(address(trexFactory));
+
+        IAFactory iaFactory = new IAFactory(address(trexFactory));
+        vm.prank(deployer);
+        getTREXImplementationAuthority().setIAFactory(address(iaFactory));
+
+        // Replace compliance with a new one
+        ModularComplianceProxy compliance = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
+        Ownable(address(compliance)).transferOwnership(deployer);
+        vm.prank(deployer);
+        Token(tokenAddress).setCompliance(address(compliance));
+
+        // Change to the reference contract itself (getReferenceContract() returns this IA)
+        address referenceContract = getTREXImplementationAuthority().getReferenceContract();
+        assertEq(referenceContract, address(getTREXImplementationAuthority()), "Should be the reference contract");
+
+        vm.prank(deployer);
+        vm.expectEmit(true, false, false, false);
+        emit ImplementationAuthorityChanged(tokenAddress, referenceContract);
+        getTREXImplementationAuthority().changeImplementationAuthority(tokenAddress, referenceContract);
     }
 
     // ============ supportsInterface() Tests ============
