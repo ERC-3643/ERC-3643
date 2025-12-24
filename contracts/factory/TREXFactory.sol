@@ -262,7 +262,7 @@ contract TREXFactory is ITREXFactory, Ownable {
 
     /// deploy function with create2 opcode call
     /// returns the address of the contract created
-    function _deploy(string memory salt, bytes memory bytecode) private returns (address) {
+    function _deploy(string memory salt, bytes memory bytecode) internal returns (address) {
         bytes32 saltBytes = bytes32(keccak256(abi.encodePacked(salt)));
         address addr;
         // solhint-disable-next-line no-inline-assembly

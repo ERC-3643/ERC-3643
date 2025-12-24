@@ -6,6 +6,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { IERC3643IdentityRegistryStorage } from "contracts/ERC-3643/IERC3643IdentityRegistryStorage.sol";
 import { TestModule } from "contracts/_testContracts/TestModule.sol";
+import { TestTREXFactory } from "contracts/_testContracts/TestTREXFactory.sol";
 import { ModuleProxy } from "contracts/compliance/modular/modules/ModuleProxy.sol";
 import { InvalidImplementationAuthority } from "contracts/errors/CommonErrors.sol";
 import { ZeroAddress } from "contracts/errors/InvalidArgumentErrors.sol";
@@ -21,12 +22,14 @@ import {
     TokenAlreadyDeployed
 } from "contracts/factory/TREXFactory.sol";
 import { IdentityRegistryStorageProxy } from "contracts/proxy/IdentityRegistryStorageProxy.sol";
+import { TrustedIssuersRegistryProxy } from "contracts/proxy/TrustedIssuersRegistryProxy.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
 import { OwnableOnceNext2StepUpgradeable } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
 import { OwnershipTransferStarted } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
 import { Token } from "contracts/token/Token.sol";
 import { Test } from "forge-std/Test.sol";
 import { IdentityFactoryHelper } from "test/helpers/IdentityFactoryHelper.sol";
+import { ImplementationAuthorityHelper } from "test/helpers/ImplementationAuthorityHelper.sol";
 import { TREXFactorySetup } from "test/helpers/TREXFactorySetup.sol";
 
 contract TREXFactoryTest is TREXFactorySetup {
@@ -310,6 +313,52 @@ contract TREXFactoryTest is TREXFactorySetup {
 
         address tokenAddress = trexFactory.getToken("salt");
         assertNotEq(tokenAddress, address(0), "Token address should not be zero");
+    }
+
+    // ============ setImplementationAuthority() Tests ============
+
+    function test_setImplementationAuthority_RevertWhen_ZeroAddress() public {
+        vm.prank(deployer);
+        vm.expectRevert(ZeroAddress.selector);
+        trexFactory.setImplementationAuthority(address(0));
+    }
+
+    function test_setImplementationAuthority_RevertWhen_IncompleteIA() public {
+        // Deploy a new IA but don't add any version (incomplete)
+        TREXImplementationAuthority incompleteIA = new TREXImplementationAuthority(true, address(0), address(0));
+        Ownable(address(incompleteIA)).transferOwnership(deployer);
+
+        vm.prank(deployer);
+        vm.expectRevert(InvalidImplementationAuthority.selector);
+        trexFactory.setImplementationAuthority(address(incompleteIA));
+    }
+
+    function test_setImplementationAuthority_Success() public {
+        // Deploy a complete IA using the helper
+        ImplementationAuthorityHelper.ImplementationAuthoritySetup memory newIASetup =
+            ImplementationAuthorityHelper.deploy(true);
+        Ownable(address(newIASetup.implementationAuthority)).transferOwnership(deployer);
+
+        vm.prank(deployer);
+        trexFactory.setImplementationAuthority(address(newIASetup.implementationAuthority));
+
+        assertEq(
+            trexFactory.getImplementationAuthority(),
+            address(newIASetup.implementationAuthority),
+            "Implementation Authority should be updated"
+        );
+    }
+
+    function test_deployTREXSuite_RevertWhen_CREATE2Fails() public {
+        // Deploy test factory that invoke the internal functon _deploy
+        TestTREXFactory testFactory =
+            new TestTREXFactory(address(getTREXImplementationAuthority()), address(getIdFactory()));
+
+        // Use empty bytecode so the CREATE2 will return address(0)
+        bytes memory emptyBytecode = new bytes(0);
+
+        vm.expectRevert(); // Should revert from the assembly revert(0, 0) because CREATE2 will return address(0) so the extcodesize(address(0)) = 0
+        testFactory.testDeploy("test-salt-empty", emptyBytecode);
     }
 
     // ============ setIdFactory() Tests ============
