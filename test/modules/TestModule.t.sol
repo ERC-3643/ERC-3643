@@ -8,7 +8,12 @@ import { TestModule } from "contracts/_testContracts/TestModule.sol";
 import { ModularCompliance } from "contracts/compliance/modular/ModularCompliance.sol";
 import { IModule } from "contracts/compliance/modular/modules/IModule.sol";
 import { OnlyBoundComplianceCanCall } from "contracts/errors/ComplianceErrors.sol";
-import { ComplianceNotBound } from "contracts/errors/ComplianceErrors.sol";
+import {
+    ComplianceAlreadyBound,
+    ComplianceNotBound,
+    OnlyComplianceContractCanCall
+} from "contracts/errors/ComplianceErrors.sol";
+import { ZeroAddress } from "contracts/errors/InvalidArgumentErrors.sol";
 import { IERC173 } from "contracts/roles/IERC173.sol";
 import { Test } from "forge-std/Test.sol";
 
@@ -252,6 +257,126 @@ contract TestModuleTest is Test {
         address unboundCompliance = makeAddr("unboundCompliance");
         vm.expectRevert(ComplianceNotBound.selector);
         testModule.invokeOnlyBoundCompliance(unboundCompliance);
+    }
+
+    // ============================================
+    // onlyComplianceCall Modifier Tests
+    // ============================================
+
+    /// @notice Should revert when called from non-bound compliance address
+    function test_onlyComplianceCall_RevertWhen_NotBoundCompliance() public {
+        address nonCompliance = makeAddr("nonCompliance");
+        vm.prank(nonCompliance);
+        vm.expectRevert(OnlyBoundComplianceCanCall.selector);
+        testModule.doSomething(42);
+    }
+
+    /// @notice Should revert when called from non-bound compliance address
+    function test_onlyComplianceCall_RevertWhen_NotBoundCompliance_BlockModule() public {
+        address nonCompliance = makeAddr("nonCompliance2");
+        vm.prank(nonCompliance);
+        vm.expectRevert(OnlyBoundComplianceCanCall.selector);
+        testModule.blockModule(true);
+    }
+
+    /// @notice Should revert when moduleTransferAction called from non-bound compliance
+    function test_onlyComplianceCall_RevertWhen_NotBoundCompliance_ModuleTransferAction() public {
+        address nonCompliance = makeAddr("nonCompliance3");
+        vm.prank(nonCompliance);
+        vm.expectRevert(OnlyBoundComplianceCanCall.selector);
+        testModule.moduleTransferAction(alice, bob, 100);
+    }
+
+    /// @notice Should revert when moduleMintAction called from non-bound compliance
+    function test_onlyComplianceCall_RevertWhen_NotBoundCompliance_ModuleMintAction() public {
+        address nonCompliance = makeAddr("nonCompliance4");
+        vm.prank(nonCompliance);
+        vm.expectRevert(OnlyBoundComplianceCanCall.selector);
+        testModule.moduleMintAction(alice, 100);
+    }
+
+    /// @notice Should revert when moduleBurnAction called from non-bound compliance
+    function test_onlyComplianceCall_RevertWhen_NotBoundCompliance_ModuleBurnAction() public {
+        address nonCompliance = makeAddr("nonCompliance5");
+        vm.prank(nonCompliance);
+        vm.expectRevert(OnlyBoundComplianceCanCall.selector);
+        testModule.moduleBurnAction(alice, 100);
+    }
+
+    // ============================================
+    // bindCompliance() Tests
+    // ============================================
+
+    /// @notice Should revert when compliance address is zero
+    function test_bindCompliance_RevertWhen_ZeroAddress() public {
+        vm.prank(address(compliance));
+        vm.expectRevert(ZeroAddress.selector);
+        testModule.bindCompliance(address(0));
+    }
+
+    /// @notice Should revert when compliance is already bound
+    function test_bindCompliance_RevertWhen_AlreadyBound() public {
+        // First unbind the compliance that was bound in setUp
+        vm.prank(address(compliance));
+        testModule.unbindCompliance(address(compliance));
+
+        // Bind it again
+        vm.prank(address(compliance));
+        testModule.bindCompliance(address(compliance));
+
+        // Try to bind again (should revert)
+        vm.prank(address(compliance));
+        vm.expectRevert(ComplianceAlreadyBound.selector);
+        testModule.bindCompliance(address(compliance));
+    }
+
+    /// @notice Should revert when called from non-compliance address
+    function test_bindCompliance_RevertWhen_NotFromCompliance() public {
+        // Use a new unbound compliance address to avoid hitting ComplianceAlreadyBound
+        address newCompliance = makeAddr("newCompliance");
+        address nonCompliance = makeAddr("nonCompliance");
+        vm.prank(nonCompliance);
+        vm.expectRevert(OnlyComplianceContractCanCall.selector);
+        testModule.bindCompliance(newCompliance);
+    }
+
+    // ============================================
+    // unbindCompliance() Tests
+    // ============================================
+
+    /// @notice Should revert when compliance address is zero
+    function test_unbindCompliance_RevertWhen_ZeroAddress() public {
+        vm.prank(address(compliance));
+        vm.expectRevert(ZeroAddress.selector);
+        testModule.unbindCompliance(address(0));
+    }
+
+    /// @notice Should revert when called from non-compliance address
+    /// @dev This test covers the onlyComplianceCall modifier which checks first
+    function test_unbindCompliance_RevertWhen_NotFromCompliance() public {
+        address nonCompliance = makeAddr("nonCompliance");
+        vm.prank(nonCompliance);
+        // The onlyComplianceCall modifier checks first, so it reverts with OnlyBoundComplianceCanCall
+        vm.expectRevert(OnlyBoundComplianceCanCall.selector);
+        testModule.unbindCompliance(address(compliance));
+    }
+
+    /// @notice Should revert when msg.sender is bound compliance but _compliance parameter is different
+    function test_unbindCompliance_RevertWhen_ComplianceMismatch() public {
+        // Deploy a second compliance and bind it
+        ModularCompliance compliance2Implementation = new ModularCompliance();
+        bytes memory initData2 = abi.encodeWithSelector(ModularCompliance.init.selector);
+        ERC1967Proxy compliance2Proxy = new ERC1967Proxy(address(compliance2Implementation), initData2);
+        ModularCompliance compliance2 = ModularCompliance(address(compliance2Proxy));
+
+        // Bind compliance2 to the module
+        vm.prank(address(compliance2));
+        testModule.bindCompliance(address(compliance2));
+
+        // Try to unbind compliance from compliance2 (should revert because msg.sender != _compliance)
+        vm.prank(address(compliance2));
+        vm.expectRevert(OnlyComplianceContractCanCall.selector);
+        testModule.unbindCompliance(address(compliance));
     }
 
 }
