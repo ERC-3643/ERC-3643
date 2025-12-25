@@ -14,12 +14,15 @@ import {
     IdentityStored,
     IdentityUnstored
 } from "contracts/ERC-3643/IERC3643IdentityRegistryStorage.sol";
+import { MockContract } from "contracts/_testContracts/MockContract.sol";
+import { InitializationFailed } from "contracts/errors/CommonErrors.sol";
 import { ZeroAddress } from "contracts/errors/InvalidArgumentErrors.sol";
 import { CallerDoesNotHaveAgentRole } from "contracts/errors/RoleErrors.sol";
 import { ClaimTopicsRegistryProxy } from "contracts/proxy/ClaimTopicsRegistryProxy.sol";
 import { IdentityRegistryProxy } from "contracts/proxy/IdentityRegistryProxy.sol";
 import { IdentityRegistryStorageProxy } from "contracts/proxy/IdentityRegistryStorageProxy.sol";
 import { TrustedIssuersRegistryProxy } from "contracts/proxy/TrustedIssuersRegistryProxy.sol";
+import { ITREXImplementationAuthority } from "contracts/proxy/authority/ITREXImplementationAuthority.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
 import { ClaimTopicsRegistry } from "contracts/registry/implementation/ClaimTopicsRegistry.sol";
 import { IdentityRegistry } from "contracts/registry/implementation/IdentityRegistry.sol";
@@ -381,6 +384,46 @@ contract IdentityRegistryStorageTest is Test {
         InterfaceIdCalculator calculator = new InterfaceIdCalculator();
         bytes4 interfaceId = calculator.getIERC165InterfaceId();
         assertTrue(identityRegistryStorage.supportsInterface(interfaceId));
+    }
+
+    // ============ Constructor Tests ============
+
+    /// @notice Should revert when implementation authority is zero address
+    function test_constructor_RevertWhen_ImplementationAuthorityZeroAddress() public {
+        vm.expectRevert(ZeroAddress.selector);
+        new IdentityRegistryStorageProxy(address(0));
+    }
+
+    /// @notice Should revert when initialization fails (invalid implementation)
+    function test_constructor_RevertWhen_InitializationFails() public {
+        // Deploy a mock contract that doesn't have init() function
+        MockContract mockImpl = new MockContract();
+
+        // Deploy an IA and manually set an invalid IRS implementation
+        TREXImplementationAuthority incompleteIA = new TREXImplementationAuthority(true, address(0), address(0));
+
+        // Create a version with invalid IRS implementation (mock contract without init())
+        ITREXImplementationAuthority.Version memory version =
+            ITREXImplementationAuthority.Version({ major: 4, minor: 0, patch: 0 });
+
+        ITREXImplementationAuthority.TREXContracts memory contracts = ITREXImplementationAuthority.TREXContracts({
+            tokenImplementation: address(mockImpl), // Invalid - doesn't have proper init
+            ctrImplementation: address(mockImpl), // Invalid
+            irImplementation: address(mockImpl), // Invalid
+            irsImplementation: address(mockImpl), // Invalid - doesn't have init() function
+            tirImplementation: address(mockImpl), // Invalid
+            mcImplementation: address(mockImpl) // Invalid
+        });
+
+        // Add version to IA (need to be owner)
+        Ownable(address(incompleteIA)).transferOwnership(deployer);
+        vm.prank(deployer);
+        incompleteIA.addAndUseTREXVersion(version, contracts);
+
+        // Now try to deploy proxy - delegatecall to mockImpl.init() will fail
+        // because MockContract doesn't have init() function, causing InitializationFailed() revert
+        vm.expectRevert(InitializationFailed.selector);
+        new IdentityRegistryStorageProxy(address(incompleteIA));
     }
 
 }
