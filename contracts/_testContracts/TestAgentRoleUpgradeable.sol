@@ -15,4 +15,3 @@ contract TestAgentRoleUpgradeable is AgentRoleUpgradeable {
     }
 
 }
-

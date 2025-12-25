@@ -11,4 +11,3 @@ contract TestAgentRole is AgentRole {
     }
 
 }
-
