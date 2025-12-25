@@ -11,6 +11,7 @@ import { ComplianceAdded } from "contracts/ERC-3643/IERC3643.sol";
 import { IERC3643Compliance } from "contracts/ERC-3643/IERC3643Compliance.sol";
 import { TokenBound, TokenUnbound } from "contracts/ERC-3643/IERC3643Compliance.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
+import { MockContract } from "contracts/_testContracts/MockContract.sol";
 import { ModuleNotPnP } from "contracts/_testContracts/ModuleNotPnP.sol";
 import { TestModule } from "contracts/_testContracts/TestModule.sol";
 import { IModularCompliance } from "contracts/compliance/modular/IModularCompliance.sol";
@@ -25,14 +26,18 @@ import {
 } from "contracts/compliance/modular/ModularCompliance.sol";
 import { ModuleProxy } from "contracts/compliance/modular/modules/ModuleProxy.sol";
 import { ArraySizeLimited } from "contracts/errors/CommonErrors.sol";
+import { InitializationFailed } from "contracts/errors/CommonErrors.sol";
 import {
     AddressNotATokenBoundToComplianceContract,
     ComplianceNotSuitableForBindingToModule
 } from "contracts/errors/ComplianceErrors.sol";
 import { ZeroAddress } from "contracts/errors/InvalidArgumentErrors.sol";
 import { ZeroValue } from "contracts/errors/InvalidArgumentErrors.sol";
+import { ZeroAddress } from "contracts/errors/InvalidArgumentErrors.sol";
 import { ITREXFactory } from "contracts/factory/ITREXFactory.sol";
 import { ModularComplianceProxy } from "contracts/proxy/ModularComplianceProxy.sol";
+import { ITREXImplementationAuthority } from "contracts/proxy/authority/ITREXImplementationAuthority.sol";
+import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
 import { IdentityRegistry } from "contracts/registry/implementation/IdentityRegistry.sol";
 import { OwnableOnceNext2StepUpgradeable } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
 import { OwnershipTransferStarted } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
@@ -114,6 +119,48 @@ contract ComplianceTest is TREXFactorySetup {
     function test_init_RevertWhen_CalledTwice() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         compliance.init();
+    }
+
+    // ============================================
+    // Constructor Tests
+    // ============================================
+
+    /// @notice Should revert when implementation authority is zero address
+    function test_constructor_RevertWhen_ImplementationAuthorityZeroAddress() public {
+        vm.expectRevert(ZeroAddress.selector);
+        new ModularComplianceProxy(address(0));
+    }
+
+    /// @notice Should revert when initialization fails (invalid implementation)
+    function test_constructor_RevertWhen_InitializationFails() public {
+        // Deploy a mock contract that doesn't have init() function
+        MockContract mockImpl = new MockContract();
+
+        // Deploy an IA and manually set an invalid MC implementation
+        TREXImplementationAuthority incompleteIA = new TREXImplementationAuthority(true, address(0), address(0));
+
+        // Create a version with invalid MC implementation (mock contract without init())
+        ITREXImplementationAuthority.Version memory version =
+            ITREXImplementationAuthority.Version({ major: 4, minor: 0, patch: 0 });
+
+        ITREXImplementationAuthority.TREXContracts memory contracts = ITREXImplementationAuthority.TREXContracts({
+            tokenImplementation: address(mockImpl), // Invalid - doesn't have proper init
+            ctrImplementation: address(mockImpl), // Invalid
+            irImplementation: address(mockImpl), // Invalid
+            irsImplementation: address(mockImpl), // Invalid
+            tirImplementation: address(mockImpl), // Invalid
+            mcImplementation: address(mockImpl) // Invalid - doesn't have init() function
+        });
+
+        // Add version to IA (need to be owner)
+        Ownable(address(incompleteIA)).transferOwnership(deployer);
+        vm.prank(deployer);
+        incompleteIA.addAndUseTREXVersion(version, contracts);
+
+        // Now try to deploy proxy - delegatecall to mockImpl.init() will fail
+        // because MockContract doesn't have init() function, causing InitializationFailed() revert
+        vm.expectRevert(InitializationFailed.selector);
+        new ModularComplianceProxy(address(incompleteIA));
     }
 
     // ============================================
