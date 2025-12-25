@@ -4,8 +4,8 @@ echo "🔍 Generating coverage reports..."
 # Ensure coverage directory exists
 mkdir -p coverage
 
-# Generate coverage with LCOV report
-forge coverage --report summary --report lcov
+# Generate coverage with LCOV report (exclude test files and test contracts)
+forge coverage --report summary --report lcov --no-match-coverage "(^test/|_testContracts/|utils/)"
 
 # Move lcov.info to coverage folder if it exists in root
 if [ -f lcov.info ]; then
