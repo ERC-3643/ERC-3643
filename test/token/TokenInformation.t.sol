@@ -519,14 +519,18 @@ contract TokenInformationTest is TokenTestBase {
     function test_TokenProxy_constructor_RevertWhen_IdentityRegistryZeroAddress() public {
         address randomAddress = vm.addr(999);
         vm.expectRevert(ZeroAddress.selector);
-        new TokenProxy(address(getTREXImplementationAuthority()), address(0), randomAddress, "Test", "TST", 18, address(0));
+        new TokenProxy(
+            address(getTREXImplementationAuthority()), address(0), randomAddress, "Test", "TST", 18, address(0)
+        );
     }
 
     /// @notice Should revert when compliance is zero address
     function test_TokenProxy_constructor_RevertWhen_ComplianceZeroAddress() public {
         address randomAddress = vm.addr(999);
         vm.expectRevert(ZeroAddress.selector);
-        new TokenProxy(address(getTREXImplementationAuthority()), randomAddress, address(0), "Test", "TST", 18, address(0));
+        new TokenProxy(
+            address(getTREXImplementationAuthority()), randomAddress, address(0), "Test", "TST", 18, address(0)
+        );
     }
 
     /// @notice Should revert when name is empty string
@@ -534,7 +538,15 @@ contract TokenInformationTest is TokenTestBase {
         ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
         address randomAddress = vm.addr(999);
         vm.expectRevert(EmptyString.selector);
-        new TokenProxy(address(getTREXImplementationAuthority()), randomAddress, address(complianceProxy), "", "TST", 18, address(0));
+        new TokenProxy(
+            address(getTREXImplementationAuthority()),
+            randomAddress,
+            address(complianceProxy),
+            "",
+            "TST",
+            18,
+            address(0)
+        );
     }
 
     /// @notice Should revert when symbol is empty string
@@ -542,7 +554,15 @@ contract TokenInformationTest is TokenTestBase {
         ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
         address randomAddress = vm.addr(999);
         vm.expectRevert(EmptyString.selector);
-        new TokenProxy(address(getTREXImplementationAuthority()), randomAddress, address(complianceProxy), "Test", "", 18, address(0));
+        new TokenProxy(
+            address(getTREXImplementationAuthority()),
+            randomAddress,
+            address(complianceProxy),
+            "Test",
+            "",
+            18,
+            address(0)
+        );
     }
 
     /// @notice Should revert when decimals is greater than 18
@@ -550,7 +570,15 @@ contract TokenInformationTest is TokenTestBase {
         ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
         address randomAddress = vm.addr(999);
         vm.expectRevert(abi.encodeWithSelector(DecimalsOutOfRange.selector, 19));
-        new TokenProxy(address(getTREXImplementationAuthority()), randomAddress, address(complianceProxy), "Test", "TST", 19, address(0));
+        new TokenProxy(
+            address(getTREXImplementationAuthority()),
+            randomAddress,
+            address(complianceProxy),
+            "Test",
+            "TST",
+            19,
+            address(0)
+        );
     }
 
     /// @notice Should revert when initialization fails (invalid implementation)
