@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {
     AddressFrozen,
@@ -14,13 +15,20 @@ import {
 } from "contracts/ERC-3643/IERC3643.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { MockContract } from "contracts/_testContracts/MockContract.sol";
-import { InitializationFailed } from "contracts/errors/CommonErrors.sol";
+import { TestTokenInternal } from "contracts/_testContracts/TestTokenInternal.sol";
+import {
+    ERC20InvalidReceiver,
+    ERC20InvalidSender,
+    ERC20InvalidSpender,
+    InitializationFailed
+} from "contracts/errors/CommonErrors.sol";
 import { DecimalsOutOfRange, EmptyString, ZeroAddress } from "contracts/errors/InvalidArgumentErrors.sol";
 import { ModularComplianceProxy } from "contracts/proxy/ModularComplianceProxy.sol";
 import { TokenProxy } from "contracts/proxy/TokenProxy.sol";
 import { ITREXImplementationAuthority } from "contracts/proxy/authority/ITREXImplementationAuthority.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
 import { IdentityRegistry } from "contracts/registry/implementation/IdentityRegistry.sol";
+import { AlreadyInitialized } from "contracts/token/Token.sol";
 import {
     AgentNotAuthorized,
     AmountAboveFrozenTokens,
@@ -613,6 +621,244 @@ contract TokenInformationTest is TokenTestBase {
         address randomAddress = vm.addr(999);
         vm.expectRevert(InitializationFailed.selector);
         new TokenProxy(address(incompleteIA), randomAddress, address(complianceProxy), "Test", "TST", 18, address(0));
+    }
+
+    // ============ Token.init() Tests ============
+
+    function test_init_RevertWhen_IdentityRegistryZeroAddress_DirectCall() public {
+        // Deploy new implementation
+        Token implementation = new Token();
+        ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
+        Ownable(address(complianceProxy)).transferOwnership(deployer);
+
+        vm.expectRevert(ZeroAddress.selector);
+        new ERC1967Proxy(
+            address(implementation),
+            abi.encodeWithSelector(
+                Token.init.selector,
+                address(0), // Zero address for Identity Registry
+                address(complianceProxy),
+                "Test Token",
+                "TEST",
+                18,
+                address(0)
+            )
+        );
+    }
+
+    function test_init_RevertWhen_ComplianceZeroAddress_DirectCall() public {
+        // Deploy new implementation
+        Token implementation = new Token();
+        address randomAddress = vm.addr(999);
+
+        vm.expectRevert(ZeroAddress.selector);
+        new ERC1967Proxy(
+            address(implementation),
+            abi.encodeWithSelector(
+                Token.init.selector,
+                randomAddress,
+                address(0), // Zero address for Compliance
+                "Test Token",
+                "TEST",
+                18,
+                address(0)
+            )
+        );
+    }
+
+    function test_init_RevertWhen_NameEmpty_DirectCall() public {
+        // Deploy new implementation
+        Token implementation = new Token();
+        ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
+        Ownable(address(complianceProxy)).transferOwnership(deployer);
+        address randomAddress = vm.addr(999);
+
+        vm.expectRevert(EmptyString.selector);
+        new ERC1967Proxy(
+            address(implementation),
+            abi.encodeWithSelector(
+                Token.init.selector,
+                randomAddress,
+                address(complianceProxy),
+                "", // Empty name
+                "TEST",
+                18,
+                address(0)
+            )
+        );
+    }
+
+    function test_init_RevertWhen_SymbolEmpty_DirectCall() public {
+        // Deploy new implementation
+        Token implementation = new Token();
+        ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
+        Ownable(address(complianceProxy)).transferOwnership(deployer);
+        address randomAddress = vm.addr(999);
+
+        vm.expectRevert(EmptyString.selector);
+        new ERC1967Proxy(
+            address(implementation),
+            abi.encodeWithSelector(
+                Token.init.selector,
+                randomAddress,
+                address(complianceProxy),
+                "Test Token",
+                "", // Empty symbol
+                18,
+                address(0)
+            )
+        );
+    }
+
+    function test_init_RevertWhen_DecimalsGreaterThan18_DirectCall() public {
+        // Deploy new implementation
+        Token implementation = new Token();
+        ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
+        Ownable(address(complianceProxy)).transferOwnership(deployer);
+        address randomAddress = vm.addr(999);
+
+        vm.expectRevert(abi.encodeWithSelector(DecimalsOutOfRange.selector, 19));
+        new ERC1967Proxy(
+            address(implementation),
+            abi.encodeWithSelector(
+                Token.init.selector,
+                randomAddress,
+                address(complianceProxy),
+                "Test Token",
+                "TEST",
+                19, // Decimals > 18
+                address(0)
+            )
+        );
+    }
+
+    function test_init_RevertWhen_AlreadyInitialized_OwnerNotZero() public {
+        Token implementation = new Token();
+        ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
+        Ownable(address(complianceProxy)).transferOwnership(deployer);
+        address randomAddress = vm.addr(999);
+
+        // Deploy proxy without initialization
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), "");
+        Token proxyToken = Token(address(proxy));
+
+        // Simulate legacy contract state where owner is already set (defensive check at line 174)
+        // Owner slot is at position 0 in OwnableOnceNext2StepUpgradeable
+        vm.store(address(proxy), bytes32(uint256(0)), bytes32(uint256(uint160(vm.addr(999)))));
+
+        vm.expectRevert(AlreadyInitialized.selector);
+        proxyToken.init(randomAddress, address(complianceProxy), "Test Token", "TEST", 18, address(0));
+    }
+
+    // ============ Internal Function Zero Address Tests ============
+
+    function test_internalTransfer_RevertWhen_FromZeroAddress() public {
+        TestTokenInternal implementation = new TestTokenInternal();
+        ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
+        Ownable(address(complianceProxy)).transferOwnership(deployer);
+
+        bytes memory initData = abi.encodeWithSelector(
+            Token.init.selector,
+            address(identityRegistry),
+            address(complianceProxy),
+            "Test Token",
+            "TEST",
+            18,
+            address(0)
+        );
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        TestTokenInternal testToken = TestTokenInternal(address(proxy));
+
+        vm.expectRevert(abi.encodeWithSelector(ERC20InvalidSpender.selector, address(0)));
+        testToken.exposeTransfer(address(0), bob, 100);
+    }
+
+    function test_internalTransfer_RevertWhen_ToZeroAddress() public {
+        TestTokenInternal implementation = new TestTokenInternal();
+        ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
+        Ownable(address(complianceProxy)).transferOwnership(deployer);
+
+        bytes memory initData = abi.encodeWithSelector(
+            Token.init.selector,
+            address(identityRegistry),
+            address(complianceProxy),
+            "Test Token",
+            "TEST",
+            18,
+            address(0)
+        );
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        TestTokenInternal testToken = TestTokenInternal(address(proxy));
+
+        testToken.addAgent(tokenAgent);
+        vm.prank(tokenAgent);
+        testToken.mint(alice, 1000);
+
+        vm.expectRevert(abi.encodeWithSelector(ERC20InvalidReceiver.selector, address(0)));
+        testToken.exposeTransfer(alice, address(0), 100);
+    }
+
+    function test_internalMint_RevertWhen_UserAddressZero() public {
+        TestTokenInternal implementation = new TestTokenInternal();
+        ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
+        Ownable(address(complianceProxy)).transferOwnership(deployer);
+
+        bytes memory initData = abi.encodeWithSelector(
+            Token.init.selector,
+            address(identityRegistry),
+            address(complianceProxy),
+            "Test Token",
+            "TEST",
+            18,
+            address(0)
+        );
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        TestTokenInternal testToken = TestTokenInternal(address(proxy));
+
+        vm.expectRevert(abi.encodeWithSelector(ERC20InvalidReceiver.selector, address(0)));
+        testToken.exposeMint(address(0), 100);
+    }
+
+    function test_internalBurn_RevertWhen_UserAddressZero() public {
+        TestTokenInternal implementation = new TestTokenInternal();
+        ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
+        Ownable(address(complianceProxy)).transferOwnership(deployer);
+
+        bytes memory initData = abi.encodeWithSelector(
+            Token.init.selector,
+            address(identityRegistry),
+            address(complianceProxy),
+            "Test Token",
+            "TEST",
+            18,
+            address(0)
+        );
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        TestTokenInternal testToken = TestTokenInternal(address(proxy));
+
+        vm.expectRevert(abi.encodeWithSelector(ERC20InvalidSpender.selector, address(0)));
+        testToken.exposeBurn(address(0), 100);
+    }
+
+    function test_internalApprove_RevertWhen_OwnerZeroAddress() public {
+        TestTokenInternal implementation = new TestTokenInternal();
+        ModularComplianceProxy complianceProxy = new ModularComplianceProxy(address(getTREXImplementationAuthority()));
+        Ownable(address(complianceProxy)).transferOwnership(deployer);
+
+        bytes memory initData = abi.encodeWithSelector(
+            Token.init.selector,
+            address(identityRegistry),
+            address(complianceProxy),
+            "Test Token",
+            "TEST",
+            18,
+            address(0)
+        );
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        TestTokenInternal testToken = TestTokenInternal(address(proxy));
+
+        vm.expectRevert(abi.encodeWithSelector(ERC20InvalidSender.selector, address(0)));
+        testToken.exposeApprove(address(0), bob, 100);
     }
 
 }

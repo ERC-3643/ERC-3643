@@ -617,6 +617,32 @@ contract TokenTransferTest is TokenTestBase {
         token.unfreezePartialTokens(alice, 100);
     }
 
+    /// @notice Should revert when agent permission is restricted
+    function test_unfreezePartialTokens_RevertWhen_AgentRestricted() public {
+        // Freeze some tokens first (before restrictions are set)
+        vm.prank(tokenAgent);
+        token.freezePartialTokens(alice, 200);
+
+        // Now set restrictions to disable partial freeze
+        TokenRoles memory restrictions = TokenRoles({
+            disableMint: false,
+            disableBurn: false,
+            disablePartialFreeze: true,
+            disableAddressFreeze: false,
+            disableRecovery: false,
+            disableForceTransfer: false,
+            disablePause: false
+        });
+
+        vm.prank(deployer);
+        token.setAgentRestrictions(tokenAgent, restrictions);
+
+        // Now try to unfreeze, should revert because partial freeze is disabled
+        vm.prank(tokenAgent);
+        vm.expectRevert(abi.encodeWithSelector(AgentNotAuthorized.selector, tokenAgent, "partial freeze disabled"));
+        token.unfreezePartialTokens(alice, 100);
+    }
+
     /// @notice Should revert when amount exceeds frozen tokens
     function test_unfreezePartialTokens_RevertWhen_AmountExceedsFrozen() public {
         vm.prank(tokenAgent);
