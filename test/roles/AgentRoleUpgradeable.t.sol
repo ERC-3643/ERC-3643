@@ -1,30 +1,36 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { TestAgentRole } from "contracts/_testContracts/TestAgentRole.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { TestAgentRoleUpgradeable } from "contracts/_testContracts/TestAgentRoleUpgradeable.sol";
+import { OwnableUnauthorizedAccount } from "contracts/errors/CommonErrors.sol";
 import { ZeroAddress } from "contracts/errors/InvalidArgumentErrors.sol";
 import { CallerDoesNotHaveAgentRole } from "contracts/errors/RoleErrors.sol";
 import { AccountAlreadyHasRole, AccountDoesNotHaveRole } from "contracts/errors/RoleErrors.sol";
-import { AgentRole } from "contracts/roles/AgentRole.sol";
-import { AgentAdded, AgentRemoved } from "contracts/roles/AgentRole.sol";
+import { AgentAdded, AgentRemoved } from "contracts/roles/AgentRoleUpgradeable.sol";
 import { Test } from "forge-std/Test.sol";
 
-contract AgentRoleTest is Test {
+contract AgentRoleUpgradeableTest is Test {
 
     // Contracts
-    TestAgentRole public agentRole;
+    TestAgentRoleUpgradeable public agentRole;
 
     // Standard test addresses
     address public owner = makeAddr("owner");
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
 
-    /// @notice Sets up AgentRole contract
+    /// @notice Sets up AgentRoleUpgradeable contract
     function setUp() public {
-        // Deploy TestAgentRole - owner will be the test contract (msg.sender)
-        agentRole = new TestAgentRole();
-        // Transfer ownership to owner address for consistency with Hardhat tests
+        // Deploy implementation
+        TestAgentRoleUpgradeable implementation = new TestAgentRoleUpgradeable();
+
+        // Deploy proxy with initialization
+        bytes memory initData = abi.encodeWithSelector(TestAgentRoleUpgradeable.initialize.selector);
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        agentRole = TestAgentRoleUpgradeable(address(proxy));
+
+        // Transfer ownership to owner address
         agentRole.transferOwnership(owner);
     }
 
@@ -33,7 +39,7 @@ contract AgentRoleTest is Test {
     /// @notice Should revert when sender is not the owner
     function test_addAgent_RevertWhen_NotOwner() public {
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, bob));
+        vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, bob));
         agentRole.addAgent(alice);
     }
 
@@ -69,7 +75,7 @@ contract AgentRoleTest is Test {
     /// @notice Should revert when sender is not the owner
     function test_removeAgent_RevertWhen_NotOwner() public {
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, bob));
+        vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, bob));
         agentRole.removeAgent(alice);
     }
 

@@ -25,7 +25,7 @@ import {
     TokenNotBound
 } from "contracts/compliance/modular/ModularCompliance.sol";
 import { ModuleProxy } from "contracts/compliance/modular/modules/ModuleProxy.sol";
-import { ArraySizeLimited } from "contracts/errors/CommonErrors.sol";
+import { ArraySizeLimited, OwnableUnauthorizedAccount } from "contracts/errors/CommonErrors.sol";
 import { InitializationFailed } from "contracts/errors/CommonErrors.sol";
 import {
     AddressNotATokenBoundToComplianceContract,
@@ -819,6 +819,24 @@ contract ComplianceTest is TREXFactorySetup {
         newCompliance.acceptOwnership();
 
         assertEq(newCompliance.owner(), bob);
+    }
+
+    /// @notice Should revert when acceptOwnership is called by non-pending owner
+    function test_OwnableOnceNext2StepUpgradeable_acceptOwnership_RevertWhen_NotPendingOwner() public {
+        ModularCompliance newCompliance = _deployModularComplianceWithProxy(address(getTREXImplementationAuthority()));
+        newCompliance.transferOwnership(alice);
+
+        vm.expectEmit(true, true, false, false, address(newCompliance));
+        emit OwnershipTransferStarted(alice, bob);
+
+        vm.prank(alice);
+        newCompliance.transferOwnership(bob);
+
+        // Try to accept ownership from a different address (not the pending owner)
+        address charlie = makeAddr("charlie");
+        vm.prank(charlie);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, charlie));
+        newCompliance.acceptOwnership();
     }
 
     // ============================================
