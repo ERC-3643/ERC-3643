@@ -319,6 +319,35 @@ contract TrustedIssuersRegistryTest is Test {
         assertEq(retrievedTopics[1], CLAIM_TOPIC_4);
     }
 
+    /// @notice Covers inner loop increment when issuer is not first in claimTopic array
+    function test_updateIssuerClaimTopics_CoversInnerLoopIncrement() public {
+        // Add two more issuers with the same initial claim topic to ensure the
+        // issuer being updated is not at index 0 in the claimTopic array
+        ClaimIssuer firstIssuer = new ClaimIssuer(bob);
+        ClaimIssuer secondIssuer = new ClaimIssuer(another);
+
+        uint256[] memory topics = new uint256[](1);
+        topics[0] = CLAIM_TOPIC_1;
+
+        vm.prank(deployer);
+        trustedIssuersRegistry.addTrustedIssuer(firstIssuer, topics);
+        vm.prank(deployer);
+        trustedIssuersRegistry.addTrustedIssuer(secondIssuer, topics);
+
+        // Update claim topics for the secondIssuer so the inner loop iterates past index 0
+        uint256[] memory newTopics = new uint256[](1);
+        newTopics[0] = CLAIM_TOPIC_2;
+
+        vm.prank(deployer);
+        vm.expectEmit(true, false, false, false);
+        emit ClaimTopicsUpdated(IClaimIssuer(address(secondIssuer)), newTopics);
+        trustedIssuersRegistry.updateIssuerClaimTopics(secondIssuer, newTopics);
+
+        // Verify mapping updated: no longer associated with CLAIM_TOPIC_1 and now mapped to CLAIM_TOPIC_2
+        assertFalse(trustedIssuersRegistry.hasClaimTopic(address(secondIssuer), CLAIM_TOPIC_1));
+        assertTrue(trustedIssuersRegistry.hasClaimTopic(address(secondIssuer), CLAIM_TOPIC_2));
+    }
+
     // ============ getTrustedIssuerClaimTopics() Tests ============
 
     /// @notice Should revert when issuer is not registered
