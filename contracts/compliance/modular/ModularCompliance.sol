@@ -322,8 +322,9 @@ contract ModularCompliance is IModularCompliance, OwnableOnceNext2StepUpgradeabl
             assembly {
                 result := calldataload(callData.offset)
             }
+        } else {
+            return result;
         }
     }
 
 }
-

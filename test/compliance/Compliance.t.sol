@@ -620,16 +620,54 @@ contract ComplianceTest is TREXFactorySetup {
 
     /// @notice Should revert when module function call fails
     function test_callModuleFunction_RevertWhen_ModuleCallFails() public {
-        address moduleAddress = _deployTestModuleWithProxy();
-        vm.prank(deployer);
-        compliance.addModule(moduleAddress);
+        // Use ModuleNotPnP which doesn't have a fallback function
+        // So calls to non-existent functions will revert
+        address moduleAddress = _deployModuleNotPnPWithProxy();
 
-        // Call a non-existent function to trigger revert
+        vm.prank(deployer);
+        compliance.bindToken(address(token));
+
+        // Make compliance suitable for ModuleNotPnP by burning tokens
+        vm.startPrank(tokenAgent);
+        token.burn(alice, 1000);
+        token.burn(bob, 500);
+        vm.stopPrank();
+
+        // Set module as ready for this compliance and add it
+        vm.startPrank(deployer);
+        ModuleNotPnP(moduleAddress).setModuleReady(address(compliance), true);
+        compliance.addModule(moduleAddress);
+        vm.stopPrank();
+
+        // Call a non-existent function to trigger revert (no fallback function)
         bytes memory callData = abi.encodeWithSignature("nonExistentFunction()");
 
         vm.prank(deployer);
         vm.expectRevert();
         compliance.callModuleFunction(callData, moduleAddress);
+    }
+
+    /// @notice Should handle callData with length less than 4 bytes
+    function test_callModuleFunction_Success_WithShortCallData() public {
+        // Use TestModule which has a fallback function
+        // This allows the module call to succeed even with invalid callData
+        address moduleAddress = _deployTestModuleWithProxy();
+
+        vm.prank(deployer);
+        compliance.addModule(moduleAddress);
+
+        // Create callData with less than 4 bytes (covers _selector's return bytes4(0) path)
+        bytes memory shortCallData = new bytes(3);
+        shortCallData[0] = 0x12;
+        shortCallData[1] = 0x34;
+        shortCallData[2] = 0x56;
+
+        // The fallback function accepts any callData, so the module call succeeds
+        // This allows _selector to be called with short callData, testing the explicit return
+        vm.expectEmit(true, true, false, false, address(compliance));
+        emit ModuleInteraction(moduleAddress, bytes4(0));
+        vm.prank(deployer);
+        compliance.callModuleFunction(shortCallData, moduleAddress);
     }
 
     // ============================================
@@ -747,6 +785,17 @@ contract ComplianceTest is TREXFactorySetup {
 
         bool result = compliance.canTransfer(alice, bob, 100);
         assertFalse(result);
+    }
+
+    /// @notice Should return true when all modules pass
+    function test_canTransfer_ReturnsTrue_WhenAllModulesPass() public {
+        address moduleAddress = _deployTestModuleWithProxy();
+        vm.prank(deployer);
+        compliance.addModule(moduleAddress);
+
+        // Ensure module is not blocked (default state allows transfers)
+        bool result = compliance.canTransfer(alice, bob, 100);
+        assertTrue(result);
     }
 
     /// @notice Should still remove the module from array when removing middle module

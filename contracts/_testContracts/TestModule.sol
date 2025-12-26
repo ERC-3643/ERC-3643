@@ -164,4 +164,7 @@ contract TestModule is AbstractModuleUpgradeable {
      */
     function invokeOnlyBoundCompliance(address _compliance) external onlyBoundCompliance(_compliance) { }
 
+    // Fallback function to accept any callData (used for testing _selector with short callData)
+    fallback() external { }
+
 }
