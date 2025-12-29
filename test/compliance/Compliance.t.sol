@@ -772,7 +772,7 @@ contract ComplianceTest is TREXFactorySetup {
     function test_getIModuleInterfaceId_ReturnsCorrectId() public {
         InterfaceIdCalculator calculator = new InterfaceIdCalculator();
         bytes4 interfaceId = calculator.getIModuleInterfaceId();
-        
+
         // Deploy a test module to verify the interface ID
         address moduleAddress = _deployTestModuleWithProxy();
         TestModule testModule = TestModule(moduleAddress);
