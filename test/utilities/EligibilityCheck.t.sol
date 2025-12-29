@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import { ClaimIssuer } from "@onchain-id/solidity/contracts/ClaimIssuer.sol";
 import { IClaimIssuer } from "@onchain-id/solidity/contracts/interface/IClaimIssuer.sol";
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
+import { ClaimIssuerTrick } from "contracts/_testContracts/ClaimIssuerTrick.sol";
 import { IERC3643ClaimTopicsRegistry } from "contracts/ERC-3643/IERC3643ClaimTopicsRegistry.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { IERC3643TrustedIssuersRegistry } from "contracts/ERC-3643/IERC3643TrustedIssuersRegistry.sol";
@@ -227,6 +228,37 @@ contract EligibilityCheckTest is TREXFactorySetup {
             assertEq(results[i].topic, allTopics[i]);
             assertTrue(results[i].pass);
         }
+    }
+
+    /// @notice Should return false when claim issuer throws an error in isClaimValid
+    function test_getVerifiedDetails_ReturnsFalse_WhenClaimIssuerThrowsError() public {
+        // Deploy ClaimIssuerTrick (always throws error on isClaimValid unless called by identity)
+        ClaimIssuerTrick trickyClaimIssuer = new ClaimIssuerTrick();
+
+        uint256[] memory topics = claimTopicsRegistry.getClaimTopics();
+        uint256 topic = topics[0];
+
+        // Add tricky issuer as trusted
+        vm.prank(deployer);
+        trustedIssuersRegistry.addTrustedIssuer(IClaimIssuer(address(trickyClaimIssuer)), topics);
+
+        // Get alice's existing claim and remove it
+        bytes32[] memory claimIds = aliceIdentity.getClaimIdsByTopic(topic);
+        vm.prank(alice);
+        aliceIdentity.removeClaim(claimIds[0]);
+
+        // Add tricky claim (will throw error when isClaimValid is called)
+        vm.prank(alice);
+        aliceIdentity.addClaim(topic, 1, address(trickyClaimIssuer), "0x00", "0x00", "");
+
+        // getVerifiedDetails should handle the error and return false
+        UtilityChecker.EligibilityCheckDetails[] memory results =
+            utilityChecker.getVerifiedDetails(address(token), alice);
+
+        assertEq(results.length, 1);
+        assertEq(address(results[0].issuer), address(trickyClaimIssuer));
+        assertEq(results[0].topic, topic);
+        assertFalse(results[0].pass); // Should be false because isClaimValid threw an error
     }
 
 }

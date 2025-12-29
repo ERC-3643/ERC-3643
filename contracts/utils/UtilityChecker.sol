@@ -100,13 +100,13 @@ contract UtilityChecker is IUtilityChecker, OwnableUpgradeable, UUPSUpgradeable 
         _eligibilityStatus = ir.isVerified(_to);
 
         ComplianceCheckDetails[] memory details = getTransferDetails(_token, _from, _to, _amount);
+        _complianceStatus = true;
         for (uint256 i; i < details.length; i++) {
             if (!details[i].pass) {
                 _complianceStatus = false;
                 break;
             }
         }
-        _complianceStatus = true;
     }
 
     /// @inheritdoc IUtilityChecker

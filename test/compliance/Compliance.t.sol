@@ -768,6 +768,17 @@ contract ComplianceTest is TREXFactorySetup {
         assertTrue(compliance.supportsInterface(interfaceId));
     }
 
+    /// @notice Should correctly identify the IModule interface ID
+    function test_getIModuleInterfaceId_ReturnsCorrectId() public {
+        InterfaceIdCalculator calculator = new InterfaceIdCalculator();
+        bytes4 interfaceId = calculator.getIModuleInterfaceId();
+        
+        // Deploy a test module to verify the interface ID
+        address moduleAddress = _deployTestModuleWithProxy();
+        TestModule testModule = TestModule(moduleAddress);
+        assertTrue(testModule.supportsInterface(interfaceId));
+    }
+
     // ============================================
     // Edge Cases Tests
     // ============================================

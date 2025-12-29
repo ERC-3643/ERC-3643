@@ -260,4 +260,51 @@ contract TransferCheckTest is TREXFactorySetup {
         assertTrue(complianceStatus);
     }
 
+    /// @notice Should return false when token is paused
+    function test_getTransferStatus_ReturnsFalse_WhenTokenPaused() public {
+        // Pause the token
+        vm.prank(tokenAgent);
+        token.pause();
+
+        (bool freezeStatus, bool eligibilityStatus, bool complianceStatus) =
+            utilityChecker.getTransferStatus(address(token), alice, bob, 100);
+
+        assertFalse(freezeStatus);
+        assertTrue(eligibilityStatus);
+        assertTrue(complianceStatus);
+    }
+
+    /// @notice Should return false when compliance check fails
+    function test_getTransferStatus_ReturnsFalse_WhenComplianceCheckFails() public {
+        // Block the test module
+        bytes memory blockModuleCall = abi.encodeWithSignature("blockModule(bool)", true);
+        vm.prank(deployer);
+        compliance.callModuleFunction(blockModuleCall, address(testModule));
+
+        // Update bob's country to ensure eligibility
+        vm.prank(tokenAgent);
+        identityRegistry.updateCountry(bob, 42);
+
+        (bool freezeStatus, bool eligibilityStatus, bool complianceStatus) =
+            utilityChecker.getTransferStatus(address(token), alice, bob, 100);
+
+        assertTrue(freezeStatus);
+        assertTrue(eligibilityStatus);
+        assertFalse(complianceStatus); // Should be false when module check fails
+    }
+
+    /// @notice Should return true when all checks pass including compliance
+    function test_getTransferStatus_ReturnsTrue_WhenAllChecksPass() public {
+        // Update bob's country to ensure eligibility
+        vm.prank(tokenAgent);
+        identityRegistry.updateCountry(bob, 42);
+
+        (bool freezeStatus, bool eligibilityStatus, bool complianceStatus) =
+            utilityChecker.getTransferStatus(address(token), alice, bob, 100);
+
+        assertTrue(freezeStatus);
+        assertTrue(eligibilityStatus);
+        assertTrue(complianceStatus); // Should be true when all modules pass
+    }
+
 }
