@@ -6,10 +6,7 @@
 ![GitHub repo size](https://img.shields.io/github/repo-size/ERC-3643/ERC-3643)
 ![GitHub Release Date](https://img.shields.io/github/release-date/ERC-3643/ERC-3643)
 
-
-
-
-----
+---
 
 <br><br>
 
@@ -18,7 +15,6 @@
   <img src="./docs/img/T-REX.png" width="150" title="t-rex">
   </a>
 </p>
-
 
 ## Overview
 
@@ -47,9 +43,75 @@ The T-REX protocol consists of several key components:
 ## Getting Started
 
 1. Clone the repository: `git clone https://github.com/ERC-3643/ERC-3643.git`
-2. Install dependencies: `npm ci`
-3. Compile the contracts: `hardhat compile`
-4. Run tests: `hardhat test`
+2. Install [Foundry](https://getfoundry.sh/) if you haven't already
+3. Install dependencies: `forge soldeer install`
+4. Compile the contracts: `forge build`
+5. Run tests: `forge test`
+
+## Development
+
+This project uses **Foundry** for development and testing.
+
+### Prerequisites
+
+- **Foundry** - Install from [getfoundry.sh](https://getfoundry.sh/)
+
+### Installation
+
+```bash
+# Install Foundry dependencies via Soldeer
+forge soldeer install
+```
+
+### Build Commands
+
+```bash
+forge build              # Compile contracts
+```
+
+### Testing
+
+```bash
+forge test               # Run tests
+forge test --gas-report  # Run tests with gas report
+```
+
+### Coverage
+
+Generate coverage reports using the provided script:
+
+```
+bash ./generate_coverage.sh
+
+```
+
+This will generate:
+
+- Terminal summary with coverage percentages
+- LCOV report (`coverage/lcov.info`) for CI/CD integration
+- HTML report (`coverage/lcov-report/index.html`) for interactive viewing
+
+**Note:** For HTML reports, `lcov` must be installed. Install with:
+
+```bash
+brew install lcov  # macOS
+```
+
+### Flatten Contracts
+
+```bash
+forge flatten <contract-path>  # Flatten a contract
+```
+
+### Project Structure
+
+```
+├── contracts/             # Solidity contracts
+├── test/                 # Foundry tests (Solidity)
+├── foundry.toml          # Foundry configuration
+├── soldeer.lock          # Dependency lock file
+└── docs/                 # Documentation files
+```
 
 ## Documentation
 
@@ -64,7 +126,7 @@ We welcome contributions from the community. Please refer to the [CONTRIBUTING](
 
 This project is licensed under the [GNU General Public License v3.0](./LICENSE.md).
 
-----
+---
 
 <div style="padding: 16px;">
    <a href="https://tokeny.com/wp-content/uploads/2023/04/Tokeny_TREX-v4_SC_Audit_Report.pdf" target="_blank">
@@ -72,4 +134,4 @@ This project is licensed under the [GNU General Public License v3.0](./LICENSE.m
    </a>
 </div>
 
-----
+---

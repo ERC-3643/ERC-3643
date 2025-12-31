@@ -4,49 +4,47 @@ jobs:
   lint:
     name: Lint sources
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20.x]
 
     steps:
       - name: Checkout
         uses: "actions/checkout@master"
 
-      - name: Set Node.js
-        uses: actions/setup-node@v3
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
         with:
-          node-version: ${{ matrix.node-version }}
+          version: stable
+
       - name: Install dependencies
-        run: npm ci
-      - name: Lint Solidity sources
-        run: npm run lint:sol
+        run: forge soldeer install
+
+      - name: Lint sources
+        run: forge fmt --check
+
       - name: Build contracts
-        run: npm run build
-      - name: Lint TypeScript sources
-        run: npm run lint:ts
+        run: forge build
 
   unit_test:
     name: Unit tests
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20.x]
 
     steps:
       - name: Checkout
         uses: "actions/checkout@master"
 
-      - name: Set Node.js
-        uses: actions/setup-node@v3
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
         with:
-          node-version: ${{ matrix.node-version }}
+          version: stable
 
       - name: Install dependencies
-        run: npm ci
+        run: forge soldeer install
+
       - name: Build application
-        run: npm run build
+        run: forge build
+
       - name: Run test coverage
-        run: npm run coverage
+        run: forge coverage --no-match-coverage "(^test/|_testContracts/|utils/)" --ir-minimum
+
       - name: Upload coverage to action results
         uses: actions/upload-artifact@v4
         with:

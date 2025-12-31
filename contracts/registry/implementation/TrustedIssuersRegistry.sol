@@ -63,13 +63,13 @@
 
 pragma solidity 0.8.30;
 
-import "@onchain-id/solidity/contracts/interface/IClaimIssuer.sol";
+import "../../errors/InvalidArgumentErrors.sol";
+import "../../roles/IERC173.sol";
 import "../../roles/OwnableOnceNext2StepUpgradeable.sol";
 import "../interface/ITrustedIssuersRegistry.sol";
 import "../storage/TIRStorage.sol";
-import "../../errors/InvalidArgumentErrors.sol";
+import "@onchain-id/solidity/contracts/interface/IClaimIssuer.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "../../roles/IERC173.sol";
 
 /// Errors
 
@@ -96,7 +96,6 @@ error TrustedIssuerAlreadyExists();
 /// @dev Thrown when trusted issuer doesn"t exist.
 error TrustedIssuerDoesNotExist();
 
-
 contract TrustedIssuersRegistry is ITrustedIssuersRegistry, OwnableOnceNext2StepUpgradeable, TIRStorage, IERC165 {
 
     constructor() {
@@ -112,7 +111,11 @@ contract TrustedIssuersRegistry is ITrustedIssuersRegistry, OwnableOnceNext2Step
     /**
      *  @dev See {ITrustedIssuersRegistry-addTrustedIssuer}.
      */
-    function addTrustedIssuer(IClaimIssuer _trustedIssuer, uint256[] calldata _claimTopics) external override onlyOwner {
+    function addTrustedIssuer(IClaimIssuer _trustedIssuer, uint256[] calldata _claimTopics)
+        external
+        override
+        onlyOwner
+    {
         require(address(_trustedIssuer) != address(0), ZeroAddress());
         require(_trustedIssuerClaimTopics[address(_trustedIssuer)].length == 0, TrustedIssuerAlreadyExists());
         require(_claimTopics.length > 0, TrustedClaimTopicsCannotBeEmpty());
@@ -143,13 +146,14 @@ contract TrustedIssuersRegistry is ITrustedIssuersRegistry, OwnableOnceNext2Step
         for (
             uint256 claimTopicIndex = 0;
             claimTopicIndex < _trustedIssuerClaimTopics[address(_trustedIssuer)].length;
-            claimTopicIndex++) {
+            claimTopicIndex++
+        ) {
             uint256 claimTopic = _trustedIssuerClaimTopics[address(_trustedIssuer)][claimTopicIndex];
             uint256 topicsLength = _claimTopicsToTrustedIssuers[claimTopic].length;
             for (uint256 i = 0; i < topicsLength; i++) {
                 if (_claimTopicsToTrustedIssuers[claimTopic][i] == _trustedIssuer) {
                     _claimTopicsToTrustedIssuers[claimTopic][i] =
-                    _claimTopicsToTrustedIssuers[claimTopic][topicsLength - 1];
+                        _claimTopicsToTrustedIssuers[claimTopic][topicsLength - 1];
                     _claimTopicsToTrustedIssuers[claimTopic].pop();
                     break;
                 }
@@ -162,7 +166,11 @@ contract TrustedIssuersRegistry is ITrustedIssuersRegistry, OwnableOnceNext2Step
     /**
      *  @dev See {ITrustedIssuersRegistry-updateIssuerClaimTopics}.
      */
-    function updateIssuerClaimTopics(IClaimIssuer _trustedIssuer, uint256[] calldata _claimTopics) external override onlyOwner {
+    function updateIssuerClaimTopics(IClaimIssuer _trustedIssuer, uint256[] calldata _claimTopics)
+        external
+        override
+        onlyOwner
+    {
         require(address(_trustedIssuer) != address(0), ZeroAddress());
         require(_trustedIssuerClaimTopics[address(_trustedIssuer)].length != 0, NotATrustedIssuer());
         require(_claimTopics.length <= 15, MaxClaimTopcisReached(15));
@@ -174,7 +182,7 @@ contract TrustedIssuersRegistry is ITrustedIssuersRegistry, OwnableOnceNext2Step
             for (uint256 j = 0; j < topicsLength; j++) {
                 if (_claimTopicsToTrustedIssuers[claimTopic][j] == _trustedIssuer) {
                     _claimTopicsToTrustedIssuers[claimTopic][j] =
-                    _claimTopicsToTrustedIssuers[claimTopic][topicsLength - 1];
+                        _claimTopicsToTrustedIssuers[claimTopic][topicsLength - 1];
                     _claimTopicsToTrustedIssuers[claimTopic].pop();
                     break;
                 }
@@ -205,7 +213,7 @@ contract TrustedIssuersRegistry is ITrustedIssuersRegistry, OwnableOnceNext2Step
      *  @dev See {ITrustedIssuersRegistry-isTrustedIssuer}.
      */
     function isTrustedIssuer(address _issuer) external view override returns (bool) {
-        if(_trustedIssuerClaimTopics[_issuer].length > 0) {
+        if (_trustedIssuerClaimTopics[_issuer].length > 0) {
             return true;
         }
         return false;
@@ -214,7 +222,12 @@ contract TrustedIssuersRegistry is ITrustedIssuersRegistry, OwnableOnceNext2Step
     /**
      *  @dev See {ITrustedIssuersRegistry-getTrustedIssuerClaimTopics}.
      */
-    function getTrustedIssuerClaimTopics(IClaimIssuer _trustedIssuer) external view override returns (uint256[] memory) {
+    function getTrustedIssuerClaimTopics(IClaimIssuer _trustedIssuer)
+        external
+        view
+        override
+        returns (uint256[] memory)
+    {
         require(_trustedIssuerClaimTopics[address(_trustedIssuer)].length != 0, TrustedIssuerDoesNotExist());
         return _trustedIssuerClaimTopics[address(_trustedIssuer)];
     }
@@ -237,9 +250,8 @@ contract TrustedIssuersRegistry is ITrustedIssuersRegistry, OwnableOnceNext2Step
      *  @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(bytes4 interfaceId) public pure virtual override returns (bool) {
-        return
-            interfaceId == type(IERC3643TrustedIssuersRegistry).interfaceId ||
-            interfaceId == type(IERC173).interfaceId ||
-            interfaceId == type(IERC165).interfaceId;
+        return interfaceId == type(IERC3643TrustedIssuersRegistry).interfaceId
+            || interfaceId == type(IERC173).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
+
 }

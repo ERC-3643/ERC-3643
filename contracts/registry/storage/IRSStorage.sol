@@ -66,6 +66,7 @@ pragma solidity 0.8.30;
 import "@onchain-id/solidity/contracts/interface/IIdentity.sol";
 
 contract IRSStorage {
+
     /// @dev struct containing the identity contract and the country of the user
     struct Identity {
         IIdentity identityContract;
@@ -82,4 +83,5 @@ contract IRSStorage {
      * variables without shifting down storage in the inheritance chain.
      */
     uint256[49] private __gap;
+
 }

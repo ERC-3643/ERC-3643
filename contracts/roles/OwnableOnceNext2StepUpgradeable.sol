@@ -63,16 +63,15 @@
 
 pragma solidity 0.8.30;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import { OwnableUnauthorizedAccount } from "../errors/CommonErrors.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import { OwnableUnauthorizedAccount} from "../errors/CommonErrors.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @dev Emitted when a new owner is set.
 /// @param previousOwner The address of the previous owner.
 /// @param newOwner The address of the new owner.
 event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
-
 
 abstract contract OwnableOnceNext2StepUpgradeable is Initializable, ContextUpgradeable {
 
@@ -81,13 +80,13 @@ abstract contract OwnableOnceNext2StepUpgradeable is Initializable, ContextUpgra
         address pendingOwner;
         bool nextOwner;
     }
-    
+
     bytes32 private constant _STORAGE_SLOT = keccak256("tokeny.storage.OwnableOnceNext2StepUpgradeable");
 
     /// @dev Preserve the owner address before an upgrade.
     address private _owner;
     uint256[49] private __gap;
- 
+
     modifier onlyOwner() {
         _checkOwner();
         _;
@@ -102,8 +101,7 @@ abstract contract OwnableOnceNext2StepUpgradeable is Initializable, ContextUpgra
         if (!s.nextOwner) {
             s.nextOwner = true;
             _transferOwnership(newOwner);
-        }
-        else {
+        } else {
             _getStorage().pendingOwner = newOwner;
 
             emit OwnershipTransferStarted(_owner, newOwner);
@@ -142,7 +140,6 @@ abstract contract OwnableOnceNext2StepUpgradeable is Initializable, ContextUpgra
     function _checkOwner() internal view virtual {
         require(_owner == msg.sender, OwnableUnauthorizedAccount(msg.sender));
     }
-
 
     function _getStorage() internal pure returns (Ownable2StepsStorage storage s) {
         bytes32 position = _STORAGE_SLOT;

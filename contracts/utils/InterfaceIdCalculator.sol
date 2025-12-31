@@ -63,23 +63,23 @@
 
 pragma solidity 0.8.30;
 
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
-import "../roles/IERC173.sol";
-import "../token/IToken.sol";
-import "../proxy/authority/ITREXImplementationAuthority.sol";
-import "../proxy/authority/IIAFactory.sol";
-import "../factory/ITREXGateway.sol";
-import "../compliance/modular/modules/IModule.sol";
 import "../compliance/modular/IModularCompliance.sol";
+import "../compliance/modular/modules/IModule.sol";
+import "../factory/ITREXGateway.sol";
+import "../proxy/authority/IIAFactory.sol";
+import "../proxy/authority/ITREXImplementationAuthority.sol";
 import "../registry/interface/IClaimTopicsRegistry.sol";
 import "../registry/interface/IIdentityRegistry.sol";
 import "../registry/interface/IIdentityRegistryStorage.sol";
 import "../registry/interface/ITrustedIssuersRegistry.sol";
-
+import "../roles/IERC173.sol";
+import "../token/IToken.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 contract InterfaceIdCalculator {
+
     /**
      * @dev Returns the interface ID for the IERC20 interface.
      * IERC20 interface ID is 0x36372b07
@@ -215,4 +215,5 @@ contract InterfaceIdCalculator {
     function getIModuleInterfaceId() external pure returns (bytes4) {
         return type(IModule).interfaceId;
     }
+
 }

@@ -72,7 +72,6 @@ event IdentityRegistryUnbound(address indexed _identityRegistry);
 interface IERC3643IdentityRegistryStorage {
 
     /// functions
-
     /**
      *  @dev adds an identity contract corresponding to a user address in the storage.
      *  Requires that the user doesn't have an identity contract already registered.
@@ -82,11 +81,7 @@ interface IERC3643IdentityRegistryStorage {
      *  @param _country The country of the investor
      *  emits `IdentityStored` event
      */
-    function addIdentityToStorage(
-        address _userAddress,
-        IIdentity _identity,
-        uint16 _country
-    ) external;
+    function addIdentityToStorage(address _userAddress, IIdentity _identity, uint16 _country) external;
 
     /**
      *  @dev Removes an user from the storage.
@@ -151,4 +146,5 @@ interface IERC3643IdentityRegistryStorage {
      *  @param _userAddress The wallet of the investor
      */
     function storedInvestorCountry(address _userAddress) external view returns (uint16);
+
 }

@@ -1,1 +1,0 @@
-node ./scripts/commit-msg.js $1 && npx --no-install commitlint --edit $1

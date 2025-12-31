@@ -72,11 +72,9 @@ event ComplianceBound(address indexed _compliance);
 /// @param _compliance is the address of the compliance contract being unbound
 event ComplianceUnbound(address indexed _compliance);
 
-
 interface IModule {
 
     /// functions
-
     /**
      *  @dev binds the module to a compliance contract
      *  once the module is bound, the compliance contract can interact with the module
@@ -166,4 +164,5 @@ interface IModule {
      *  @return _name the name of the module
      */
     function name() external pure returns (string memory _name);
+
 }

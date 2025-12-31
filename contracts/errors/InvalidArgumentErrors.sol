@@ -63,7 +63,6 @@
 
 pragma solidity 0.8.30;
 
-
 /// @dev Thrown when the address is not an ERC20.
 /// @param token address of the token.
 error AddressNotERC20(address token);
@@ -71,7 +70,7 @@ error AddressNotERC20(address token);
 /// @dev Thrown when limits array size exceeded.
 /// @param _compliance compliance contract address.
 /// @param _arraySize array size.
-error LimitsArraySizeExceeded(address _compliance, uint _arraySize);
+error LimitsArraySizeExceeded(address _compliance, uint256 _arraySize);
 
 /// @dev Thrown when invalid decimals is set.
 /// @param _decimals number of decimals

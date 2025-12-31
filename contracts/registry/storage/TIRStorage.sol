@@ -66,6 +66,7 @@ pragma solidity 0.8.30;
 import "@onchain-id/solidity/contracts/interface/IClaimIssuer.sol";
 
 contract TIRStorage {
+
     /// @dev Array containing all TrustedIssuers identity contract address.
     IClaimIssuer[] internal _trustedIssuers;
 
@@ -80,4 +81,5 @@ contract TIRStorage {
      * variables without shifting down storage in the inheritance chain.
      */
     uint256[49] private __gap;
+
 }

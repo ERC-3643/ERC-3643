@@ -63,10 +63,11 @@
 
 pragma solidity 0.8.30;
 
+import { IClaimIssuer, IIdentity } from "@onchain-id/solidity/contracts/interface/IClaimIssuer.sol";
+
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-import { IClaimIssuer, IIdentity } from "@onchain-id/solidity/contracts/interface/IClaimIssuer.sol";
 import { IERC3643IdentityRegistry } from "../ERC-3643/IERC3643IdentityRegistry.sol";
 import { IERC3643TrustedIssuersRegistry } from "../ERC-3643/IERC3643TrustedIssuersRegistry.sol";
 import { IModularCompliance } from "../compliance/modular/IModularCompliance.sol";
@@ -74,84 +75,93 @@ import { IModule } from "../compliance/modular/modules/IModule.sol";
 import { IToken } from "../token/IToken.sol";
 import { IUtilityChecker } from "./IUtilityChecker.sol";
 
-
 contract UtilityChecker is IUtilityChecker, OwnableUpgradeable, UUPSUpgradeable {
 
     function initialize() external initializer {
-        __Ownable_init();
+        __Ownable_init(msg.sender);
     }
 
     /// @inheritdoc IUtilityChecker
     /// @dev This function is not gas optimized and should be called only OFF chain.
-    function testTransfer(address _token, address _from, address _to, uint256 _amount) 
-        external view override returns (bool _freezeStatus, bool _eligibilityStatus, bool _complianceStatus) {
+    function getTransferStatus(address _token, address _from, address _to, uint256 _amount)
+        external
+        view
+        override
+        returns (bool _freezeStatus, bool _eligibilityStatus, bool _complianceStatus)
+    {
         IToken token = IToken(_token);
 
         _freezeStatus = !token.paused();
 
-        (bool frozen, ) = testFreeze(_token, _from, _to, _amount);
+        (bool frozen,) = getFreezeStatus(_token, _from, _to, _amount);
         _freezeStatus = _freezeStatus && !frozen;
 
         IERC3643IdentityRegistry ir = token.identityRegistry();
         _eligibilityStatus = ir.isVerified(_to);
 
-        ComplianceCheckDetails [] memory details = testTransferDetails(_token, _from, _to, _amount);
+        ComplianceCheckDetails[] memory details = getTransferDetails(_token, _from, _to, _amount);
+        _complianceStatus = true;
         for (uint256 i; i < details.length; i++) {
             if (!details[i].pass) {
                 _complianceStatus = false;
                 break;
             }
         }
-        _complianceStatus = true;
     }
 
     /// @inheritdoc IUtilityChecker
-    function testVerifiedDetails(address _token, address _userAddress) 
-        public view override returns (EligibilityCheckDetails [] memory _details) {
-        
+    function getVerifiedDetails(address _token, address _userAddress)
+        public
+        view
+        override
+        returns (EligibilityCheckDetails[] memory _details)
+    {
         IERC3643IdentityRegistry identityRegistry = IToken(_token).identityRegistry();
         IERC3643TrustedIssuersRegistry tokenIssuersRegistry = identityRegistry.issuersRegistry();
         IIdentity identity = identityRegistry.identity(_userAddress);
 
-        uint256 foundClaimTopic;
-        uint256 scheme;
-        address issuer;
-        bytes memory sig;
-        bytes memory data;
-        uint256 topic;
         uint256[] memory requiredClaimTopics = identityRegistry.topicsRegistry().getClaimTopics();
         uint256 topicsCount = requiredClaimTopics.length;
-        _details = new EligibilityCheckDetails[](topicsCount); 
+        _details = new EligibilityCheckDetails[](topicsCount);
         for (uint256 claimTopic; claimTopic < topicsCount; claimTopic++) {
-            topic = requiredClaimTopics[claimTopic];
-            IClaimIssuer[] memory trustedIssuers =
-                tokenIssuersRegistry.getTrustedIssuersForClaimTopic(topic);
-            
-            for (uint256 i; i < trustedIssuers.length; i++) {
-                bytes32 claimId = keccak256(abi.encode(trustedIssuers[i], topic));
-                (foundClaimTopic, scheme, issuer, sig, data, ) = identity.getClaim(claimId);
-                if (foundClaimTopic == topic) {
-                    bool pass;
-                    try IClaimIssuer(issuer).isClaimValid(identity, topic, sig, data) returns(bool validity) {
-                        pass = validity;
-                    }
-                    catch {
-                        pass = false;
-                    }
+            uint256 topic = requiredClaimTopics[claimTopic];
+            IClaimIssuer[] memory trustedIssuers = tokenIssuersRegistry.getTrustedIssuersForClaimTopic(topic);
 
-                    _details[claimTopic] = EligibilityCheckDetails({
-                        issuer: trustedIssuers[i],
-                        topic: topic,
-                        pass: pass
-                    });
+            for (uint256 i; i < trustedIssuers.length; i++) {
+                (bool topicMatch, bool pass) = _getEligibility(trustedIssuers[i], topic, identity);
+                if (topicMatch) {
+                    _details[claimTopic] =
+                        EligibilityCheckDetails({ issuer: trustedIssuers[i], topic: topic, pass: pass });
                 }
             }
         }
     }
 
+    /// @dev Function splitted to avoid stack too deep error
+    function _getEligibility(IClaimIssuer _trustedIssuer, uint256 _topic, IIdentity _identity)
+        internal
+        view
+        returns (bool topicMatch, bool pass)
+    {
+        bytes32 claimId = keccak256(abi.encode(_trustedIssuer, _topic));
+        (uint256 foundClaimTopic,, address issuer, bytes memory sig, bytes memory data,) = _identity.getClaim(claimId);
+        if (foundClaimTopic != _topic) return (false, false);
+        topicMatch = true;
+
+        try IClaimIssuer(issuer).isClaimValid(_identity, _topic, sig, data) returns (bool validity) {
+            pass = validity;
+        } catch {
+            pass = false;
+        }
+    }
+
     /// @inheritdoc IUtilityChecker
-    function testFreeze(address _token, address _from, address _to, uint256 _amount) 
-        public view override returns (bool _frozen, uint256 _availableBalance) {
+    function getFreezeStatus(address _token, address _from, address _to, uint256 _amount)
+        public
+        view
+        override
+        returns (bool _frozen, uint256 _availableBalance)
+    {
         IToken token = IToken(_token);
 
         if (token.isFrozen(_from) || token.isFrozen(_to)) {
@@ -164,22 +174,32 @@ contract UtilityChecker is IUtilityChecker, OwnableUpgradeable, UUPSUpgradeable 
     }
 
     /// @inheritdoc IUtilityChecker
-    function testTransferDetails(address _token, address _from, address _to, uint256 _value) 
-        public view override returns (ComplianceCheckDetails [] memory _details) {
+    function getTransferDetails(address _token, address _from, address _to, uint256 _value)
+        public
+        view
+        override
+        returns (ComplianceCheckDetails[] memory _details)
+    {
         IModularCompliance compliance = IModularCompliance(address(IToken(_token).compliance()));
         address[] memory modules = compliance.getModules();
         uint256 length = modules.length;
-        _details = new ComplianceCheckDetails[](length); 
+        _details = new ComplianceCheckDetails[](length);
         for (uint256 i; i < length; i++) {
             IModule module = IModule(modules[i]);
             _details[i] = ComplianceCheckDetails({
-                moduleName: module.name(),
-                pass: module.moduleCheck(_from, _to, _value, address(compliance))
+                moduleName: module.name(), pass: module.moduleCheck(_from, _to, _value, address(compliance))
             });
         }
     }
 
     // solhint-disable-next-line no-empty-blocks
-    function _authorizeUpgrade(address /*newImplementation*/) internal view override onlyOwner { }
+    function _authorizeUpgrade(
+        address /*newImplementation*/
+    )
+        internal
+        view
+        override
+        onlyOwner
+    { }
 
 }

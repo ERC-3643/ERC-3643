@@ -66,7 +66,6 @@ import "../../ERC-3643/IERC3643TrustedIssuersRegistry.sol";
 
 // solhint-disable-next-line no-empty-blocks
 interface ITrustedIssuersRegistry is IERC3643TrustedIssuersRegistry {
+    // functions that are not part of the original standard can be added here in future versions
 
-// functions that are not part of the original standard can be added here in future versions
-
-}
+    }

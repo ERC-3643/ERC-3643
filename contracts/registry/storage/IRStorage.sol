@@ -64,10 +64,11 @@
 pragma solidity 0.8.30;
 
 import "../interface/IClaimTopicsRegistry.sol";
-import "../interface/ITrustedIssuersRegistry.sol";
 import "../interface/IIdentityRegistryStorage.sol";
+import "../interface/ITrustedIssuersRegistry.sol";
 
 contract IRStorage {
+
     /// @dev Address of the ClaimTopicsRegistry Contract
     IClaimTopicsRegistry internal _tokenTopicsRegistry;
 
@@ -85,4 +86,5 @@ contract IRStorage {
      * variables without shifting down storage in the inheritance chain.
      */
     uint256[48] private __gap;
+
 }

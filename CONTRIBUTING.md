@@ -16,9 +16,9 @@ We use Github to host code, to track issues and feature requests, as well as acc
 Pull requests are the best way to propose changes to the codebase. We actively welcome your pull requests:
 
 1. Fork the repo and create your branch from `main`.
-2. If you've added code that should be tested, add tests. Our test suite uses TypeScript and Hardhat.
+2. If you've added code that should be tested, add tests. Our test suite uses Foundry (Solidity).
 3. Ensure the test suite passes. Tests are automated and any PR will trigger them automatically.
-4. Make sure your code lints. We use [Solhint](https://github.com/protofire/solhint) for Solidity and [ESLint](https://eslint.org/) for TypeScript.
+4. Make sure your code lints. We use Foundry's built-in linting (`forge lint`) for Solidity code.
 5. Issue that pull request!
 
 ## Any contributions you make will be under the GPL v3 Software License
@@ -35,14 +35,14 @@ Great Bug Reports tend to have:
 
 - A quick summary and/or background
 - Steps to reproduce
-    - Be specific!
-    - Give sample code if you can.
+  - Be specific!
+  - Give sample code if you can.
 - What you expected would happen
 - What actually happens
 
 ## Use a Consistent Coding Style
 
-We're using [Solhint](https://github.com/protofire/solhint) for Solidity and [ESLint](https://eslint.org/) for TypeScript. Make sure your code follows the style guide.
+We use Foundry's built-in linting and formatting tools for Solidity code. Linting is automatically enabled on build (`forge build`) and you can manually run `forge lint` to check your code. Make sure your code follows the style guide and passes all linting checks.
 
 ## Commit Messages
 

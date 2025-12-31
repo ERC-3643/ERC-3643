@@ -65,15 +65,15 @@ pragma solidity 0.8.30;
 import "@onchain-id/solidity/contracts/interface/IClaimIssuer.sol";
 import "@onchain-id/solidity/contracts/interface/IIdentity.sol";
 
-import "../interface/IClaimTopicsRegistry.sol";
-import "../interface/ITrustedIssuersRegistry.sol";
-import "../interface/IIdentityRegistry.sol";
-import "../../roles/AgentRoleUpgradeable.sol";
-import "../interface/IIdentityRegistryStorage.sol";
-import "../storage/IRStorage.sol";
 import "../../errors/InvalidArgumentErrors.sol";
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "../../roles/AgentRoleUpgradeable.sol";
 import "../../roles/IERC173.sol";
+import "../interface/IClaimTopicsRegistry.sol";
+import "../interface/IIdentityRegistry.sol";
+import "../interface/IIdentityRegistryStorage.sol";
+import "../interface/ITrustedIssuersRegistry.sol";
+import "../storage/IRStorage.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// error triggered when eligibility checks are disabled and the disable function is called
 error EligibilityChecksDisabledAlready();
@@ -96,16 +96,15 @@ contract IdentityRegistry is IIdentityRegistry, AgentRoleUpgradeable, IRStorage,
      *  emits a `TrustedIssuersRegistrySet` event
      *  emits an `IdentityStorageSet` event
      */
-    function init(
-        address _trustedIssuersRegistry,
-        address _claimTopicsRegistry,
-        address _identityStorage
-    ) external initializer {
+    function init(address _trustedIssuersRegistry, address _claimTopicsRegistry, address _identityStorage)
+        external
+        initializer
+    {
         require(
-            _trustedIssuersRegistry != address(0)
-            && _claimTopicsRegistry != address(0)
-            && _identityStorage != address(0)
-        , ZeroAddress());
+            _trustedIssuersRegistry != address(0) && _claimTopicsRegistry != address(0)
+                && _identityStorage != address(0),
+            ZeroAddress()
+        );
         _tokenTopicsRegistry = IClaimTopicsRegistry(_claimTopicsRegistry);
         _tokenIssuersRegistry = ITrustedIssuersRegistry(_trustedIssuersRegistry);
         _tokenIdentityStorage = IIdentityRegistryStorage(_identityStorage);
@@ -203,8 +202,8 @@ contract IdentityRegistry is IIdentityRegistry, AgentRoleUpgradeable, IRStorage,
      */
     // solhint-disable-next-line code-complexity
     function isVerified(address _userAddress) external view override returns (bool) {
-        if(_checksDisabled) {return true;}
-        if (address(identity(_userAddress)) == address(0)) {return false;}
+        if (_checksDisabled) return true;
+        if (address(identity(_userAddress)) == address(0)) return false;
         uint256[] memory requiredClaimTopics = _tokenTopicsRegistry.getClaimTopics();
         if (requiredClaimTopics.length == 0) {
             return true;
@@ -218,9 +217,9 @@ contract IdentityRegistry is IIdentityRegistry, AgentRoleUpgradeable, IRStorage,
         uint256 claimTopic;
         for (claimTopic = 0; claimTopic < requiredClaimTopics.length; claimTopic++) {
             IClaimIssuer[] memory trustedIssuers =
-            _tokenIssuersRegistry.getTrustedIssuersForClaimTopic(requiredClaimTopics[claimTopic]);
+                _tokenIssuersRegistry.getTrustedIssuersForClaimTopic(requiredClaimTopics[claimTopic]);
 
-            if (trustedIssuers.length == 0) {return false;}
+            if (trustedIssuers.length == 0) return false;
 
             bytes32[] memory claimIds = new bytes32[](trustedIssuers.length);
             for (uint256 i = 0; i < trustedIssuers.length; i++) {
@@ -228,15 +227,14 @@ contract IdentityRegistry is IIdentityRegistry, AgentRoleUpgradeable, IRStorage,
             }
 
             for (uint256 j = 0; j < claimIds.length; j++) {
-                (foundClaimTopic, scheme, issuer, sig, data, ) = identity(_userAddress).getClaim(claimIds[j]);
+                (foundClaimTopic, scheme, issuer, sig, data,) = identity(_userAddress).getClaim(claimIds[j]);
 
                 if (foundClaimTopic == requiredClaimTopics[claimTopic]) {
-                    try IClaimIssuer(issuer).isClaimValid(identity(_userAddress), requiredClaimTopics[claimTopic], sig,
-                        data) returns(bool _validity) {
-
-                        if (
-                            _validity
-                        ) {
+                    try IClaimIssuer(issuer)
+                        .isClaimValid(identity(_userAddress), requiredClaimTopics[claimTopic], sig, data) returns (
+                        bool _validity
+                    ) {
+                        if (_validity) {
                             j = claimIds.length;
                         }
                         if (!_validity && j == (claimIds.length - 1)) {
@@ -296,11 +294,7 @@ contract IdentityRegistry is IIdentityRegistry, AgentRoleUpgradeable, IRStorage,
     /**
      *  @dev See {IIdentityRegistry-registerIdentity}.
      */
-    function registerIdentity(
-        address _userAddress,
-        IIdentity _identity,
-        uint16 _country
-    ) public override onlyAgent {
+    function registerIdentity(address _userAddress, IIdentity _identity, uint16 _country) public override onlyAgent {
         _tokenIdentityStorage.addIdentityToStorage(_userAddress, _identity, _country);
         emit IdentityRegistered(_userAddress, _identity);
     }
@@ -316,10 +310,9 @@ contract IdentityRegistry is IIdentityRegistry, AgentRoleUpgradeable, IRStorage,
      *  @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(bytes4 interfaceId) public pure virtual override returns (bool) {
-        return
-            interfaceId == type(IIdentityRegistry).interfaceId ||
-            interfaceId == type(IERC3643IdentityRegistry).interfaceId ||
-            interfaceId == type(IERC173).interfaceId ||
-            interfaceId == type(IERC165).interfaceId;
+        return interfaceId == type(IIdentityRegistry).interfaceId
+            || interfaceId == type(IERC3643IdentityRegistry).interfaceId || interfaceId == type(IERC173).interfaceId
+            || interfaceId == type(IERC165).interfaceId;
     }
+
 }

@@ -50,11 +50,8 @@ event TokenUnbound(address _token);
 
 interface IERC3643Compliance {
 
-
     /// Functions
-
     /// initialization of the compliance contract
-
     /**
      *  @dev binds a token to the compliance contract
      *  @param _token address of the token to bind
@@ -71,8 +68,6 @@ interface IERC3643Compliance {
      */
     function unbindToken(address _token) external;
 
-
-
     // compliance check and state update
     /**
      *  @dev function called whenever tokens are transferred
@@ -87,11 +82,7 @@ interface IERC3643Compliance {
      *  @param _amount The amount of tokens involved in the transfer
      *  This function calls moduleTransferAction() on each module bound to the compliance contract
      */
-    function transferred(
-        address _from,
-        address _to,
-        uint256 _amount
-    ) external;
+    function transferred(address _from, address _to, uint256 _amount) external;
 
     /**
      *  @dev function called whenever tokens are created on a wallet
@@ -131,11 +122,7 @@ interface IERC3643Compliance {
      *  If each of the module checks return TRUE, this function will return TRUE as well
      *  returns FALSE otherwise
      */
-    function canTransfer(
-        address _from,
-        address _to,
-        uint256 _amount
-    ) external view returns (bool);
+    function canTransfer(address _from, address _to, uint256 _amount) external view returns (bool);
 
     /// check the parameters of the compliance contract
 

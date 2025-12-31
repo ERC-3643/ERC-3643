@@ -22,22 +22,17 @@
     "!artifacts/build-info"
   ],
   "scripts": {
-    "build": "hardhat compile",
+    "prepare": "husky && forge soldeer install",
+    "build": "forge build",
     "flatten": "node scripts/flatten.js",
-    "coverage": "hardhat coverage",
-    "test": "hardhat test",
-    "lint:ts": "eslint \"test/**/*.ts\" \"hardhat.config.ts\" \"*.ts\"",
-    "lint:js": "eslint \"scripts/**/*.js\" \"*.js\"",
-    "lint:ts-fix": "eslint \"test/**/*.ts\" \"hardhat.config.ts\" \"*.ts\" --fix",
-    "lint:js-fix": "eslint \"scripts/**/*.js\" \"*.js\" --fix",
-    "lint": "npm run lint:sol && npm run lint:ts && npm run lint:js",
-    "lint:sol": "solhint \"contracts/**/*.sol\"",
-    "lint:fix": "npm run lint:ts-fix && npm run lint:js-fix && npm run lint:sol",
+    "lint": "forge fmt --check",
+    "lint:fix": "forge fmt",
     "format": "prettier --write \"**/*.{ts,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,js,json,md}\"",
-    "docs": "hardhat dodoc",
-    "prepare": "husky",
-    "storage": "bash scripts/storage-delta/run.sh"
+    "test": "forge test --gas-report",
+    "coverage": "forge coverage --no-match-coverage \"(test|dependencies|scripts)\" --ir-minimum",
+    "coverage:report": "mkdir -p coverage && forge coverage --no-match-coverage \"(test|scripts|dependencies)\" --ir-minimum --report lcov --report-file coverage/lcov.info && genhtml coverage/lcov.info -o coverage/report --branch-coverage && open coverage/report/index.html",
+    "clean": "forge clean"
   },
   "repository": {
     "type": "git",
@@ -52,63 +47,23 @@
   "devDependencies": {
     "@commitlint/cli": "^19.5.0",
     "@commitlint/config-conventional": "^19.5.0",
-    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "@nomiclabs/hardhat-solhint": "^4.0.1",
     "@onchain-id/solidity": "^2.2.2-beta2",
-    "@openzeppelin/contracts": "^4.9.6",
-    "@openzeppelin/contracts-upgradeable": "^4.9.6",
-    "@openzeppelin/hardhat-upgrades": "^3.9.0",
-    "@primitivefi/hardhat-dodoc": "^0.2.3",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.18.0",
-    "@xyrusworx/hardhat-solidity-json": "^1.0.2",
-    "eslint": "^8.57.0",
-    "eslint-config-airbnb-base": "^15.0.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-import-resolver-typescript": "^3.6.3",
-    "eslint-plugin-chai-friendly": "^1.0.1",
-    "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-prettier": "^5.2.1",
-    "eslint-plugin-security": "^3.0.1",
-    "eslint-plugin-sonarjs": "^2.0.4",
-    "eslint-plugin-unicorn": "^56.0.1",
-    "eth-gas-reporter": "^0.2.27",
-    "fs-extra": "^11.2.0",
-    "glob": "^11.0.0",
-    "hardhat": "^2.24.2",
-    "hardhat-storage-layout-changes": "^0.1.2",
+    "@openzeppelin/contracts": "^5.5.0",
+    "@openzeppelin/contracts-upgradeable": "^5.5.0",
     "husky": "^9.1.6",
     "lint-staged": "^15.2.10",
-    "prettier": "^3.4.1",
-    "prettier-plugin-solidity": "^1.4.1",
-    "solhint": "^5.0.3",
-    "solhint-plugin-prettier": "^0.1.0",
-    "solidity-coverage": "^0.8.13"
+    "prettier": "^3.4.1"
   },
-  "overrides": {
-    "@openzeppelin/defender-sdk-deploy-client": {
-      "@openzeppelin/defender-sdk-base-client": "1.13.1"
-    },
-    "@openzeppelin/hardhat-upgrades": {
-      "@openzeppelin/defender-sdk-deploy-client": "1.13.1",
-      "@openzeppelin/defender-sdk-base-client": "1.13.1",
-      "@openzeppelin/defender-sdk-network-client": "1.13.1"
-    }
+  "dependencies": {
+    "forge-std": "github:foundry-rs/forge-std#v1.10.0"
   },
   "lint-staged": {
-    "*.ts": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.js": [
-      "eslint --fix",
-      "prettier --write"
-    ],
     "*.{json,md}": [
       "prettier --write"
     ],
     "*.sol": [
-      "solhint"
+      "forge fmt"
     ]
   }
 }
+

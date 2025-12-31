@@ -1,25 +1,14 @@
-node_modules/
+# Foundry
 dependencies/
 out/
-
-# Artifacts
-build/
-bin/
+cache/
 coverage/
 coverage.json
-typechain-types/
-artifacts/
-cache/
-docgen/
-flat/
+gas-report.txt
 
 # IDEs
 .idea/
 .vscode/
-
-# NPM
-gas-report
-/bin/
 
 .storage_delta_cache
 storage_delta

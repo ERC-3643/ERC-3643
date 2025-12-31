@@ -64,12 +64,12 @@ pragma solidity 0.8.30;
 
 import "@onchain-id/solidity/contracts/interface/IIdentity.sol";
 
+import "../../errors/InvalidArgumentErrors.sol";
 import "../../roles/AgentRoleUpgradeable.sol";
+import "../../roles/IERC173.sol";
 import "../interface/IIdentityRegistryStorage.sol";
 import "../storage/IRSStorage.sol";
-import "../../errors/InvalidArgumentErrors.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "../../roles/IERC173.sol";
 
 /// Errors
 
@@ -86,7 +86,6 @@ error IdentityRegistryNotStored();
 /// @param _max miximum number of IR by IRS.
 error MaxIRByIRSReached(uint256 _max);
 
-
 contract IdentityRegistryStorage is IIdentityRegistryStorage, AgentRoleUpgradeable, IRSStorage, IERC165 {
 
     constructor() {
@@ -100,15 +99,12 @@ contract IdentityRegistryStorage is IIdentityRegistryStorage, AgentRoleUpgradeab
     /**
      *  @dev See {IIdentityRegistryStorage-addIdentityToStorage}.
      */
-    function addIdentityToStorage(
-        address _userAddress,
-        IIdentity _identity,
-        uint16 _country
-    ) external override onlyAgent {
-        require(
-            _userAddress != address(0)
-            && address(_identity) != address(0)
-        , ZeroAddress());
+    function addIdentityToStorage(address _userAddress, IIdentity _identity, uint16 _country)
+        external
+        override
+        onlyAgent
+    {
+        require(_userAddress != address(0) && address(_identity) != address(0), ZeroAddress());
         require(address(_identities[_userAddress].identityContract) == address(0), AddressAlreadyStored());
         _identities[_userAddress].identityContract = _identity;
         _identities[_userAddress].investorCountry = _country;
@@ -119,10 +115,7 @@ contract IdentityRegistryStorage is IIdentityRegistryStorage, AgentRoleUpgradeab
      *  @dev See {IIdentityRegistryStorage-modifyStoredIdentity}.
      */
     function modifyStoredIdentity(address _userAddress, IIdentity _identity) external override onlyAgent {
-        require(
-            _userAddress != address(0)
-            && address(_identity) != address(0)
-        , ZeroAddress());
+        require(_userAddress != address(0) && address(_identity) != address(0), ZeroAddress());
         require(address(_identities[_userAddress].identityContract) != address(0), AddressNotYetStored());
         IIdentity oldIdentity = _identities[_userAddress].identityContract;
         _identities[_userAddress].identityContract = _identity;
@@ -204,9 +197,8 @@ contract IdentityRegistryStorage is IIdentityRegistryStorage, AgentRoleUpgradeab
      *  @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(bytes4 interfaceId) public pure virtual override returns (bool) {
-        return
-            interfaceId == type(IERC3643IdentityRegistryStorage).interfaceId ||
-            interfaceId == type(IERC173).interfaceId ||
-            interfaceId == type(IERC165).interfaceId;
+        return interfaceId == type(IERC3643IdentityRegistryStorage).interfaceId
+            || interfaceId == type(IERC173).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
+
 }

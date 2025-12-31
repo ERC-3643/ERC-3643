@@ -10,13 +10,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
         with:
-          node-version: 20
-      - run: npm ci
-      - run: npm run build
+          version: stable
+      - name: Install dependencies
+        run: forge soldeer install
+      - name: Build contracts
+        run: forge build
       - name: Run test coverage
-        run: npm run coverage
+        run: forge coverage --no-match-coverage "(^test/|_testContracts/|utils/)" --ir-minimum
       - name: Zip coverage results
         run: zip -r coverage.zip "coverage/" "coverage.json"
       - name: Upload artifacts to release
@@ -26,18 +29,3 @@ jobs:
           files: coverage.zip
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-
-  publish-npm:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 20
-          registry-url: https://registry.npmjs.org/
-      - run: npm ci
-      - run: npm run build
-      - run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}

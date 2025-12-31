@@ -62,17 +62,16 @@
 
 pragma solidity 0.8.30;
 
-import "./interface/IProxy.sol";
-import "./authority/ITREXImplementationAuthority.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../errors/CommonErrors.sol";
 import "../errors/InvalidArgumentErrors.sol";
+import "./authority/ITREXImplementationAuthority.sol";
+import "./interface/IProxy.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /// Errors
 
 /// @dev Thrown when called by other than the current implementation authority.
 error OnlyCurrentImplementationAuthorityCanCall();
-
 
 abstract contract AbstractProxy is IProxy, Initializable {
 
@@ -84,12 +83,13 @@ abstract contract AbstractProxy is IProxy, Initializable {
         require(_newImplementationAuthority != address(0), ZeroAddress());
         require(
             (ITREXImplementationAuthority(_newImplementationAuthority)).getTokenImplementation() != address(0)
-            && (ITREXImplementationAuthority(_newImplementationAuthority)).getCTRImplementation() != address(0)
-            && (ITREXImplementationAuthority(_newImplementationAuthority)).getIRImplementation() != address(0)
-            && (ITREXImplementationAuthority(_newImplementationAuthority)).getIRSImplementation() != address(0)
-            && (ITREXImplementationAuthority(_newImplementationAuthority)).getMCImplementation() != address(0)
-            && (ITREXImplementationAuthority(_newImplementationAuthority)).getTIRImplementation() != address(0)
-        , InvalidImplementationAuthority());
+                && (ITREXImplementationAuthority(_newImplementationAuthority)).getCTRImplementation() != address(0)
+                && (ITREXImplementationAuthority(_newImplementationAuthority)).getIRImplementation() != address(0)
+                && (ITREXImplementationAuthority(_newImplementationAuthority)).getIRSImplementation() != address(0)
+                && (ITREXImplementationAuthority(_newImplementationAuthority)).getMCImplementation() != address(0)
+                && (ITREXImplementationAuthority(_newImplementationAuthority)).getTIRImplementation() != address(0),
+            InvalidImplementationAuthority()
+        );
         _storeImplementationAuthority(_newImplementationAuthority);
         emit ImplementationAuthoritySet(_newImplementationAuthority);
     }
@@ -97,7 +97,7 @@ abstract contract AbstractProxy is IProxy, Initializable {
     /**
      *  @dev See {IProxy-getImplementationAuthority}.
      */
-    function getImplementationAuthority() public override view returns(address) {
+    function getImplementationAuthority() public view override returns (address) {
         address implemAuth;
         // solhint-disable-next-line no-inline-assembly
         assembly {

@@ -15,7 +15,8 @@ abstract contract NoncesUpgradeable {
     }
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.Nonces")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant _NONCES_STORAGE_LOCATION = 0x5ab42ced628888259c08ac98db1eb0cf702fc1501344311d8b100cd1bfe4bb00;
+    bytes32 private constant _NONCES_STORAGE_LOCATION =
+        0x5ab42ced628888259c08ac98db1eb0cf702fc1501344311d8b100cd1bfe4bb00;
 
     /**
      * @dev Returns the next unused nonce for an address.
@@ -55,4 +56,5 @@ abstract contract NoncesUpgradeable {
             $.slot := _NONCES_STORAGE_LOCATION
         }
     }
+
 }

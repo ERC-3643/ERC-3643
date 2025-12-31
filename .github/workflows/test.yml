@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FOUNDRY_PROFILE: ci
+  ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY }}
+
+jobs:
+  check:
+    strategy:
+      fail-fast: true
+
+    name: Foundry project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Install dependencies
+        run: forge soldeer install
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Run Linter
+        run: forge fmt --check
+        id: lint
+
+      - name: Run build
+        run: forge build
+        id: build
+
+      - name: Run tests
+        run: forge test --gas-report
+        id: test
+
+      - name: Run coverage
+        run: ./.github/scripts/forge_coverage.sh
+        id: coverage

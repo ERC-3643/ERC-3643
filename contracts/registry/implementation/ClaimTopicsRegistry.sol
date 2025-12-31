@@ -62,11 +62,11 @@
 
 pragma solidity 0.8.30;
 
-import "../../roles/OwnableOnceNext2StepUpgradeable.sol";
-import "../storage/CTRStorage.sol";
-import "../interface/IClaimTopicsRegistry.sol";
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "../../roles/IERC173.sol";
+import "../../roles/OwnableOnceNext2StepUpgradeable.sol";
+import "../interface/IClaimTopicsRegistry.sol";
+import "../storage/CTRStorage.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// Errors
 
@@ -76,7 +76,6 @@ error MaxTopicsReached(uint256 _max);
 
 /// @dev Thrown whern claim topic already exists.
 error ClaimTopicAlreadyExists();
-
 
 contract ClaimTopicsRegistry is IClaimTopicsRegistry, OwnableOnceNext2StepUpgradeable, CTRStorage, IERC165 {
 
@@ -127,9 +126,8 @@ contract ClaimTopicsRegistry is IClaimTopicsRegistry, OwnableOnceNext2StepUpgrad
      *  @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(bytes4 interfaceId) public pure virtual override returns (bool) {
-        return
-            interfaceId == type(IERC3643ClaimTopicsRegistry).interfaceId ||
-            interfaceId == type(IERC173).interfaceId ||
-            interfaceId == type(IERC165).interfaceId;
+        return interfaceId == type(IERC3643ClaimTopicsRegistry).interfaceId || interfaceId == type(IERC173).interfaceId
+            || interfaceId == type(IERC165).interfaceId;
     }
+
 }

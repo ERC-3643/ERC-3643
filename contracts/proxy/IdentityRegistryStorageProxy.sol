@@ -62,8 +62,8 @@
 
 pragma solidity 0.8.30;
 
-import "./AbstractProxy.sol";
 import "../errors/CommonErrors.sol";
+import "./AbstractProxy.sol";
 
 contract IdentityRegistryStorageProxy is AbstractProxy {
 
@@ -75,7 +75,7 @@ contract IdentityRegistryStorageProxy is AbstractProxy {
         address logic = (ITREXImplementationAuthority(getImplementationAuthority())).getIRSImplementation();
 
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, ) = logic.delegatecall(abi.encodeWithSignature("init()"));
+        (bool success,) = logic.delegatecall(abi.encodeWithSignature("init()"));
         require(success, InitializationFailed());
     }
 
@@ -98,4 +98,5 @@ contract IdentityRegistryStorageProxy is AbstractProxy {
             }
         }
     }
+
 }

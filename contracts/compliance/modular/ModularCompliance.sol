@@ -62,16 +62,16 @@
 
 pragma solidity 0.8.30;
 
+import "../../errors/CommonErrors.sol";
+import "../../errors/ComplianceErrors.sol";
+import "../../errors/InvalidArgumentErrors.sol";
+import "../../roles/IERC173.sol";
 import "../../roles/OwnableOnceNext2StepUpgradeable.sol";
 import "../../token/IToken.sol";
 import "./IModularCompliance.sol";
 import "./MCStorage.sol";
 import "./modules/IModule.sol";
-import "../../errors/ComplianceErrors.sol";
-import "../../errors/CommonErrors.sol";
-import "../../errors/InvalidArgumentErrors.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "../../roles/IERC173.sol";
 
 /// errors
 
@@ -91,11 +91,9 @@ error OnlyOwnerOrTokenCanCall();
 /// @dev Thrown when token is not bound.
 error TokenNotBound();
 
-
 contract ModularCompliance is IModularCompliance, OwnableOnceNext2StepUpgradeable, MCStorage, IERC165 {
 
     /// modifiers
-
     /**
      * @dev Throws if called by any address that is not a token bound to the compliance.
      */
@@ -123,10 +121,10 @@ contract ModularCompliance is IModularCompliance, OwnableOnceNext2StepUpgradeabl
     }
 
     /**
-    *  @dev See {IERC3643Compliance-unbindToken}.
-    */
+     *  @dev See {IERC3643Compliance-unbindToken}.
+     */
     function unbindToken(address _token) external override {
-        require(owner() == msg.sender || msg.sender == _token , OnlyOwnerOrTokenCanCall());
+        require(owner() == msg.sender || msg.sender == _token, OnlyOwnerOrTokenCanCall());
         require(_token == _tokenBound, TokenNotBound());
         require(_token != address(0), ZeroAddress());
         delete _tokenBound;
@@ -153,13 +151,10 @@ contract ModularCompliance is IModularCompliance, OwnableOnceNext2StepUpgradeabl
     }
 
     /**
-    *  @dev See {IERC3643Compliance-transferred}.
-    */
-    function transferred(address _from, address _to, uint256 _value) external onlyToken override {
-        require(
-            _from != address(0)
-            && _to != address(0)
-        , ZeroAddress());
+     *  @dev See {IERC3643Compliance-transferred}.
+     */
+    function transferred(address _from, address _to, uint256 _value) external override onlyToken {
+        require(_from != address(0) && _to != address(0), ZeroAddress());
         require(_value > 0, ZeroValue());
         uint256 length = _modules.length;
         for (uint256 i = 0; i < length; i++) {
@@ -170,7 +165,7 @@ contract ModularCompliance is IModularCompliance, OwnableOnceNext2StepUpgradeabl
     /**
      *  @dev See {IERC3643Compliance-created}.
      */
-    function created(address _to, uint256 _value) external onlyToken override {
+    function created(address _to, uint256 _value) external override onlyToken {
         require(_to != address(0), ZeroAddress());
         require(_value > 0, ZeroValue());
         uint256 length = _modules.length;
@@ -182,7 +177,7 @@ contract ModularCompliance is IModularCompliance, OwnableOnceNext2StepUpgradeabl
     /**
      *  @dev See {IERC3643Compliance-destroyed}.
      */
-    function destroyed(address _from, uint256 _value) external onlyToken override {
+    function destroyed(address _from, uint256 _value) external override onlyToken {
         require(_from != address(0), ZeroAddress());
         require(_value > 0, ZeroValue());
         uint256 length = _modules.length;
@@ -194,7 +189,7 @@ contract ModularCompliance is IModularCompliance, OwnableOnceNext2StepUpgradeabl
     /**
      *  @dev See {IModularCompliance-addAndSetModule}.
      */
-    function addAndSetModule(address _module, bytes[] calldata _interactions) external onlyOwner override {
+    function addAndSetModule(address _module, bytes[] calldata _interactions) external override onlyOwner {
         require(_interactions.length <= 5, ArraySizeLimited(5));
         addModule(_module);
         for (uint256 i = 0; i < _interactions.length; i++) {
@@ -227,7 +222,7 @@ contract ModularCompliance is IModularCompliance, OwnableOnceNext2StepUpgradeabl
      *  @dev See {IERC3643Compliance-getTokenBound}.
      */
     function isTokenBound(address _token) external view override returns (bool) {
-        if(_token == _tokenBound) {
+        if (_token == _tokenBound) {
             return true;
         }
         return false;
@@ -254,8 +249,10 @@ contract ModularCompliance is IModularCompliance, OwnableOnceNext2StepUpgradeabl
         require(!_moduleBound[_module], ModuleAlreadyBound());
         require(_modules.length <= 24, MaxModulesReached(25));
         IModule module = IModule(_module);
-        require(module.isPlugAndPlay() || module.canComplianceBind(address(this)),
-            ComplianceNotSuitableForBindingToModule(_module));
+        require(
+            module.isPlugAndPlay() || module.canComplianceBind(address(this)),
+            ComplianceNotSuitableForBindingToModule(_module)
+        );
 
         module.bindCompliance(address(this));
         _modules.push(_module);
@@ -278,7 +275,7 @@ contract ModularCompliance is IModularCompliance, OwnableOnceNext2StepUpgradeabl
         assembly {
             let freeMemoryPointer := mload(0x40) // Load the free memory pointer from memory location 0x40
 
-        // Copy callData from calldata to the free memory location
+            // Copy callData from calldata to the free memory location
             calldatacopy(freeMemoryPointer, callData.offset, callData.length)
 
             if iszero( // Check if the call returns zero (indicating failure)
@@ -304,11 +301,9 @@ contract ModularCompliance is IModularCompliance, OwnableOnceNext2StepUpgradeabl
      *  @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(bytes4 interfaceId) public pure virtual override returns (bool) {
-        return
-            interfaceId == type(IModularCompliance).interfaceId ||
-            interfaceId == type(IERC3643Compliance).interfaceId ||
-            interfaceId == type(IERC173).interfaceId ||
-            interfaceId == type(IERC165).interfaceId;
+        return interfaceId == type(IModularCompliance).interfaceId
+            || interfaceId == type(IERC3643Compliance).interfaceId || interfaceId == type(IERC173).interfaceId
+            || interfaceId == type(IERC165).interfaceId;
     }
 
     /// @dev Extracts the Solidity ABI selector for the specified interaction.
@@ -327,7 +322,9 @@ contract ModularCompliance is IModularCompliance, OwnableOnceNext2StepUpgradeabl
             assembly {
                 result := calldataload(callData.offset)
             }
+        } else {
+            return result;
         }
     }
-}
 
+}
