@@ -358,7 +358,7 @@ contract TREXFactoryTest is TREXFactorySetup {
         bytes memory emptyBytecode = new bytes(0);
 
         vm.expectRevert(); // Should revert from the assembly revert(0, 0) because CREATE2 will return address(0) so the extcodesize(address(0)) = 0
-        testFactory.testDeploy("test-salt-empty", emptyBytecode);
+        testFactory.testDeploy("test-salt-empty", "Test", emptyBytecode);
     }
 
     // ============ setIdFactory() Tests ============

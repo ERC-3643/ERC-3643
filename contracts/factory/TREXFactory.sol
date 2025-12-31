@@ -262,12 +262,16 @@ contract TREXFactory is ITREXFactory, Ownable {
         emit IdFactorySet(idFactory_);
     }
 
-    /// Uses deployCreate3AndInit to call postInit(address(this)) after deployment to transfer ownership
-    /// returns the address of the contract created
-    function _deploy(string memory salt, bytes memory bytecode) internal returns (address) {
-        // Hash salt with bytecode to ensure unique CREATE3 proxy per contract type
-        // This prevents collisions when multiple contracts in a suite use the same salt
-        bytes32 saltBytes = bytes32(keccak256(abi.encodePacked(salt, bytecode)));
+    /**
+     * @dev Deploys a contract using CREATE3 and transfers ownership via postInit
+     * @param salt Base salt for deployment
+     * @param contractType Contract type identifier (e.g., "TIR", "CTR")
+     * @param bytecode Full creation bytecode including constructor parameters
+     */
+    function _deploy(string memory salt, string memory contractType, bytes memory bytecode) internal returns (address) {
+        // we need to add a contract type parameter to prevent the address collisions
+        // because if we just depend on the salt it all the 6 contracts will have the same address so it will revert as we are deploying at same address 6 times
+        bytes32 saltBytes = bytes32(keccak256(abi.encodePacked(salt, contractType)));
 
         // Prepare postInit call to transfer ownership from CREATE3 proxy to this contract
         bytes memory postInitData = abi.encodeWithSignature("postInit(address)", address(this));
@@ -283,7 +287,7 @@ contract TREXFactory is ITREXFactory, Ownable {
         bytes memory _code = type(TrustedIssuersRegistryProxy).creationCode;
         bytes memory _constructData = abi.encode(implementationAuthority_);
         bytes memory bytecode = abi.encodePacked(_code, _constructData);
-        return _deploy(_salt, bytecode);
+        return _deploy(_salt, "TIR", bytecode);
     }
 
     /// function used to deploy a claim topics registry using CREATE3
@@ -291,7 +295,7 @@ contract TREXFactory is ITREXFactory, Ownable {
         bytes memory _code = type(ClaimTopicsRegistryProxy).creationCode;
         bytes memory _constructData = abi.encode(implementationAuthority_);
         bytes memory bytecode = abi.encodePacked(_code, _constructData);
-        return _deploy(_salt, bytecode);
+        return _deploy(_salt, "CTR", bytecode);
     }
 
     /// function used to deploy modular compliance contract using CREATE3
@@ -299,7 +303,7 @@ contract TREXFactory is ITREXFactory, Ownable {
         bytes memory _code = type(ModularComplianceProxy).creationCode;
         bytes memory _constructData = abi.encode(implementationAuthority_);
         bytes memory bytecode = abi.encodePacked(_code, _constructData);
-        return _deploy(_salt, bytecode);
+        return _deploy(_salt, "MC", bytecode);
     }
 
     /// function used to deploy an identity registry storage using CREATE3
@@ -307,7 +311,7 @@ contract TREXFactory is ITREXFactory, Ownable {
         bytes memory _code = type(IdentityRegistryStorageProxy).creationCode;
         bytes memory _constructData = abi.encode(implementationAuthority_);
         bytes memory bytecode = abi.encodePacked(_code, _constructData);
-        return _deploy(_salt, bytecode);
+        return _deploy(_salt, "IRS", bytecode);
     }
 
     /// function used to deploy an identity registry using CREATE3
@@ -322,7 +326,7 @@ contract TREXFactory is ITREXFactory, Ownable {
         bytes memory _constructData =
             abi.encode(implementationAuthority_, _trustedIssuersRegistry, _claimTopicsRegistry, _identityStorage);
         bytes memory bytecode = abi.encodePacked(_code, _constructData);
-        return _deploy(_salt, bytecode);
+        return _deploy(_salt, "IR", bytecode);
     }
 
     /// function used to deploy a token using CREATE3
@@ -341,7 +345,7 @@ contract TREXFactory is ITREXFactory, Ownable {
             implementationAuthority_, _identityRegistry, _compliance, _name, _symbol, _decimals, _onchainId
         );
         bytes memory bytecode = abi.encodePacked(_code, _constructData);
-        return _deploy(_salt, bytecode);
+        return _deploy(_salt, "Token", bytecode);
     }
 
 }

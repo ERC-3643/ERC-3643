@@ -11,8 +11,11 @@ contract TestTREXFactory is TREXFactory {
     { }
 
     /// @notice Exposes _deploy for testing
-    function testDeploy(string memory salt, bytes memory bytecode) external returns (address) {
-        return _deploy(salt, bytecode);
+    function testDeploy(string memory salt, string memory contractType, bytes memory bytecode)
+        external
+        returns (address)
+    {
+        return _deploy(salt, contractType, bytecode);
     }
 
 }
