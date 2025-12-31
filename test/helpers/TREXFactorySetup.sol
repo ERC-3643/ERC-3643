@@ -1,37 +1,29 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {IdentityFactoryHelper} from "./IdentityFactoryHelper.sol";
-import {
-    ImplementationAuthorityHelper
-} from "./ImplementationAuthorityHelper.sol";
-import {TREXFactoryHelper} from "./TREXFactoryHelper.sol";
-import {IdFactory} from "@onchain-id/solidity/contracts/factory/IdFactory.sol";
-import {
-    IIdentity
-} from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {TREXFactory} from "contracts/factory/TREXFactory.sol";
-import {
-    ITREXImplementationAuthority
-} from "contracts/proxy/authority/ITREXImplementationAuthority.sol";
-import {
-    TREXImplementationAuthority
-} from "contracts/proxy/authority/TREXImplementationAuthority.sol";
-import {Addresses} from "contracts/utils/Addresses.sol";
-import {CreateX} from "contracts/utils/createx/CreateX.sol";
-import {Test} from "forge-std/Test.sol";
+import { IdentityFactoryHelper } from "./IdentityFactoryHelper.sol";
+import { ImplementationAuthorityHelper } from "./ImplementationAuthorityHelper.sol";
+import { TREXFactoryHelper } from "./TREXFactoryHelper.sol";
+import { IdFactory } from "@onchain-id/solidity/contracts/factory/IdFactory.sol";
+import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { TREXFactory } from "contracts/factory/TREXFactory.sol";
+import { ITREXImplementationAuthority } from "contracts/proxy/authority/ITREXImplementationAuthority.sol";
+import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
+import { Addresses } from "contracts/utils/Addresses.sol";
+import { CreateX } from "contracts/utils/createx/CreateX.sol";
+import { Test } from "forge-std/Test.sol";
 
 /// @notice Comprehensive fixture that orchestrates all helpers to deploy the full ERC-3643/T-REX suite
 /// @dev Combines all 3 helpers: IdentityFactoryHelper, ImplementationAuthorityHelper, TREXFactoryHelper
 /// Provides standard test addresses and convenience getters for easy access to all components
 contract TREXFactorySetup is Test {
+
     // ONCHAINID Setup
     IdentityFactoryHelper.ONCHAINIDSetup public onchainidSetup;
 
     // TREX Implementation Authority Setup
-    ImplementationAuthorityHelper.ImplementationAuthoritySetup
-        public implementationAuthoritySetup;
+    ImplementationAuthorityHelper.ImplementationAuthoritySetup public implementationAuthoritySetup;
 
     // TREX Factory
     TREXFactory public trexFactory;
@@ -62,10 +54,7 @@ contract TREXFactorySetup is Test {
     function _deployCreateX() internal {
         // Deploy CreateX directly to the hardcoded address
         // Using deployCodeTo ensures immutables are correctly set for the target address
-        deployCodeTo(
-            "contracts/utils/createx/CreateX.sol:CreateX",
-            Addresses.CREATEX
-        );
+        deployCodeTo("contracts/utils/createx/CreateX.sol:CreateX", Addresses.CREATEX);
     }
 
     /// @notice Deploys the complete TREX setup using all 3 helpers
@@ -78,44 +67,27 @@ contract TREXFactorySetup is Test {
         onchainidSetup = IdentityFactoryHelper.deploy(deployerAddress);
 
         // Step 2: Deploy TREX Implementation Authority
-        implementationAuthoritySetup = ImplementationAuthorityHelper.deploy(
-            isReference
-        );
+        implementationAuthoritySetup = ImplementationAuthorityHelper.deploy(isReference);
 
         // Step 3: Deploy TREX Factory and link everything
-        trexFactory = TREXFactoryHelper.deploy(
-            implementationAuthoritySetup.implementationAuthority,
-            onchainidSetup.idFactory
-        );
+        trexFactory =
+            TREXFactoryHelper.deploy(implementationAuthoritySetup.implementationAuthority, onchainidSetup.idFactory);
 
         // Transfer ownership to deployer after linking is complete
-        Ownable(address(implementationAuthoritySetup.implementationAuthority))
-            .transferOwnership(deployerAddress);
+        Ownable(address(implementationAuthoritySetup.implementationAuthority)).transferOwnership(deployerAddress);
         Ownable(address(trexFactory)).transferOwnership(deployerAddress);
-        Ownable(address(onchainidSetup.idFactory)).transferOwnership(
-            deployerAddress
-        );
+        Ownable(address(onchainidSetup.idFactory)).transferOwnership(deployerAddress);
 
         // common identities for test addresses (alice, bob, charlie)
         vm.startPrank(deployerAddress);
-        aliceIdentity = IIdentity(
-            onchainidSetup.idFactory.createIdentity(alice, "alice-salt")
-        );
-        bobIdentity = IIdentity(
-            onchainidSetup.idFactory.createIdentity(bob, "bob-salt")
-        );
-        charlieIdentity = IIdentity(
-            onchainidSetup.idFactory.createIdentity(charlie, "charlie-salt")
-        );
+        aliceIdentity = IIdentity(onchainidSetup.idFactory.createIdentity(alice, "alice-salt"));
+        bobIdentity = IIdentity(onchainidSetup.idFactory.createIdentity(bob, "bob-salt"));
+        charlieIdentity = IIdentity(onchainidSetup.idFactory.createIdentity(charlie, "charlie-salt"));
         vm.stopPrank();
     }
 
     /// @notice Returns the TREX Implementation Authority contract
-    function getTREXImplementationAuthority()
-        public
-        view
-        returns (TREXImplementationAuthority)
-    {
+    function getTREXImplementationAuthority() public view returns (TREXImplementationAuthority) {
         return implementationAuthoritySetup.implementationAuthority;
     }
 
@@ -133,61 +105,30 @@ contract TREXFactorySetup is Test {
     function getTREXImplementations()
         public
         view
-        returns (
-            address tokenImpl,
-            address ctrImpl,
-            address irImpl,
-            address irsImpl,
-            address tirImpl,
-            address mcImpl
-        )
+        returns (address tokenImpl, address ctrImpl, address irImpl, address irsImpl, address tirImpl, address mcImpl)
     {
         return (
             address(implementationAuthoritySetup.implementations.token),
-            address(
-                implementationAuthoritySetup.implementations.claimTopicsRegistry
-            ),
-            address(
-                implementationAuthoritySetup.implementations.identityRegistry
-            ),
-            address(
-                implementationAuthoritySetup
-                    .implementations
-                    .identityRegistryStorage
-            ),
-            address(
-                implementationAuthoritySetup
-                    .implementations
-                    .trustedIssuersRegistry
-            ),
-            address(
-                implementationAuthoritySetup.implementations.modularCompliance
-            )
+            address(implementationAuthoritySetup.implementations.claimTopicsRegistry),
+            address(implementationAuthoritySetup.implementations.identityRegistry),
+            address(implementationAuthoritySetup.implementations.identityRegistryStorage),
+            address(implementationAuthoritySetup.implementations.trustedIssuersRegistry),
+            address(implementationAuthoritySetup.implementations.modularCompliance)
         );
     }
 
     /// @notice Returns TREXContracts struct using current implementation addresses
-    function getTREXContracts()
-        public
-        view
-        returns (ITREXImplementationAuthority.TREXContracts memory)
-    {
-        (
-            address tokenImpl,
-            address ctrImpl,
-            address irImpl,
-            address irsImpl,
-            address tirImpl,
-            address mcImpl
-        ) = getTREXImplementations();
-        return
-            ITREXImplementationAuthority.TREXContracts({
-                tokenImplementation: tokenImpl,
-                ctrImplementation: ctrImpl,
-                irImplementation: irImpl,
-                irsImplementation: irsImpl,
-                tirImplementation: tirImpl,
-                mcImplementation: mcImpl
-            });
+    function getTREXContracts() public view returns (ITREXImplementationAuthority.TREXContracts memory) {
+        (address tokenImpl, address ctrImpl, address irImpl, address irsImpl, address tirImpl, address mcImpl) =
+            getTREXImplementations();
+        return ITREXImplementationAuthority.TREXContracts({
+            tokenImplementation: tokenImpl,
+            ctrImplementation: ctrImpl,
+            irImplementation: irImpl,
+            irsImplementation: irsImpl,
+            tirImplementation: tirImpl,
+            mcImplementation: mcImpl
+        });
     }
+
 }
