@@ -77,7 +77,9 @@ import "../registry/interface/IIdentityRegistryStorage.sol";
 import "../registry/interface/ITrustedIssuersRegistry.sol";
 import "../roles/AgentRole.sol";
 import "../token/IToken.sol";
+import "../utils/Addresses.sol";
 import "./ITREXFactory.sol";
+import { ICreateX } from "@createx/ICreateX.sol";
 import "@onchain-id/solidity/contracts/factory/IIdFactory.sol";
 
 /// Errors
@@ -115,7 +117,7 @@ contract TREXFactory is ITREXFactory, Ownable {
     /// the address of the Identity Factory used to deploy token OIDs
     address private _idFactory;
 
-    /// mapping containing info about the token contracts corresponding to salt already used for CREATE2 deployments
+    /// mapping containing info about the token contracts corresponding to salt already used for CREATE3 deployments
     mapping(string => address) public tokenDeployed;
 
     /// constructor is setting the implementation authority and the Identity Factory of the TREX factory
@@ -260,25 +262,23 @@ contract TREXFactory is ITREXFactory, Ownable {
         emit IdFactorySet(idFactory_);
     }
 
-    /// deploy function with create2 opcode call
+    /// Uses deployCreate3AndInit to call postInit(address(this)) after deployment to transfer ownership
     /// returns the address of the contract created
     function _deploy(string memory salt, bytes memory bytecode) internal returns (address) {
-        bytes32 saltBytes = bytes32(keccak256(abi.encodePacked(salt)));
-        address addr;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            let encoded_data := add(0x20, bytecode) // load initialization code.
-            let encoded_size := mload(bytecode) // load init code's length.
-            addr := create2(0, encoded_data, encoded_size, saltBytes)
-            if iszero(extcodesize(addr)) {
-                revert(0, 0)
-            }
-        }
+        // Hash salt with bytecode to ensure unique CREATE3 proxy per contract type
+        // This prevents collisions when multiple contracts in a suite use the same salt
+        bytes32 saltBytes = bytes32(keccak256(abi.encodePacked(salt, bytecode)));
+
+        // Prepare postInit call to transfer ownership from CREATE3 proxy to this contract
+        bytes memory postInitData = abi.encodeWithSignature("postInit(address)", address(this));
+        ICreateX.Values memory values = ICreateX.Values({ constructorAmount: 0, initCallAmount: 0 });
+
+        address addr = ICreateX(Addresses.CREATEX).deployCreate3AndInit(saltBytes, bytecode, postInitData, values);
         emit Deployed(addr);
         return addr;
     }
 
-    /// function used to deploy a trusted issuers registry using CREATE2
+    /// function used to deploy a trusted issuers registry using CREATE3
     function _deployTIR(string memory _salt, address implementationAuthority_) private returns (address) {
         bytes memory _code = type(TrustedIssuersRegistryProxy).creationCode;
         bytes memory _constructData = abi.encode(implementationAuthority_);
@@ -286,7 +286,7 @@ contract TREXFactory is ITREXFactory, Ownable {
         return _deploy(_salt, bytecode);
     }
 
-    /// function used to deploy a claim topics registry using CREATE2
+    /// function used to deploy a claim topics registry using CREATE3
     function _deployCTR(string memory _salt, address implementationAuthority_) private returns (address) {
         bytes memory _code = type(ClaimTopicsRegistryProxy).creationCode;
         bytes memory _constructData = abi.encode(implementationAuthority_);
@@ -294,7 +294,7 @@ contract TREXFactory is ITREXFactory, Ownable {
         return _deploy(_salt, bytecode);
     }
 
-    /// function used to deploy modular compliance contract using CREATE2
+    /// function used to deploy modular compliance contract using CREATE3
     function _deployMC(string memory _salt, address implementationAuthority_) private returns (address) {
         bytes memory _code = type(ModularComplianceProxy).creationCode;
         bytes memory _constructData = abi.encode(implementationAuthority_);
@@ -302,7 +302,7 @@ contract TREXFactory is ITREXFactory, Ownable {
         return _deploy(_salt, bytecode);
     }
 
-    /// function used to deploy an identity registry storage using CREATE2
+    /// function used to deploy an identity registry storage using CREATE3
     function _deployIRS(string memory _salt, address implementationAuthority_) private returns (address) {
         bytes memory _code = type(IdentityRegistryStorageProxy).creationCode;
         bytes memory _constructData = abi.encode(implementationAuthority_);
@@ -310,7 +310,7 @@ contract TREXFactory is ITREXFactory, Ownable {
         return _deploy(_salt, bytecode);
     }
 
-    /// function used to deploy an identity registry using CREATE2
+    /// function used to deploy an identity registry using CREATE3
     function _deployIR(
         string memory _salt,
         address implementationAuthority_,
@@ -325,7 +325,7 @@ contract TREXFactory is ITREXFactory, Ownable {
         return _deploy(_salt, bytecode);
     }
 
-    /// function used to deploy a token using CREATE2
+    /// function used to deploy a token using CREATE3
     function _deployToken(
         string memory _salt,
         address implementationAuthority_,

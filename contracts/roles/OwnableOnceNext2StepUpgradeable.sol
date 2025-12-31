@@ -64,6 +64,8 @@
 pragma solidity 0.8.30;
 
 import { OwnableUnauthorizedAccount } from "../errors/CommonErrors.sol";
+import { ZeroAddress } from "../errors/InvalidArgumentErrors.sol";
+import "../utils/Addresses.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -125,6 +127,15 @@ abstract contract OwnableOnceNext2StepUpgradeable is Initializable, ContextUpgra
     // solhint-disable-next-line func-name-mixedcase
     function __Ownable_init() internal onlyInitializing {
         _transferOwnership(msg.sender);
+    }
+
+    /// @dev Post initialization function to transfer ownership after CREATE3 deployment.
+    /// @param newOwner The address of the new owner (typically TREXFactory).
+    function postInit(address newOwner) external {
+        require(newOwner != address(0), ZeroAddress());
+        // Only CreateX can call postInit since it calls this directly after deployment
+        require(msg.sender == Addresses.CREATEX, OwnableUnauthorizedAccount(msg.sender));
+        _transferOwnership(newOwner);
     }
 
     /// @dev Transfers ownership of the contract to a new address.
