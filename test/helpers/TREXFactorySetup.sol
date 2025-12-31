@@ -4,7 +4,6 @@ pragma solidity 0.8.30;
 import { IdentityFactoryHelper } from "./IdentityFactoryHelper.sol";
 import { ImplementationAuthorityHelper } from "./ImplementationAuthorityHelper.sol";
 import { TREXFactoryHelper } from "./TREXFactoryHelper.sol";
-import { CreateX } from "@createx/CreateX.sol";
 import { IdFactory } from "@onchain-id/solidity/contracts/factory/IdFactory.sol";
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
@@ -12,6 +11,7 @@ import { TREXFactory } from "contracts/factory/TREXFactory.sol";
 import { ITREXImplementationAuthority } from "contracts/proxy/authority/ITREXImplementationAuthority.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
 import { Addresses } from "contracts/utils/Addresses.sol";
+import { CreateX } from "contracts/utils/createx/CreateX.sol";
 import { Test } from "forge-std/Test.sol";
 
 /// @notice Comprehensive fixture that orchestrates all helpers to deploy the full ERC-3643/T-REX suite
@@ -54,7 +54,7 @@ contract TREXFactorySetup is Test {
     function _deployCreateX() internal {
         // Deploy CreateX directly to the hardcoded address
         // Using deployCodeTo ensures immutables are correctly set for the target address
-        deployCodeTo("CreateX.sol:CreateX", Addresses.CREATEX);
+        deployCodeTo("contracts/utils/createx/CreateX.sol:CreateX", Addresses.CREATEX);
     }
 
     /// @notice Deploys the complete TREX setup using all 3 helpers

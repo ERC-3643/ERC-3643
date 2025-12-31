@@ -26,8 +26,6 @@ forge-std = "1.11.0"
 "@openzeppelin-contracts" = "5.5.0"
 "@openzeppelin-contracts-upgradeable" = "5.5.0"
 onchain-id = { version = "2.2.2-beta3", git = "https://github.com/onchain-id/solidity.git", tag = "2.2.2-beta3" }
-solady = "0.1.26"
-createx = { version = "v1.0.0", git = "https://github.com/pcaversaccio/createx", tag = "v1.0.0" }
 
 [rpc_endpoints]
 baseSepolia = "https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}"
