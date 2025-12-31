@@ -27,6 +27,8 @@ import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImple
 import { OwnableOnceNext2StepUpgradeable } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
 import { OwnershipTransferStarted } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
 import { Token } from "contracts/token/Token.sol";
+import { Addresses } from "contracts/utils/Addresses.sol";
+import { ICreateX } from "contracts/utils/createx/ICreateX.sol";
 import { Test } from "forge-std/Test.sol";
 import { IdentityFactoryHelper } from "test/helpers/IdentityFactoryHelper.sol";
 import { ImplementationAuthorityHelper } from "test/helpers/ImplementationAuthorityHelper.sol";
@@ -482,6 +484,78 @@ contract TREXFactoryTest is TREXFactorySetup {
             address(newIR.identityStorage()),
             address(tempIR.identityStorage()),
             "Both tokens should share the same identity registry storage"
+        );
+    }
+
+    // ============ CREATE3 Specific Tests ============
+
+    /// @notice Tests that CREATE3 address is independent of bytecode changes
+    function test_CREATE3_AddressIndependentOfBytecode() public {
+        string memory salt = "bytecode-independent-salt";
+
+        vm.prank(deployer);
+        trexFactory.deployTREXSuite(salt, _createEmptyTokenDetails(), _createEmptyClaimDetails());
+        address token1 = trexFactory.getToken(salt);
+
+        // Compute the address (accounting for _guard hashing)
+        // Flow: salt+contractType -> keccak256 (TREXFactory) -> keccak256 (CreateX._guard) -> computeCreate3Address
+        bytes32 tokenSalt = keccak256(abi.encode(keccak256(abi.encodePacked(salt, "Token"))));
+        ICreateX createX = ICreateX(Addresses.CREATEX);
+        address computedAddress = createX.computeCreate3Address(tokenSalt, Addresses.CREATEX);
+
+        // The computed address should match the deployed address
+        // This proves that the address depends only on salt + contractType, not on bytecode
+        assertEq(computedAddress, token1, "CREATE3 address should be independent of bytecode");
+    }
+
+    /// @notice Tests that different contract types with same salt get different addresses
+    function test_CREATE3_DifferentContractTypes_SameSalt_DifferentAddresses() public {
+        string memory salt = "same-salt-different-types";
+
+        vm.prank(deployer);
+        trexFactory.deployTREXSuite(salt, _createEmptyTokenDetails(), _createEmptyClaimDetails());
+
+        address token = trexFactory.getToken(salt);
+        Token tokenContract = Token(token);
+        address ir = address(tokenContract.identityRegistry());
+        IERC3643IdentityRegistry irContract = IERC3643IdentityRegistry(ir);
+
+        // Verify computed addresses match deployed addresses
+        // Flow: salt+contractType -> keccak256 (TREXFactory) -> keccak256 (CreateX._guard) -> computeCreate3Address
+        ICreateX createX = ICreateX(Addresses.CREATEX);
+
+        bytes32 tokenSalt = keccak256(abi.encode(keccak256(abi.encodePacked(salt, "Token"))));
+        assertEq(createX.computeCreate3Address(tokenSalt, Addresses.CREATEX), token, "Token address mismatch");
+
+        bytes32 irSalt = keccak256(abi.encode(keccak256(abi.encodePacked(salt, "IR"))));
+        assertEq(createX.computeCreate3Address(irSalt, Addresses.CREATEX), ir, "IR address mismatch");
+
+        bytes32 mcSalt = keccak256(abi.encode(keccak256(abi.encodePacked(salt, "MC"))));
+        assertEq(
+            createX.computeCreate3Address(mcSalt, Addresses.CREATEX),
+            address(tokenContract.compliance()),
+            "MC address mismatch"
+        );
+
+        bytes32 tirSalt = keccak256(abi.encode(keccak256(abi.encodePacked(salt, "TIR"))));
+        assertEq(
+            createX.computeCreate3Address(tirSalt, Addresses.CREATEX),
+            address(irContract.issuersRegistry()),
+            "TIR address mismatch"
+        );
+
+        bytes32 ctrSalt = keccak256(abi.encode(keccak256(abi.encodePacked(salt, "CTR"))));
+        assertEq(
+            createX.computeCreate3Address(ctrSalt, Addresses.CREATEX),
+            address(irContract.topicsRegistry()),
+            "CTR address mismatch"
+        );
+
+        bytes32 irsSalt = keccak256(abi.encode(keccak256(abi.encodePacked(salt, "IRS"))));
+        assertEq(
+            createX.computeCreate3Address(irsSalt, Addresses.CREATEX),
+            address(irContract.identityStorage()),
+            "IRS address mismatch"
         );
     }
 

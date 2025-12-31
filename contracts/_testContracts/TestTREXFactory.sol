@@ -19,4 +19,3 @@ contract TestTREXFactory is TREXFactory {
     }
 
 }
-
