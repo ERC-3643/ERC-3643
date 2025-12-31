@@ -1,4 +1,6 @@
 node_modules/
+dependencies/
+out/
 
 # Artifacts
 build/
@@ -21,3 +23,4 @@ gas-report
 
 .storage_delta_cache
 storage_delta
+
