@@ -63,8 +63,8 @@
 
 pragma solidity 0.8.30;
 
-import {OwnableUnauthorizedAccount} from "../errors/CommonErrors.sol";
-import {ZeroAddress} from "../errors/InvalidArgumentErrors.sol";
+import { OwnableUnauthorizedAccount } from "../errors/CommonErrors.sol";
+import { ZeroAddress } from "../errors/InvalidArgumentErrors.sol";
 import "../utils/Addresses.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
@@ -73,23 +73,17 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /// @dev Emitted when a new owner is set.
 /// @param previousOwner The address of the previous owner.
 /// @param newOwner The address of the new owner.
-event OwnershipTransferStarted(
-    address indexed previousOwner,
-    address indexed newOwner
-);
+event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
 
-abstract contract OwnableOnceNext2StepUpgradeable is
-    Initializable,
-    ContextUpgradeable
-{
+abstract contract OwnableOnceNext2StepUpgradeable is Initializable, ContextUpgradeable {
+
     /// @custom:storage-location erc7201:tokeny.storage.OwnableOnceNext2StepUpgradeable
     struct Ownable2StepsStorage {
         address pendingOwner;
         bool nextOwner;
     }
 
-    bytes32 private constant _STORAGE_SLOT =
-        keccak256("tokeny.storage.OwnableOnceNext2StepUpgradeable");
+    bytes32 private constant _STORAGE_SLOT = keccak256("tokeny.storage.OwnableOnceNext2StepUpgradeable");
 
     /// @dev Preserve the owner address before an upgrade.
     address private _owner;
@@ -140,10 +134,7 @@ abstract contract OwnableOnceNext2StepUpgradeable is
     function postInit(address newOwner) external {
         require(newOwner != address(0), ZeroAddress());
         // Only CreateX can call postInit since it calls this directly after deployment
-        require(
-            msg.sender == Addresses.CREATEX,
-            OwnableUnauthorizedAccount(msg.sender)
-        );
+        require(msg.sender == Addresses.CREATEX, OwnableUnauthorizedAccount(msg.sender));
         _transferOwnership(newOwner);
     }
 
@@ -161,14 +152,11 @@ abstract contract OwnableOnceNext2StepUpgradeable is
         require(_owner == msg.sender, OwnableUnauthorizedAccount(msg.sender));
     }
 
-    function _getStorage()
-        internal
-        pure
-        returns (Ownable2StepsStorage storage s)
-    {
+    function _getStorage() internal pure returns (Ownable2StepsStorage storage s) {
         bytes32 position = _STORAGE_SLOT;
         assembly {
             s.slot := position
         }
     }
+
 }
