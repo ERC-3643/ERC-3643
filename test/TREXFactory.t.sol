@@ -36,6 +36,17 @@ import { TREXFactorySetup } from "test/helpers/TREXFactorySetup.sol";
 
 contract TREXFactoryTest is TREXFactorySetup {
 
+    // Helper to mirror TREXFactory salt layout + CreateX _guard (permissioned, no chainid)
+    function _guardedSalt(string memory salt, string memory contractType) internal view returns (bytes32) {
+        bytes32 rawSalt = bytes32(
+            abi.encodePacked(
+                address(trexFactory), bytes1(0x00), bytes11(keccak256(abi.encodePacked(salt, contractType)))
+            )
+        );
+        // _guard with MsgSender/False -> keccak(msg.sender, rawSalt)
+        return keccak256(abi.encodePacked(bytes32(uint256(uint160(address(trexFactory)))), rawSalt));
+    }
+
     // Helper function to create empty TokenDetails
     function _createEmptyTokenDetails() internal view returns (ITREXFactory.TokenDetails memory) {
         address[] memory emptyAgents;
@@ -498,8 +509,8 @@ contract TREXFactoryTest is TREXFactorySetup {
         address token1 = trexFactory.getToken(salt);
 
         // Compute the address (accounting for _guard hashing)
-        // Flow: salt+contractType -> keccak256 (TREXFactory) -> keccak256 (CreateX._guard) -> computeCreate3Address
-        bytes32 tokenSalt = keccak256(abi.encode(keccak256(abi.encodePacked(salt, "Token"))));
+        // Flow: salt+contractType -> TREXFactory salted layout -> CreateX._guard -> computeCreate3Address
+        bytes32 tokenSalt = _guardedSalt(salt, "Token");
         ICreateX createX = ICreateX(Addresses.CREATEX);
         address computedAddress = createX.computeCreate3Address(tokenSalt, Addresses.CREATEX);
 
@@ -521,37 +532,37 @@ contract TREXFactoryTest is TREXFactorySetup {
         IERC3643IdentityRegistry irContract = IERC3643IdentityRegistry(ir);
 
         // Verify computed addresses match deployed addresses
-        // Flow: salt+contractType -> keccak256 (TREXFactory) -> keccak256 (CreateX._guard) -> computeCreate3Address
+        // Flow: salt+contractType -> TREXFactory salted layout -> CreateX._guard -> computeCreate3Address
         ICreateX createX = ICreateX(Addresses.CREATEX);
 
-        bytes32 tokenSalt = keccak256(abi.encode(keccak256(abi.encodePacked(salt, "Token"))));
+        bytes32 tokenSalt = _guardedSalt(salt, "Token");
         assertEq(createX.computeCreate3Address(tokenSalt, Addresses.CREATEX), token, "Token address mismatch");
 
-        bytes32 irSalt = keccak256(abi.encode(keccak256(abi.encodePacked(salt, "IR"))));
+        bytes32 irSalt = _guardedSalt(salt, "IR");
         assertEq(createX.computeCreate3Address(irSalt, Addresses.CREATEX), ir, "IR address mismatch");
 
-        bytes32 mcSalt = keccak256(abi.encode(keccak256(abi.encodePacked(salt, "MC"))));
+        bytes32 mcSalt = _guardedSalt(salt, "MC");
         assertEq(
             createX.computeCreate3Address(mcSalt, Addresses.CREATEX),
             address(tokenContract.compliance()),
             "MC address mismatch"
         );
 
-        bytes32 tirSalt = keccak256(abi.encode(keccak256(abi.encodePacked(salt, "TIR"))));
+        bytes32 tirSalt = _guardedSalt(salt, "TIR");
         assertEq(
             createX.computeCreate3Address(tirSalt, Addresses.CREATEX),
             address(irContract.issuersRegistry()),
             "TIR address mismatch"
         );
 
-        bytes32 ctrSalt = keccak256(abi.encode(keccak256(abi.encodePacked(salt, "CTR"))));
+        bytes32 ctrSalt = _guardedSalt(salt, "CTR");
         assertEq(
             createX.computeCreate3Address(ctrSalt, Addresses.CREATEX),
             address(irContract.topicsRegistry()),
             "CTR address mismatch"
         );
 
-        bytes32 irsSalt = keccak256(abi.encode(keccak256(abi.encodePacked(salt, "IRS"))));
+        bytes32 irsSalt = _guardedSalt(salt, "IRS");
         assertEq(
             createX.computeCreate3Address(irsSalt, Addresses.CREATEX),
             address(irContract.identityStorage()),

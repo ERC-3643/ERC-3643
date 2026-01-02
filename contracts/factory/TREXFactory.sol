@@ -271,7 +271,17 @@ contract TREXFactory is ITREXFactory, Ownable {
     function _deploy(string memory salt, string memory contractType, bytes memory bytecode) internal returns (address) {
         // we need to add a contract type parameter to prevent the address collisions
         // because if we just depend on the salt it all the 6 contracts will have the same address so it will revert as we are deploying at same address 6 times
-        bytes32 saltBytes = bytes32(keccak256(abi.encodePacked(salt, contractType)));
+        // Salt layout (32 bytes)
+        // 1) 20 bytes: factory address
+        // 2) 1 byte: 0x00 (no chainid)
+        // 3) 11 bytes: our normal salt
+        bytes32 saltBytes = bytes32(
+            abi.encodePacked(
+                address(this), // only our address can hit the guarded branch
+                bytes1(0x00), //  no chain binding since we will go with multichain addresses
+                bytes11(keccak256(abi.encodePacked(salt, contractType))) // our normal salt
+            )
+        );
 
         // Prepare postInit call to transfer ownership from CREATE3 proxy to this contract
         bytes memory postInitData = abi.encodeWithSignature("postInit(address)", address(this));
