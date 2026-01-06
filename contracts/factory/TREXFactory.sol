@@ -117,13 +117,19 @@ contract TREXFactory is ITREXFactory, Ownable {
     /// the address of the Identity Factory used to deploy token OIDs
     address private _idFactory;
 
+    address private immutable _create3Factory;
+
     /// mapping containing info about the token contracts corresponding to salt already used for CREATE3 deployments
     mapping(string => address) public tokenDeployed;
 
     /// constructor is setting the implementation authority and the Identity Factory of the TREX factory
-    constructor(address implementationAuthority_, address idFactory_) Ownable(msg.sender) {
+    constructor(address implementationAuthority_, address idFactory_, address create3Factory_) Ownable(msg.sender) {
         setImplementationAuthority(implementationAuthority_);
         setIdFactory(idFactory_);
+
+        require(create3Factory_ != address(0), ZeroAddress());
+        _create3Factory = create3Factory_;
+        emit Create3FactorySet(create3Factory_);
     }
 
     /**
@@ -228,6 +234,13 @@ contract TREXFactory is ITREXFactory, Ownable {
     }
 
     /**
+     *  @dev See {ITREXFactory-getCreate3Factory}.
+     */
+    function getCreate3Factory() external view override returns (address) {
+        return _create3Factory;
+    }
+
+    /**
      *  @dev See {ITREXFactory-getToken}.
      */
     function getToken(string calldata _salt) external view override returns (address) {
@@ -287,7 +300,7 @@ contract TREXFactory is ITREXFactory, Ownable {
         bytes memory postInitData = abi.encodeWithSignature("postInit(address)", address(this));
         ICreateX.Values memory values = ICreateX.Values({ constructorAmount: 0, initCallAmount: 0 });
 
-        address addr = ICreateX(Addresses.CREATEX).deployCreate3AndInit(saltBytes, bytecode, postInitData, values);
+        address addr = ICreateX(_create3Factory).deployCreate3AndInit(saltBytes, bytecode, postInitData, values);
         emit Deployed(addr);
         return addr;
     }

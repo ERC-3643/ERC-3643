@@ -12,13 +12,15 @@ library TREXFactoryHelper {
     /// @notice Deploys TREX Factory and links it with Implementation Authority and Identity Factory
     /// @param implementationAuthority The TREX Implementation Authority contract
     /// @param identityFactory The Identity Factory (IdFactory) contract
+    /// @param create3Factory The Create3Factory contract address
     /// @return factory The deployed TREX Factory
-    function deploy(TREXImplementationAuthority implementationAuthority, IdFactory identityFactory)
-        internal
-        returns (TREXFactory factory)
-    {
+    function deploy(
+        TREXImplementationAuthority implementationAuthority,
+        IdFactory identityFactory,
+        address create3Factory
+    ) internal returns (TREXFactory factory) {
         // Deploy TREX Factory
-        factory = new TREXFactory(address(implementationAuthority), address(identityFactory));
+        factory = new TREXFactory(address(implementationAuthority), address(identityFactory), create3Factory);
 
         // Link TREX Factory to Implementation Authority (bidirectional)
         implementationAuthority.setTREXFactory(address(factory));

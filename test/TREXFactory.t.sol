@@ -364,8 +364,9 @@ contract TREXFactoryTest is TREXFactorySetup {
 
     function test_deployTREXSuite_RevertWhen_CREATE2Fails() public {
         // Deploy test factory that invoke the internal functon _deploy
-        TestTREXFactory testFactory =
-            new TestTREXFactory(address(getTREXImplementationAuthority()), address(getIdFactory()));
+        TestTREXFactory testFactory = new TestTREXFactory(
+            address(getTREXImplementationAuthority()), address(getIdFactory()), trexFactory.getCreate3Factory()
+        );
 
         // Use empty bytecode so the CREATE2 will return address(0)
         bytes memory emptyBytecode = new bytes(0);

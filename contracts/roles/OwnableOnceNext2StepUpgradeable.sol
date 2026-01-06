@@ -65,7 +65,7 @@ pragma solidity 0.8.30;
 
 import { OwnableUnauthorizedAccount } from "../errors/CommonErrors.sol";
 import { ZeroAddress } from "../errors/InvalidArgumentErrors.sol";
-import "../utils/Addresses.sol";
+import "../factory/ITREXFactory.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -134,7 +134,10 @@ abstract contract OwnableOnceNext2StepUpgradeable is Initializable, ContextUpgra
     function postInit(address newOwner) external {
         require(newOwner != address(0), ZeroAddress());
         // Only CreateX can call postInit since it calls this directly after deployment
-        require(msg.sender == Addresses.CREATEX, OwnableUnauthorizedAccount(msg.sender));
+        // Get the Create3Factory address from the factory (newOwner) to verify msg.sender
+        address expectedCreate3Factory = ITREXFactory(newOwner).getCreate3Factory();
+        require(expectedCreate3Factory != address(0), "Factory Create3Factory address is zero");
+        require(msg.sender == expectedCreate3Factory, OwnableUnauthorizedAccount(msg.sender));
         _transferOwnership(newOwner);
     }
 

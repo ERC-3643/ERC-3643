@@ -73,6 +73,8 @@ event Deployed(address indexed _addr);
 /// @param _idFactory The address of the identity factory contract.
 event IdFactorySet(address _idFactory);
 
+event Create3FactorySet(address _create3Factory);
+
 /// @dev Event emitted by the factory when a full suite of T-REX contracts is deployed.
 /// @param _token Address of token contract.
 /// @param _ir Address of identity registry contract.
@@ -193,6 +195,11 @@ interface ITREXFactory {
      *  @dev getter for identity factory address
      */
     function getIdFactory() external view returns (address);
+
+    /**
+     *  @dev getter for create3 factory address
+     */
+    function getCreate3Factory() external view returns (address);
 
     /**
      *  @dev getter for token address corresponding to salt string

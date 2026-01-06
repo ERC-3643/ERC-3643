@@ -70,8 +70,9 @@ contract TREXFactorySetup is Test {
         implementationAuthoritySetup = ImplementationAuthorityHelper.deploy(isReference);
 
         // Step 3: Deploy TREX Factory and link everything
-        trexFactory =
-            TREXFactoryHelper.deploy(implementationAuthoritySetup.implementationAuthority, onchainidSetup.idFactory);
+        trexFactory = TREXFactoryHelper.deploy(
+            implementationAuthoritySetup.implementationAuthority, onchainidSetup.idFactory, Addresses.CREATEX
+        );
 
         // Transfer ownership to deployer after linking is complete
         Ownable(address(implementationAuthoritySetup.implementationAuthority)).transferOwnership(deployerAddress);
