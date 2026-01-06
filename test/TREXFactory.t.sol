@@ -571,34 +571,38 @@ contract TREXFactoryTest is TREXFactorySetup {
         );
     }
 
-    /// @notice CREATE3 address should be the same across chain ids, knowing that chainid not used in guarded salt
-    function test_CREATE3_AddressDeterministicAcrossChainIds() public {
+    /// @notice Verifies CREATE3 addresses are deterministic across Ethereum, Base, and Polygon
+    /// @dev Requires ETHEREUM_RPC_URL, BASE_RPC_URL, and POLYGON_RPC_URL environment variables
+    function test_CREATE3_AddressDeterministicAcrossChains() public {
         string memory salt = "cross-chain-salt";
 
-        vm.prank(deployer);
-        trexFactory.deployTREXSuite(salt, _createEmptyTokenDetails(), _createEmptyClaimDetails());
-        address tokenAddr = trexFactory.getToken(salt);
+        // Compute the guarded salt using the existing helper
+        bytes32 guardedSalt = _guardedSalt(salt, "Token");
 
-        bytes32 tokenSalt = _guardedSalt(salt, "Token");
         ICreateX createX = ICreateX(Addresses.CREATEX);
+        address ethereumComputedToken;
+        address baseComputedToken;
+        address polygonComputedToken;
 
-        // test across a few common chain ids
-        uint256[] memory chainIds = new uint256[](7);
-        chainIds[0] = 1; // Ethereum
-        chainIds[1] = 137; // Polygon
-        chainIds[2] = 8453; // Base
-        chainIds[3] = 43114; // Avalanche
-        chainIds[4] = 10; // Optimism
-        chainIds[5] = 42161; // Arbitrum
-        chainIds[6] = 56; // BNB
+        // Fork Ethereum mainnet
+        vm.selectFork(vm.createFork(vm.envString("ETHEREUM_RPC_URL")));
+        require(Addresses.CREATEX.code.length > 0, "CreateX not found on Ethereum");
+        ethereumComputedToken = createX.computeCreate3Address(guardedSalt, Addresses.CREATEX);
 
-        uint256 originalChainId = block.chainid;
-        for (uint256 i = 0; i < chainIds.length; i++) {
-            vm.chainId(chainIds[i]);
-            address computed = createX.computeCreate3Address(tokenSalt, Addresses.CREATEX);
-            assertEq(computed, tokenAddr, "Computed token address should be chain-agnostic");
-        }
-        vm.chainId(originalChainId);
+        // Fork Base mainnet
+        vm.selectFork(vm.createFork(vm.envString("BASE_RPC_URL")));
+        require(Addresses.CREATEX.code.length > 0, "CreateX not found on Base");
+        baseComputedToken = createX.computeCreate3Address(guardedSalt, Addresses.CREATEX);
+
+        // Fork Polygon mainnet
+        vm.selectFork(vm.createFork(vm.envString("POLYGON_RPC_URL")));
+        require(Addresses.CREATEX.code.length > 0, "CreateX not found on Polygon");
+        polygonComputedToken = createX.computeCreate3Address(guardedSalt, Addresses.CREATEX);
+
+        // Verify all computed addresses are the same across chains
+        assertEq(ethereumComputedToken, baseComputedToken, "Ethereum and Base addresses should match");
+        assertEq(baseComputedToken, polygonComputedToken, "Base and Polygon addresses should match");
+        assertEq(ethereumComputedToken, polygonComputedToken, "Ethereum and Polygon addresses should match");
     }
 
 }
