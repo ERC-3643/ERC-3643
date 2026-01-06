@@ -570,4 +570,34 @@ contract TREXFactoryTest is TREXFactorySetup {
         );
     }
 
+    /// @notice CREATE3 address should be the same across chain ids, knowing that chainid not used in guarded salt
+    function test_CREATE3_AddressDeterministicAcrossChainIds() public {
+        string memory salt = "cross-chain-salt";
+
+        vm.prank(deployer);
+        trexFactory.deployTREXSuite(salt, _createEmptyTokenDetails(), _createEmptyClaimDetails());
+        address tokenAddr = trexFactory.getToken(salt);
+
+        bytes32 tokenSalt = _guardedSalt(salt, "Token");
+        ICreateX createX = ICreateX(Addresses.CREATEX);
+
+        // test across a few common chain ids
+        uint256[] memory chainIds = new uint256[](7);
+        chainIds[0] = 1; // Ethereum
+        chainIds[1] = 137; // Polygon
+        chainIds[2] = 8453; // Base
+        chainIds[3] = 43114; // Avalanche
+        chainIds[4] = 10; // Optimism
+        chainIds[5] = 42161; // Arbitrum
+        chainIds[6] = 56; // BNB
+
+        uint256 originalChainId = block.chainid;
+        for (uint256 i = 0; i < chainIds.length; i++) {
+            vm.chainId(chainIds[i]);
+            address computed = createX.computeCreate3Address(tokenSalt, Addresses.CREATEX);
+            assertEq(computed, tokenAddr, "Computed token address should be chain-agnostic");
+        }
+        vm.chainId(originalChainId);
+    }
+
 }
