@@ -78,9 +78,9 @@ import "../registry/interface/ITrustedIssuersRegistry.sol";
 import "../roles/AgentRole.sol";
 import "../token/IToken.sol";
 import "../utils/Addresses.sol";
-import { ICreateX } from "../utils/createx/ICreateX.sol";
 import "./ITREXFactory.sol";
 import "@onchain-id/solidity/contracts/factory/IIdFactory.sol";
+import { ICreateX } from "createx/ICreateX.sol";
 
 /// Errors
 

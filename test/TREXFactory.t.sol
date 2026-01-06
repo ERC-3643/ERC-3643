@@ -28,7 +28,7 @@ import { OwnableOnceNext2StepUpgradeable } from "contracts/roles/OwnableOnceNext
 import { OwnershipTransferStarted } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
 import { Token } from "contracts/token/Token.sol";
 import { Addresses } from "contracts/utils/Addresses.sol";
-import { ICreateX } from "contracts/utils/createx/ICreateX.sol";
+import { ICreateX } from "createx/ICreateX.sol";
 import { Test } from "forge-std/Test.sol";
 import { IdentityFactoryHelper } from "test/helpers/IdentityFactoryHelper.sol";
 import { ImplementationAuthorityHelper } from "test/helpers/ImplementationAuthorityHelper.sol";
