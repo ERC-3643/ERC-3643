@@ -32,10 +32,10 @@ import {
     VersionOfNewIAMustBeTheSameAsCurrentIA
 } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
 import { Token } from "contracts/token/Token.sol";
-import { Addresses } from "contracts/utils/Addresses.sol";
 import { InterfaceIdCalculator } from "contracts/utils/InterfaceIdCalculator.sol";
 import { ImplementationAuthorityHelper } from "test/helpers/ImplementationAuthorityHelper.sol";
 import { TREXFactorySetup } from "test/helpers/TREXFactorySetup.sol";
+import { Addresses } from "test/utils/Addresses.sol";
 
 contract TREXImplementationAuthorityTest is TREXFactorySetup {
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { ICreateX } from "@createx/ICreateX.sol";
 import { ClaimIssuer } from "@onchain-id/solidity/contracts/ClaimIssuer.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
@@ -27,12 +28,11 @@ import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImple
 import { OwnableOnceNext2StepUpgradeable } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
 import { OwnershipTransferStarted } from "contracts/roles/OwnableOnceNext2StepUpgradeable.sol";
 import { Token } from "contracts/token/Token.sol";
-import { Addresses } from "contracts/utils/Addresses.sol";
-import { ICreateX } from "createx/ICreateX.sol";
 import { Test } from "forge-std/Test.sol";
 import { IdentityFactoryHelper } from "test/helpers/IdentityFactoryHelper.sol";
 import { ImplementationAuthorityHelper } from "test/helpers/ImplementationAuthorityHelper.sol";
 import { TREXFactorySetup } from "test/helpers/TREXFactorySetup.sol";
+import { Addresses } from "test/utils/Addresses.sol";
 
 contract TREXFactoryTest is TREXFactorySetup {
 

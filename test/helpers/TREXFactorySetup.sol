@@ -11,8 +11,8 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { TREXFactory } from "contracts/factory/TREXFactory.sol";
 import { ITREXImplementationAuthority } from "contracts/proxy/authority/ITREXImplementationAuthority.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
-import { Addresses } from "contracts/utils/Addresses.sol";
 import { Test } from "forge-std/Test.sol";
+import { Addresses } from "test/utils/Addresses.sol";
 
 /// @notice Comprehensive fixture that orchestrates all helpers to deploy the full ERC-3643/T-REX suite
 /// @dev Combines all 3 helpers: IdentityFactoryHelper, ImplementationAuthorityHelper, TREXFactoryHelper

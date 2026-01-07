@@ -77,10 +77,9 @@ import "../registry/interface/IIdentityRegistryStorage.sol";
 import "../registry/interface/ITrustedIssuersRegistry.sol";
 import "../roles/AgentRole.sol";
 import "../token/IToken.sol";
-import "../utils/Addresses.sol";
 import "./ITREXFactory.sol";
+import { ICreateX } from "@createx/ICreateX.sol";
 import "@onchain-id/solidity/contracts/factory/IIdFactory.sol";
-import { ICreateX } from "createx/ICreateX.sol";
 
 /// Errors
 
@@ -129,7 +128,6 @@ contract TREXFactory is ITREXFactory, Ownable {
 
         require(create3Factory_ != address(0), ZeroAddress());
         _create3Factory = create3Factory_;
-        emit Create3FactorySet(create3Factory_);
     }
 
     /**
