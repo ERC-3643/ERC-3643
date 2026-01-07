@@ -13,6 +13,12 @@ checksum = "6360df12918b82436dfd68a4a7d9b962aa4d4b0b6bf323ecbd400b9eca5e5974"
 integrity = "ede37ded73bb7dff1325cdfcc124d83afff3d92e646a9418d79ac0d6a9721b05"
 
 [[dependencies]]
+name = "createx"
+version = "1.0.0"
+git = "https://github.com/pcaversaccio/createx.git"
+rev = "cbac803268835138f86a69bfe01fcf05a50e0447"
+
+[[dependencies]]
 name = "forge-std"
 version = "1.11.0"
 url = "https://soldeer-revisions.s3.amazonaws.com/forge-std/1_11_0_09-10-2025_06:23:22_forge-std-1.11.zip"
