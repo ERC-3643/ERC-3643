@@ -572,7 +572,7 @@ contract TREXFactoryTest is TREXFactorySetup {
     }
 
     /// @notice Verifies CREATE3 addresses are deterministic across Ethereum, Base, and Polygon
-    /// @dev Requires ETHEREUM_RPC_URL, BASE_RPC_URL, and POLYGON_RPC_URL environment variables
+    /// @dev Requires ethereum, base, and polygon configured in foundry.toml [rpc_endpoints]
     function test_CREATE3_AddressDeterministicAcrossChains() public {
         string memory salt = "cross-chain-salt";
 
@@ -585,17 +585,17 @@ contract TREXFactoryTest is TREXFactorySetup {
         address polygonComputedToken;
 
         // Fork Ethereum mainnet
-        vm.selectFork(vm.createFork(vm.envString("ETHEREUM_RPC_URL")));
+        vm.createSelectFork("ethereum");
         require(Addresses.CREATEX.code.length > 0, "CreateX not found on Ethereum");
         ethereumComputedToken = createX.computeCreate3Address(guardedSalt, Addresses.CREATEX);
 
         // Fork Base mainnet
-        vm.selectFork(vm.createFork(vm.envString("BASE_RPC_URL")));
+        vm.createSelectFork("base");
         require(Addresses.CREATEX.code.length > 0, "CreateX not found on Base");
         baseComputedToken = createX.computeCreate3Address(guardedSalt, Addresses.CREATEX);
 
         // Fork Polygon mainnet
-        vm.selectFork(vm.createFork(vm.envString("POLYGON_RPC_URL")));
+        vm.createSelectFork("polygon");
         require(Addresses.CREATEX.code.length > 0, "CreateX not found on Polygon");
         polygonComputedToken = createX.computeCreate3Address(guardedSalt, Addresses.CREATEX);
 
@@ -606,15 +606,14 @@ contract TREXFactoryTest is TREXFactorySetup {
     }
 
     /// @notice Verifies that unauthorized deployment cannot deploy to Factory's address
-    /// @dev Requires ETHEREUM_RPC_URL and BASE_RPC_URL environment variables
+    /// @dev Requires ethereum and base configured in foundry.toml [rpc_endpoints]
     function test_CREATE3_UnauthorizedCannotDeployToSameAddress() public {
         string memory salt = "protected-salt";
         ITREXFactory.TokenDetails memory tokenDetails = _createEmptyTokenDetails();
         ITREXFactory.ClaimDetails memory claimDetails = _createEmptyClaimDetails();
 
         // Factory deploys TREX Suite on Ethereum
-        uint256 ethereumFork = vm.createFork(vm.envString("ETHEREUM_RPC_URL"));
-        vm.selectFork(ethereumFork);
+        vm.createSelectFork("ethereum");
         require(Addresses.CREATEX.code.length > 0, "CreateX not found on Ethereum");
 
         deploy(deployer, true);
@@ -626,8 +625,7 @@ contract TREXFactoryTest is TREXFactorySetup {
         require(factoryToken != address(0), "Token should be deployed from Factory");
 
         // On Base, compute what address alice would get if she tried to use factory's salt
-        uint256 baseFork = vm.createFork(vm.envString("BASE_RPC_URL"));
-        vm.selectFork(baseFork);
+        vm.createSelectFork("base");
         require(Addresses.CREATEX.code.length > 0, "CreateX not found on Base");
 
         ICreateX createX = ICreateX(Addresses.CREATEX);
@@ -660,15 +658,14 @@ contract TREXFactoryTest is TREXFactorySetup {
     }
 
     /// @notice Verifies that Factory deployments with same salt produce same address on different chains
-    /// @dev Requires ETHEREUM_RPC_URL and BASE_RPC_URL environment variables
+    /// @dev Requires ethereum and base configured in foundry.toml [rpc_endpoints]
     function test_CREATE3_FactoryDeploysSameAddressAcrossChains() public {
         string memory salt = "factory-cross-chain";
         ITREXFactory.TokenDetails memory tokenDetails = _createEmptyTokenDetails();
         ITREXFactory.ClaimDetails memory claimDetails = _createEmptyClaimDetails();
 
         // Deploy on Ethereum
-        uint256 ethereumFork = vm.createFork(vm.envString("ETHEREUM_RPC_URL"));
-        vm.selectFork(ethereumFork);
+        vm.createSelectFork("ethereum");
         require(Addresses.CREATEX.code.length > 0, "CreateX not found on Ethereum");
 
         deploy(deployer, true);
@@ -680,8 +677,7 @@ contract TREXFactoryTest is TREXFactorySetup {
         require(ethereumToken != address(0), "Token should be deployed on Ethereum");
 
         // Deploy on Base with same salt
-        uint256 baseFork = vm.createFork(vm.envString("BASE_RPC_URL"));
-        vm.selectFork(baseFork);
+        vm.createSelectFork("base");
         require(Addresses.CREATEX.code.length > 0, "CreateX not found on Base");
 
         deploy(deployer, true);
@@ -694,7 +690,6 @@ contract TREXFactoryTest is TREXFactorySetup {
 
         // Compute what token address would be on Base if factory was at same address as Ethereum
         ICreateX createX = ICreateX(Addresses.CREATEX);
-        vm.selectFork(baseFork);
 
         // Construct salt as if factory was at ethereumFactory address
         bytes32 baseSalt = bytes32(
