@@ -1,0 +1,2683 @@
+# ERC-3643 T-REX Protocol - Complete Contract Documentation
+
+> **Version:** 4.1.3  
+> **Standard:** ERC-3643 (Security Token Standard)  
+> **Developer:** Tokeny sàrl  
+> **License:** GPL v3.0 / Proprietary
+
+---
+
+## Table of Contents
+
+1. [Introduction](#1-introduction)
+2. [Architecture Overview](#2-architecture-overview)
+3. [Core Token Contract](#3-core-token-contract)
+4. [Identity Registry System](#4-identity-registry-system)
+5. [Compliance System](#5-compliance-system)
+6. [Factory & Deployment System](#6-factory--deployment-system)
+7. [Proxy & Upgrade System](#7-proxy--upgrade-system)
+8. [Registry Contracts](#8-registry-contracts)
+9. [Roles & Access Control](#9-roles--access-control)
+10. [Storage Contracts](#10-storage-contracts)
+11. [Contract Interaction Flows](#11-contract-interaction-flows)
+12. [Security Considerations](#12-security-considerations)
+13. [Gas Optimization Notes](#13-gas-optimization-notes)
+
+---
+
+## 1. Introduction
+
+### What is T-REX?
+
+T-REX (Token for Regulated EXchanges) is a comprehensive suite of smart contracts implementing the **ERC-3643 standard** for security tokens. It provides a compliant framework for issuing, managing, and transferring tokenized securities on EVM-compatible blockchains while maintaining full regulatory compliance.
+
+### Key Features
+
+-  **Identity-Based Transfers**: All token holders must have verified on-chain identities (OnchainID)
+-  **Claim-Based Verification**: KYC/AML compliance through cryptographic claims
+-  **Modular Compliance**: Pluggable compliance rules (up to 25 modules)
+-  **Upgradeable Architecture**: Proxy pattern for bug fixes and feature additions
+-  **Wallet Recovery**: Recover tokens from lost wallets
+-  **Transfer Controls**: Freeze wallets, pause token, forced transfers
+-  **Regulatory Flexibility**: Country restrictions, investor limits, transfer limits
+-  **Factory Deployment**: One-transaction deployment of complete token suite
+
+### Core Design Principles
+
+1. **Compliance First**: Every transfer validates investor eligibility
+2. **Separation of Concerns**: Storage, logic, and registries are separate
+3. **Upgradeability**: All contracts use proxy pattern for future-proofing
+4. **Role-Based Access**: Owners, Agents, and Users have distinct privileges
+5. **On-Chain Identity**: Leverages OnchainID for verifiable credentials
+6. **Modularity**: Compliance rules are pluggable and composable
+
+---
+
+## 2. Architecture Overview
+
+### System Components
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      T-REX ARCHITECTURE                         │
+└─────────────────────────────────────────────────────────────────┘
+
+                    ┌─────────────────────┐
+                    │   Security Token    │
+                    │   (ERC-3643)        │
+                    └──────────┬──────────┘
+                               │
+              ┌────────────────┼────────────────┐
+              ▼                ▼                ▼
+    ┌─────────────────┐ ┌────────────┐ ┌──────────────┐
+    │Identity Registry│ │ Compliance │ │  OnchainID   │
+    │    System       │ │   System   │ │   (Token)    │
+    └────────┬────────┘ └─────┬──────┘ └──────────────┘
+             │                │
+      ┌──────┴──────┐   ┌─────┴─────────────┐
+      ▼             ▼   ▼                   ▼
+   ┌─────┐      ┌─────┐ ┌────────┐    ┌─────────┐
+   │ CTR │      │ TIR │ │Module 1│    │Module N │
+   └─────┘      └─────┘ └────────┘    └─────────┘
+Claim Topics  Trusted                Compliance
+Registry      Issuers                 Modules
+
+Legend:
+CTR  = ClaimTopicsRegistry
+TIR  = TrustedIssuersRegistry
+IRS  = IdentityRegistryStorage
+```
+
+### Contract Categories
+
+#### **1. Core Contracts**
+- `Token.sol` - Main security token contract
+- `TokenStorage.sol` - Token state variables
+
+#### **2. Identity Management**
+- `IdentityRegistry.sol` - Links wallets to identities
+- `IdentityRegistryStorage.sol` - Stores identity mappings
+- `ClaimTopicsRegistry.sol` - Required claim types
+- `TrustedIssuersRegistry.sol` - Approved claim issuers
+
+#### **3. Compliance**
+- `ModularCompliance.sol` - Main compliance orchestrator
+- `MCStorage.sol` - Compliance state
+- `AbstractModule.sol` - Base module implementation
+- Various compliance modules (country restrictions, limits, etc.)
+
+#### **4. Factory & Deployment**
+- `TREXFactory.sol` - Deploys complete token suites
+- `TREXGateway.sol` - Deployment interface with fee management
+- `TREXImplementationAuthority.sol` - Manages implementation addresses
+
+#### **5. Proxy System**
+- `AbstractProxy.sol` - Base proxy contract
+- `TokenProxy.sol`, `IdentityRegistryProxy.sol`, etc. - Specific proxies
+
+#### **6. Access Control**
+- `AgentRole.sol` / `AgentRoleUpgradeable.sol` - Agent management
+- `Roles.sol` - Role utilities
+
+### Data Flow
+
+```
+Transfer Request
+    ↓
+Token Contract
+    ↓
+Identity Verification (IdentityRegistry)
+    ├→ Fetch OnchainID
+    ├→ Check Claim Topics (CTR)
+    ├→ Verify Claims with Issuers (TIR)
+    └→ Validate Signatures
+    ↓
+Compliance Checks (ModularCompliance)
+    ├→ Module 1 (Country restrictions)
+    ├→ Module 2 (Transfer limits)
+    └→ Module N (Custom rules)
+    ↓
+Execute Transfer (if all checks pass)
+    ↓
+Post-Transfer Actions
+    └→ Update module states
+```
+
+---
+
+## 3. Core Token Contract
+
+### 3.1 Token.sol
+
+**Location:** `contracts/token/Token.sol`  
+**Type:** Upgradeable Implementation  
+**Inherits:** `IToken`, `AgentRoleUpgradeable`, `TokenStorage`
+
+#### Purpose
+The main security token contract implementing ERC-3643 standard. It extends ERC-20 with identity verification, compliance checks, and regulatory controls.
+
+#### Key Features
+
+##### **Standard ERC-20 Functionality**
+```solidity
+function transfer(address to, uint256 amount) external returns (bool)
+function approve(address spender, uint256 amount) external returns (bool)
+function transferFrom(address from, address to, uint256 amount) external returns (bool)
+function balanceOf(address account) external view returns (uint256)
+function totalSupply() external view returns (uint256)
+```
+
+##### **Identity & Compliance Integration**
+```solidity
+function setIdentityRegistry(address _identityRegistry) external onlyOwner
+function setCompliance(address _compliance) external onlyOwner
+```
+- Links token to Identity Registry for KYC/AML verification
+- Links token to Modular Compliance for transfer rules
+
+##### **Wallet Control Functions** (Agent Only)
+
+**Freeze/Unfreeze Wallet**
+```solidity
+function setAddressFrozen(address _userAddress, bool _freeze) external onlyAgent
+```
+- **Use Case**: Freeze suspicious accounts or comply with court orders
+- **Effect**: Frozen wallets cannot send tokens (but can receive)
+- **Storage**: `mapping(address => bool) internal _frozen`
+
+**Partial Token Freeze**
+```solidity
+function freezePartialTokens(address _userAddress, uint256 _amount) external onlyAgent
+function unfreezePartialTokens(address _userAddress, uint256 _amount) external onlyAgent
+```
+- **Use Case**: Lock tokens for vesting, escrow, or regulatory holds
+- **Effect**: Only `(balance - frozenTokens)` can be transferred
+- **Storage**: `mapping(address => uint256) internal _frozenTokens`
+
+##### **Token Supply Management** (Agent Only)
+
+**Minting**
+```solidity
+function mint(address _to, uint256 _amount) external onlyAgent
+function batchMint(address[] calldata _toList, uint256[] calldata _amounts) external onlyAgent
+```
+- **Pre-conditions**:
+  - Receiver must have verified identity (`isVerified(to) == true`)
+  - Compliance modules must allow minting (e.g., supply limits)
+- **Actions**:
+  - Updates `_balances[to]` and `_totalSupply`
+  - Calls `compliance.created(to, amount)` for module tracking
+  - Emits `Transfer(address(0), to, amount)`
+
+**Burning**
+```solidity
+function burn(address _userAddress, uint256 _amount) external onlyAgent
+function batchBurn(address[] calldata _userAddresses, uint256[] calldata _amounts) external onlyAgent
+```
+- **Smart Handling**: If frozen tokens exist, automatically unfreezes necessary amount
+- **Actions**:
+  - Updates `_balances[from]` and `_totalSupply`
+  - Calls `compliance.destroyed(from, amount)` for module tracking
+  - Emits `Transfer(from, address(0), amount)`
+
+##### **Forced Operations** (Agent Only)
+
+**Forced Transfer**
+```solidity
+function forcedTransfer(
+    address _from,
+    address _to,
+    uint256 _amount
+) external onlyAgent returns (bool)
+```
+- **Use Case**: Court-ordered transfers, regulatory compliance, error correction
+- **Bypasses**: Sender's freeze status, sender's compliance checks
+- **Still Checks**: Receiver identity verification, token pause status
+- **Smart Handling**: Automatically unfreezes sender's tokens if needed
+
+**Batch Forced Transfer**
+```solidity
+function batchForcedTransfer(
+    address[] calldata _fromList,
+    address[] calldata _toList,
+    uint256[] calldata _amounts
+) external onlyAgent
+```
+- Bulk version for operational efficiency
+
+##### **Wallet Recovery** (Agent Only)
+
+```solidity
+function recoveryAddress(
+    address _lostWallet,
+    address _newWallet,
+    address _investorOnchainID
+) external onlyAgent returns (bool)
+```
+
+**Purpose**: Recover tokens when investor loses private keys
+
+**Process**:
+1. Verify both wallets linked to same OnchainID
+2. Transfer all tokens (including frozen) from lost to new wallet
+3. Update identity registry to unlink old wallet
+4. Emit `RecoverySuccess` event
+
+**Security**: Requires same OnchainID ownership proof
+
+##### **Pause Functionality** (Agent Only)
+
+```solidity
+function pause() external onlyAgent whenNotPaused
+function unpause() external onlyAgent whenPaused
+```
+- **Use Case**: Emergency stop, system maintenance, security incidents
+- **Effect**: No transfers allowed when paused (agents can still force transfer)
+- **Storage**: `bool internal _tokenPaused`
+
+##### **Token Information Management** (Owner Only)
+
+```solidity
+function setName(string calldata _name) external onlyOwner
+function setSymbol(string calldata _symbol) external onlyOwner
+function setOnchainID(address _onchainID) external onlyOwner
+```
+- Update token metadata
+- Link token to its OnchainID (token's own identity)
+
+#### Transfer Flow (Internal)
+
+```solidity
+function _transfer(address from, address to, uint256 amount) internal
+```
+
+**Validation Steps**:
+1.  Check token not paused
+2.  Check sender not frozen
+3.  Check receiver not frozen
+4.  Check sufficient unfrozen balance
+5.  Verify receiver identity: `identityRegistry.isVerified(to)`
+6.  Check compliance: `compliance.canTransfer(from, to, amount)`
+7.  Execute balance updates
+8.  Notify compliance: `compliance.transferred(from, to, amount)`
+
+**Code Flow**:
+```solidity
+function _transfer(address _from, address _to, uint256 _amount) internal {
+    require(!_tokenPaused, "Pausable: paused");
+    require(!_frozen[_from], "wallet is frozen");
+    require(!_frozen[_to], "wallet is frozen");
+    require(
+        _balances[_from] - _frozenTokens[_from] >= _amount,
+        "Insufficient Balance"
+    );
+    
+    if (_tokenIdentityRegistry.isVerified(_to)) {
+        require(
+            _tokenCompliance.canTransfer(_from, _to, _amount),
+            "Transfer not compliant"
+        );
+        
+        _balances[_from] -= _amount;
+        _balances[_to] += _amount;
+        
+        _tokenCompliance.transferred(_from, _to, _amount);
+        emit Transfer(_from, _to, _amount);
+    } else {
+        revert("Transfer not possible");
+    }
+}
+```
+
+#### State Variables (via TokenStorage)
+
+```solidity
+// ERC20 basics
+mapping(address => uint256) internal _balances;
+mapping(address => mapping(address => uint256)) internal _allowances;
+uint256 internal _totalSupply;
+
+// Token metadata
+string internal _tokenName;
+string internal _tokenSymbol;
+uint8 internal _tokenDecimals;
+address internal _tokenOnchainID;
+string internal constant _TOKEN_VERSION = "4.1.3";
+
+// Control mechanisms
+mapping(address => bool) internal _frozen;
+mapping(address => uint256) internal _frozenTokens;
+bool internal _tokenPaused;
+
+// External systems
+IIdentityRegistry internal _tokenIdentityRegistry;
+IModularCompliance internal _tokenCompliance;
+
+// Upgrade safety
+uint256[49] private __gap;
+```
+
+#### Events
+
+```solidity
+event UpdatedTokenInformation(
+    string indexed _newName,
+    string indexed _newSymbol,
+    uint8 _newDecimals,
+    string _newVersion,
+    address indexed _newOnchainID
+);
+
+event IdentityRegistryAdded(address indexed _identityRegistry);
+event ComplianceAdded(address indexed _compliance);
+
+event AddressFrozen(
+    address indexed _userAddress,
+    bool indexed _isFrozen,
+    address indexed _owner
+);
+
+event TokensFrozen(address indexed _userAddress, uint256 _amount);
+event TokensUnfrozen(address indexed _userAddress, uint256 _amount);
+
+event Paused(address _userAddress);
+event Unpaused(address _userAddress);
+
+event RecoverySuccess(
+    address indexed _lostWallet,
+    address indexed _newWallet,
+    address indexed _investorOnchainID
+);
+```
+
+#### Usage Examples
+
+**Example 1: Standard Transfer**
+```solidity
+// Investor A transfers to Investor B
+token.transfer(investorB, 1000);
+//  Validates B's identity
+//  Checks compliance rules
+//  Updates balances
+```
+
+**Example 2: Agent Freezes Wallet**
+```solidity
+// Agent freezes suspicious account
+token.setAddressFrozen(suspiciousWallet, true);
+// ❌ Wallet can no longer send tokens
+//  Wallet can still receive tokens
+```
+
+**Example 3: Partial Freeze for Vesting**
+```solidity
+// Agent locks 50% of tokens for 1 year
+uint256 balance = token.balanceOf(employee);
+token.freezePartialTokens(employee, balance / 2);
+// Employee can only transfer 50% of balance
+```
+
+**Example 4: Wallet Recovery**
+```solidity
+// Investor lost keys, agent helps recover
+token.recoveryAddress(
+    oldWallet,      // Lost wallet
+    newWallet,      // New wallet  
+    investorOID     // Proof of ownership
+);
+//  All tokens moved to new wallet
+```
+
+#### Security Considerations
+
+⚠️ **Centralization Risks**:
+- Agents have significant power (freeze, force transfer, mint/burn)
+- Owner can change compliance rules mid-lifecycle
+- Recommendation: Use multi-sig for owner/agent roles
+
+⚠️ **Upgrade Risks**:
+- Proxy pattern allows changing logic
+- Malicious implementation could steal funds
+- Recommendation: Timelock on implementation changes
+
+ **Safety Features**:
+- Paused by default (must explicitly unpause)
+- Recovery requires OnchainID proof
+- Frozen token tracking prevents double-spending
+
+#### Gas Optimization Notes
+
+- Batch operations save ~40% gas vs individual calls
+- Frozen token checks add ~2000 gas per transfer
+- Identity + compliance checks add ~50,000-100,000 gas per transfer
+
+---
+
+## 4. Identity Registry System
+
+The Identity Registry System is the **heart of ERC-3643 compliance**. It validates that token holders have proper KYC/AML credentials through on-chain identity verification.
+
+### 4.1 IdentityRegistry.sol
+
+**Location:** `contracts/registry/implementation/IdentityRegistry.sol`  
+**Type:** Upgradeable Implementation  
+**Inherits:** `IIdentityRegistry`, `AgentRoleUpgradeable`, `IRStorage`
+
+#### Purpose
+Links investor wallet addresses to their OnchainID and verifies they possess required claims from trusted issuers.
+
+#### Core Functions
+
+##### **Register Identity** (Agent Only)
+```solidity
+function registerIdentity(
+    address _userAddress,
+    IIdentity _identity,
+    uint16 _country
+) external onlyAgent
+```
+
+**Purpose**: Onboard a verified investor to the token ecosystem
+
+**Parameters**:
+- `_userAddress` - Investor's wallet address
+- `_identity` - Investor's OnchainID contract address
+- `_country` - Numeric country code (ISO 3166-1)
+
+**Process**:
+1. Verify wallet not already registered
+2. Verify identity contract is owned by wallet
+3. Store in IdentityRegistryStorage:
+   - `_identities[wallet] = identity`
+   - `_investorCountries[wallet] = country`
+4. Emit `IdentityRegistered` event
+
+**Use Case**:
+```solidity
+// Agent registers investor after KYC approval
+identityRegistry.registerIdentity(
+    0xInvestorWallet,
+    0xInvestorOnchainID,
+    840  // USA
+);
+```
+
+##### **Batch Register** (Agent Only)
+```solidity
+function batchRegisterIdentity(
+    address[] calldata _userAddresses,
+    IIdentity[] calldata _identities,
+    uint16[] calldata _countries
+) external onlyAgent
+```
+- Bulk registration for operational efficiency
+- Loops through arrays calling `registerIdentity()`
+
+##### **Update Identity** (Agent Only)
+```solidity
+function updateIdentity(address _userAddress, IIdentity _identity) external onlyAgent
+```
+- Update investor's OnchainID address
+- Use case: Investor migrates to new identity contract
+
+##### **Update Country** (Agent Only)
+```solidity
+function updateCountry(address _userAddress, uint16 _country) external onlyAgent
+```
+- Update investor's country of residence
+- Affects country-based compliance rules
+
+##### **Delete Identity** (Agent Only)
+```solidity
+function deleteIdentity(address _userAddress) external onlyAgent
+```
+- Remove investor from registry
+- Use case: Investor no longer eligible, account closure
+- **Effect**: Investor can no longer receive tokens
+
+##### **Verify Eligibility** (View Function)
+```solidity
+function isVerified(address _userAddress) external view returns (bool)
+```
+
+**Purpose**: **THE MOST IMPORTANT FUNCTION** - Validates investor eligibility
+
+**Verification Steps**:
+1. Check if wallet is registered: `contains(_userAddress)`
+2. Get investor's OnchainID: `identity(_userAddress)`
+3. Get required claim topics from ClaimTopicsRegistry
+4. For each required topic:
+   - Get trusted issuers for that topic (from TrustedIssuersRegistry)
+   - Check if investor has valid claim from at least one trusted issuer
+   - Verify claim signature is valid
+5. Return `true` only if ALL required claims are present and valid
+
+**Code Logic**:
+```solidity
+function isVerified(address _userAddress) public view returns (bool) {
+    if (!contains(_userAddress)) {
+        return false;
+    }
+    
+    IIdentity investorIdentity = identity(_userAddress);
+    uint256[] memory requiredClaimTopics = _tokenTopicsRegistry.getClaimTopics();
+    
+    if (requiredClaimTopics.length == 0) {
+        return true;
+    }
+    
+    for (uint256 i = 0; i < requiredClaimTopics.length; i++) {
+        // Check if investor has this claim from a trusted issuer
+        if (!_hasValidClaim(investorIdentity, requiredClaimTopics[i])) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+```
+
+**Why This Matters**:
+- Called on EVERY token transfer to validate receiver
+- Ensures only KYC'd investors can receive tokens
+- Real-time compliance validation
+
+##### **Configuration Functions** (Owner Only)
+
+```solidity
+function setIdentityRegistryStorage(address _identityRegistryStorage) external onlyOwner
+function setClaimTopicsRegistry(address _claimTopicsRegistry) external onlyOwner
+function setTrustedIssuersRegistry(address _trustedIssuersRegistry) external onlyOwner
+```
+- Link to dependency contracts
+- Allows upgrading individual components
+
+##### **View Functions**
+
+```solidity
+function contains(address _userAddress) external view returns (bool)
+```
+- Check if wallet is registered
+
+```solidity
+function identity(address _userAddress) external view returns (IIdentity)
+```
+- Get investor's OnchainID address
+
+```solidity
+function investorCountry(address _userAddress) external view returns (uint16)
+```
+- Get investor's country code
+
+```solidity
+function identityStorage() external view returns (IIdentityRegistryStorage)
+function issuersRegistry() external view returns (ITrustedIssuersRegistry)
+function topicsRegistry() external view returns (IClaimTopicsRegistry)
+```
+- Get linked registry contracts
+
+#### State Variables (via IRStorage)
+
+```solidity
+IClaimTopicsRegistry internal _tokenTopicsRegistry;
+ITrustedIssuersRegistry internal _tokenIssuersRegistry;
+IIdentityRegistryStorage internal _tokenIdentityStorage;
+
+uint256[49] private __gap;  // Upgrade safety
+```
+
+#### Events
+
+```solidity
+event ClaimTopicsRegistrySet(address indexed claimTopicsRegistry);
+event IdentityStorageSet(address indexed identityStorage);
+event TrustedIssuersRegistrySet(address indexed trustedIssuersRegistry);
+event IdentityRegistered(address indexed investorAddress, IIdentity indexed identity);
+event IdentityRemoved(address indexed investorAddress, IIdentity indexed identity);
+event IdentityUpdated(IIdentity indexed oldIdentity, IIdentity indexed newIdentity);
+event CountryUpdated(address indexed investorAddress, uint16 indexed country);
+```
+
+---
+
+### 4.2 IdentityRegistryStorage.sol
+
+**Location:** `contracts/registry/implementation/IdentityRegistryStorage.sol`  
+**Type:** Upgradeable Implementation  
+**Inherits:** `IIdentityRegistryStorage`, `OwnableUpgradeable`, `IRSStorage`
+
+#### Purpose
+Separate storage contract for identity data. Allows upgrading IdentityRegistry logic without losing data.
+
+#### Core Functions
+
+##### **Storage Management** (Owner/Registry Only)
+
+```solidity
+function addIdentityToStorage(
+    address _userAddress,
+    IIdentity _identity,
+    uint16 _country
+) external onlyOwner
+```
+- Store wallet → identity → country mapping
+- Called by IdentityRegistry during registration
+
+```solidity
+function removeIdentityFromStorage(address _userAddress) external onlyOwner
+```
+- Remove wallet from storage
+- Called by IdentityRegistry during deletion
+
+```solidity
+function modifyStoredIdentity(address _userAddress, IIdentity _identity) external onlyOwner
+```
+- Update identity contract address
+
+```solidity
+function modifyStoredInvestorCountry(address _userAddress, uint16 _country) external onlyOwner
+```
+- Update country code
+
+##### **Identity Registry Binding**
+
+```solidity
+function bindIdentityRegistry(address _identityRegistry) external
+```
+- Links storage to specific IdentityRegistry
+- Only bound registry can modify storage
+
+```solidity
+function unbindIdentityRegistry(address _identityRegistry) external
+```
+- Unlink registry (for upgrades)
+
+##### **View Functions**
+
+```solidity
+function storedIdentity(address _userAddress) external view returns (IIdentity)
+function storedInvestorCountry(address _userAddress) external view returns (uint16)
+```
+- Retrieve stored data
+
+```solidity
+function linkedIdentityRegistries() external view returns (address[] memory)
+```
+- Get all bound registries
+
+#### State Variables (via IRSStorage)
+
+```solidity
+// wallet => OnchainID
+mapping(address => IIdentity) internal _identities;
+
+// wallet => country code
+mapping(address => uint16) internal _investorCountries;
+
+// Array of all registered wallets
+address[] internal _storedIdentity;
+
+// Bound identity registries
+mapping(address => bool) internal _identityRegistries;
+
+uint256[49] private __gap;
+```
+
+#### Why Separate Storage?
+
+**Advantages**:
+-  Upgrade IdentityRegistry logic without data migration
+-  Share storage across multiple registries (if needed)
+-  Cheaper to deploy new logic (reuse storage)
+-  Reduce risk of storage corruption during upgrades
+
+**Trade-offs**:
+- ❌ More contracts to manage
+- ❌ Additional cross-contract calls (higher gas)
+
+---
+
+### 4.3 ClaimTopicsRegistry.sol
+
+**Location:** `contracts/registry/implementation/ClaimTopicsRegistry.sol`  
+**Type:** Upgradeable Implementation  
+**Inherits:** `IClaimTopicsRegistry`, `OwnableUpgradeable`, `CTRStorage`
+
+#### Purpose
+Defines which types of claims (KYC, accreditation, etc.) are REQUIRED for token holders.
+
+#### Core Functions
+
+##### **Manage Claim Topics** (Owner Only)
+
+```solidity
+function addClaimTopic(uint256 _claimTopic) external onlyOwner
+```
+- Add required claim type
+- Examples:
+  - `1` = KYC verified
+  - `2` = Accredited investor
+  - `3` = Country verification
+  - `4` = Age verification
+
+```solidity
+function removeClaimTopic(uint256 _claimTopic) external onlyOwner
+```
+- Remove claim requirement
+- Use case: Regulatory changes
+
+##### **View Functions**
+
+```solidity
+function getClaimTopics() external view returns (uint256[] memory)
+```
+- Get all required claim topics
+- Called by IdentityRegistry during `isVerified()`
+
+#### State Variables (via CTRStorage)
+
+```solidity
+uint256[] internal _claimTopics;
+mapping(uint256 => uint256) internal _claimTopicsIndex;
+
+uint256[49] private __gap;
+```
+
+#### Example Usage
+
+```solidity
+// Token requires KYC and accreditation
+claimTopicsRegistry.addClaimTopic(1);  // KYC
+claimTopicsRegistry.addClaimTopic(2);  // Accreditation
+
+// Now all investors MUST have both claims
+```
+
+---
+
+### 4.4 TrustedIssuersRegistry.sol
+
+**Location:** `contracts/registry/implementation/TrustedIssuersRegistry.sol`  
+**Type:** Upgradeable Implementation  
+**Inherits:** `ITrustedIssuersRegistry`, `OwnableUpgradeable`, `TIRStorage`
+
+#### Purpose
+Manages the list of trusted entities (KYC providers) who can issue valid claims.
+
+#### Core Functions
+
+##### **Manage Trusted Issuers** (Owner Only)
+
+```solidity
+function addTrustedIssuer(
+    IClaimIssuer _trustedIssuer,
+    uint256[] calldata _claimTopics
+) external onlyOwner
+```
+
+**Parameters**:
+- `_trustedIssuer` - OnchainID of the claim issuer (e.g., KYC provider)
+- `_claimTopics` - Array of claim types this issuer can sign
+
+**Example**:
+```solidity
+// Add KYC provider that can issue KYC claims (topic 1)
+trustedIssuersRegistry.addTrustedIssuer(
+    kycProviderOnchainID,
+    [1]  // Can issue topic 1 (KYC) claims
+);
+
+// Add investment advisor that can issue accreditation claims
+trustedIssuersRegistry.addTrustedIssuer(
+    advisorOnchainID,
+    [2]  // Can issue topic 2 (accreditation) claims
+);
+```
+
+```solidity
+function removeTrustedIssuer(IClaimIssuer _trustedIssuer) external onlyOwner
+```
+- Remove issuer from trusted list
+- Existing claims remain but won't be checked
+
+```solidity
+function updateIssuerClaimTopics(
+    IClaimIssuer _trustedIssuer,
+    uint256[] calldata _claimTopics
+) external onlyOwner
+```
+- Update which claims an issuer can provide
+
+##### **View Functions**
+
+```solidity
+function getTrustedIssuers() external view returns (IClaimIssuer[] memory)
+```
+- Get all trusted issuers
+
+```solidity
+function getTrustedIssuersForClaimTopic(uint256 claimTopic) 
+    external view returns (IClaimIssuer[] memory)
+```
+- Get issuers authorized for specific claim type
+- Called during identity verification
+
+```solidity
+function isTrustedIssuer(address _issuer) external view returns (bool)
+```
+- Check if issuer is trusted
+
+```solidity
+function hasClaimTopic(address _issuer, uint256 _claimTopic) 
+    external view returns (bool)
+```
+- Check if issuer can sign specific claim type
+
+#### State Variables (via TIRStorage)
+
+```solidity
+IClaimIssuer[] internal _trustedIssuers;
+mapping(address => uint256) internal _trustedIssuersIndex;
+mapping(address => uint256[]) internal _claimTopics;
+
+uint256[49] private __gap;
+```
+
+---
+
+### Identity System Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              IDENTITY VERIFICATION FLOW                      │
+└─────────────────────────────────────────────────────────────┘
+
+1. Token.transfer(to, amount)
+        ↓
+2. IdentityRegistry.isVerified(to)
+        ↓
+3. IdentityRegistryStorage.storedIdentity(to)
+        ↓ Returns: 0xInvestorOnchainID
+4. ClaimTopicsRegistry.getClaimTopics()
+        ↓ Returns: [1, 2] (KYC, Accreditation)
+5. FOR EACH topic:
+        ↓
+6. TrustedIssuersRegistry.getTrustedIssuersForClaimTopic(1)
+        ↓ Returns: [0xKYCProvider, 0xKYCProvider2]
+7. InvestorOnchainID.getClaim(claimId)
+        ↓ Check if claim exists from ANY trusted issuer
+8. Verify claim signature
+        ↓
+9. IF all topics have valid claims:
+        ↓ Return TRUE 
+   ELSE:
+        ↓ Return FALSE ❌
+```
+
+---
+
+## 5. Compliance System
+
+The Modular Compliance System allows token issuers to enforce custom transfer rules through pluggable modules.
+
+### 5.1 ModularCompliance.sol
+
+**Location:** `contracts/compliance/modular/ModularCompliance.sol`  
+**Type:** Upgradeable Implementation  
+**Inherits:** `IModularCompliance`, `OwnableUpgradeable`, `MCStorage`
+
+#### Purpose
+Orchestrates multiple compliance modules to validate and track token transfers. Acts as the compliance layer between Token and individual rule modules.
+
+#### Architecture
+
+```
+ModularCompliance
+    ├─ Module 1: CountryRestrictModule
+    ├─ Module 2: TimeTransferLimitsModule
+    ├─ Module 3: MaxBalanceModule
+    ├─ Module 4: SupplyLimitModule
+    └─ Module N: Custom Module (up to 25 total)
+```
+
+#### Core Functions
+
+##### **Token Binding** (Owner/Token Only)
+
+```solidity
+function bindToken(address _token) external
+```
+- Links compliance to specific token contract
+- Only bound token can call `transferred()`, `created()`, `destroyed()`
+- Can be called by owner OR by token during initialization
+
+```solidity
+function unbindToken(address _token) external
+```
+- Unlink token (for upgrades or decommissioning)
+
+##### **Module Management** (Owner Only)
+
+```solidity
+function addModule(address _module) external onlyOwner
+```
+
+**Process**:
+1. Verify module not already bound
+2. Verify max 25 modules not exceeded
+3. Check if module requires preset: `module.canComplianceBind(this)`
+4. Call `module.bindCompliance(this)` to link module
+5. Add to `_modules[]` array
+6. Set `_moduleBound[module] = true`
+7. Emit `ModuleAdded` event
+
+**Example**:
+```solidity
+// Add country restriction module
+modularCompliance.addModule(countryRestrictModuleAddress);
+
+// Configure the module
+modularCompliance.callModuleFunction(
+    abi.encodeWithSignature("addCountryRestriction(uint16)", 840),
+    countryRestrictModuleAddress
+);
+```
+
+```solidity
+function removeModule(address _module) external onlyOwner
+```
+- Remove module from compliance
+- Calls `module.unbindCompliance(this)`
+- Future transfers won't check this module
+
+**⚠️ Important**: Removing a module doesn't reset its state. Re-adding it will restore previous configuration.
+
+##### **Module Interaction** (Owner Only)
+
+```solidity
+function callModuleFunction(bytes calldata callData, address _module) external onlyOwner
+```
+
+**Purpose**: Configure module parameters
+
+**Parameters**:
+- `callData` - ABI-encoded function call
+- `_module` - Target module address
+
+**Examples**:
+```solidity
+// Set max balance to 1,000,000 tokens
+callData = abi.encodeWithSignature(
+    "setMaxBalance(uint256)",
+    1000000
+);
+modularCompliance.callModuleFunction(callData, maxBalanceModule);
+
+// Add country restriction for USA (840)
+callData = abi.encodeWithSignature(
+    "addCountryRestriction(uint16)",
+    840
+);
+modularCompliance.callModuleFunction(callData, countryRestrictModule);
+```
+
+##### **Transfer Validation** (View - Called by Token)
+
+```solidity
+function canTransfer(
+    address _from,
+    address _to,
+    uint256 _amount
+) external view returns (bool)
+```
+
+**Purpose**: **CRITICAL FUNCTION** - Validates if transfer complies with all rules
+
+**Process**:
+1. If no modules bound, return `true`
+2. FOR EACH module in `_modules[]`:
+   - Call `module.moduleCheck(_from, _to, _amount, compliance)`
+   - If ANY module returns `false`, return `false`
+3. If ALL modules return `true`, return `true`
+
+**Code Logic**:
+```solidity
+function canTransfer(
+    address _from,
+    address _to,
+    uint256 _amount
+) public view returns (bool) {
+    if (_modules.length == 0) {
+        return true;
+    }
+    
+    for (uint256 i = 0; i < _modules.length; i++) {
+        if (!IModule(_modules[i]).moduleCheck(_from, _to, _amount, address(this))) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+```
+
+**Called During**: Every `token.transfer()` and `token.transferFrom()`
+
+##### **State Update Functions** (Token Only)
+
+```solidity
+function transferred(
+    address _from,
+    address _to,
+    uint256 _amount
+) external onlyToken
+```
+
+**Purpose**: Notify modules of completed transfer to update their state
+
+**Process**:
+1. FOR EACH module in `_modules[]`:
+   - Call `module.moduleTransferAction(_from, _to, _amount, compliance)`
+2. Emit `ModuleInteraction` for each module
+
+**Called After**: Successful transfer execution
+
+**Example Module Actions**:
+- TimeTransferLimitsModule: Increment transfer counter
+- ExchangeLimitsModule: Track exchange volumes
+- MaxBalanceModule: No action needed (token tracks balance)
+
+```solidity
+function created(address _to, uint256 _amount) external onlyToken
+```
+- Called after minting
+- Modules update state: `module.moduleMintAction(_to, _amount, compliance)`
+
+```solidity
+function destroyed(address _from, uint256 _amount) external onlyToken
+```
+- Called after burning
+- Modules update state: `module.moduleBurnAction(_from, _amount, compliance)`
+
+##### **View Functions**
+
+```solidity
+function getModules() external view returns (address[] memory)
+```
+- Get all bound modules
+
+```solidity
+function getTokenBound() external view returns (address)
+```
+- Get bound token address
+
+```solidity
+function isModuleBound(address _module) external view returns (bool)
+```
+- Check if module is bound
+
+#### State Variables (via MCStorage)
+
+```solidity
+address[] internal _modules;
+mapping(address => bool) internal _moduleBound;
+address internal _tokenBound;
+
+uint256[49] private __gap;
+```
+
+#### Events
+
+```solidity
+event ModuleInteraction(address indexed target, bytes4 selector);
+event TokenBound(address _token);
+event TokenUnbound(address _token);
+event ModuleAdded(address indexed _module);
+event ModuleRemoved(address indexed _module);
+```
+
+---
+
+### 5.2 AbstractModule.sol
+
+**Location:** `contracts/compliance/modular/modules/AbstractModule.sol`  
+**Type:** Abstract Base Contract  
+**Inherits:** `IModule`
+
+#### Purpose
+Base implementation for all compliance modules. Provides binding logic and access control.
+
+#### Core Functions
+
+```solidity
+function bindCompliance(address _compliance) external override
+```
+- Links module to compliance contract
+- Can only be called by compliance itself
+- Sets `_complianceBound[_compliance] = true`
+
+```solidity
+function unbindCompliance(address _compliance) external onlyComplianceCall override
+```
+- Unlinks module from compliance
+- Only callable by bound compliance
+
+```solidity
+function isComplianceBound(address _compliance) external view returns (bool)
+```
+- Check if compliance is bound
+
+#### Modifiers
+
+```solidity
+modifier onlyBoundCompliance(address _compliance)
+```
+- Ensures compliance is bound before allowing operations
+
+```solidity
+modifier onlyComplianceCall()
+```
+- Ensures caller is a bound compliance contract
+
+#### State Variables
+
+```solidity
+mapping(address => bool) private _complianceBound;
+```
+
+---
+
+### 5.3 IModule Interface
+
+**Location:** `contracts/compliance/modular/modules/IModule.sol`
+
+All compliance modules MUST implement:
+
+```solidity
+interface IModule {
+    // Module metadata
+    function name() external pure returns (string memory);
+    
+    // Binding control
+    function isPlugAndPlay() external pure returns (bool);
+    function canComplianceBind(address _compliance) external view returns (bool);
+    
+    // Compliance binding
+    function bindCompliance(address _compliance) external;
+    function unbindCompliance(address _compliance) external;
+    function isComplianceBound(address _compliance) external view returns (bool);
+    
+    // Transfer validation
+    function moduleCheck(
+        address _from,
+        address _to,
+        uint256 _amount,
+        address _compliance
+    ) external view returns (bool);
+    
+    // State updates
+    function moduleTransferAction(
+        address _from,
+        address _to,
+        uint256 _amount,
+        address _compliance
+    ) external;
+    
+    function moduleMintAction(
+        address _to,
+        uint256 _amount,
+        address _compliance
+    ) external;
+    
+    function moduleBurnAction(
+        address _from,
+        uint256 _amount,
+        address _compliance
+    ) external;
+}
+```
+
+#### Key Concepts
+
+**Plug and Play**:
+```solidity
+function isPlugAndPlay() external pure returns (bool)
+```
+- Returns `true` if module can be added without preset
+- Returns `false` if module requires configuration first
+
+**Can Bind**:
+```solidity
+function canComplianceBind(address _compliance) external view returns (bool)
+```
+- Checks if module is properly configured for this compliance
+- Example: Check if supply limit is set before binding
+
+---
+
+### 5.4 Example Compliance Modules
+
+#### **CountryRestrictModule**
+
+**Purpose**: Block transfers involving specific countries
+
+**Key Functions**:
+```solidity
+function addCountryRestriction(uint16 _country) external
+function removeCountryRestriction(uint16 _country) external
+function batchRestrictCountries(uint16[] calldata _countries) external
+```
+
+**Module Check**:
+```solidity
+function moduleCheck(address _from, address _to, uint256, address _compliance) 
+    external view returns (bool) 
+{
+    uint16 fromCountry = IModularCompliance(_compliance).getTokenBound()
+        .identityRegistry().investorCountry(_from);
+    uint16 toCountry = IModularCompliance(_compliance).getTokenBound()
+        .identityRegistry().investorCountry(_to);
+    
+    if (_countryRestricted[fromCountry] || _countryRestricted[toCountry]) {
+        return false;
+    }
+    return true;
+}
+```
+
+---
+
+#### **TimeTransferLimitsModule**
+
+**Purpose**: Limit transfer amounts within time periods
+
+**Key Functions**:
+```solidity
+function setTimeTransferLimit(uint32 _limitTime, uint256 _limitValue) external
+function removeTimeTransferLimit(uint32 _limitTime) external
+```
+
+**State**:
+```solidity
+mapping(address => mapping(uint256 => uint256)) private _usersCounters;
+mapping(uint32 => uint256) private _limits;
+```
+
+**Module Check**:
+```solidity
+function moduleCheck(address _from, address, uint256 _amount, address) 
+    external view returns (bool) 
+{
+    uint256 currentPeriod = block.timestamp / limitTime;
+    uint256 transferred = _usersCounters[_from][currentPeriod];
+    uint256 limit = _limits[limitTime];
+    
+    return (transferred + _amount <= limit);
+}
+```
+
+**Transfer Action**:
+```solidity
+function moduleTransferAction(address _from, address, uint256 _amount, address) 
+    external 
+{
+    uint256 currentPeriod = block.timestamp / limitTime;
+    _usersCounters[_from][currentPeriod] += _amount;
+}
+```
+
+---
+
+#### **MaxBalanceModule**
+
+**Purpose**: Limit maximum token balance per investor
+
+**Key Functions**:
+```solidity
+function setMaxBalance(uint256 _max) external
+```
+
+**Module Check**:
+```solidity
+function moduleCheck(address, address _to, uint256 _amount, address _compliance) 
+    external view returns (bool) 
+{
+    address tokenAddress = IModularCompliance(_compliance).getTokenBound();
+    uint256 balance = IToken(tokenAddress).balanceOf(_to);
+    uint256 maxBalance = _maxBalances[_to];
+    
+    return (balance + _amount <= maxBalance);
+}
+```
+
+---
+
+#### **SupplyLimitModule**
+
+**Purpose**: Prevent minting beyond maximum supply
+
+**Key Functions**:
+```solidity
+function setSupplyLimit(uint256 _limit) external
+```
+
+**Module Check**:
+```solidity
+function moduleCheck(address, address, uint256, address) 
+    external pure returns (bool) 
+{
+    return true;  // No check on transfer, only on mint
+}
+```
+
+**Mint Action**:
+```solidity
+function moduleMintAction(address, uint256 _amount, address _compliance) 
+    external 
+{
+    address tokenAddress = IModularCompliance(_compliance).getTokenBound();
+    uint256 totalSupply = IToken(tokenAddress).totalSupply();
+    
+    require(totalSupply + _amount <= _supplyLimit, "Supply limit exceeded");
+}
+```
+
+---
+
+### Compliance Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   COMPLIANCE CHECK FLOW                     │
+└─────────────────────────────────────────────────────────────┘
+
+Token.transfer(to, amount)
+        ↓
+ModularCompliance.canTransfer(from, to, amount)
+        ↓
+    ┌───┴───────────────────────────────┐
+    ▼                                   ▼
+Module1.moduleCheck()            Module2.moduleCheck()
+    │                                   │
+    ├─ Get investor countries          ├─ Get transfer history
+    ├─ Check restrictions              ├─ Calculate current period
+    └─ Return true/false               └─ Check limit
+        ↓                                   ↓
+        └───────────┬───────────────────────┘
+                    ▼
+            All return true?
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+       YES                     NO
+        │                       │
+   ALLOW TRANSFER          REJECT ❌
+        │
+        ▼
+Execute transfer
+        │
+        ▼
+ModularCompliance.transferred(from, to, amount)
+        │
+    ┌───┴───────────────────────────────┐
+    ▼                                   ▼
+Module1.moduleTransferAction()   Module2.moduleTransferAction()
+    │                                   │
+    └─ No action                       └─ Increment counter
+```
+
+---
+
+## 6. Factory & Deployment System
+
+The Factory system enables one-transaction deployment of complete T-REX token suites with deterministic addresses using CREATE2.
+
+### 6.1 TREXFactory.sol
+
+**Location:** `contracts/factory/TREXFactory.sol`  
+**Type:** Standard Contract (not upgradeable)  
+**Inherits:** `ITREXFactory`, `Ownable`
+
+#### Purpose
+Deploys and configures complete token ecosystems (6+ contracts) in a single transaction using CREATE2 for deterministic addresses.
+
+#### Key Functions
+
+##### **Deploy Complete Token Suite** (Owner Only)
+
+```solidity
+function deployTREXSuite(
+    string memory _salt,
+    TokenDetails calldata _tokenDetails,
+    ClaimDetails calldata _claimDetails
+) external onlyOwner
+```
+
+**Parameters**:
+
+**TokenDetails struct**:
+```solidity
+struct TokenDetails {
+    address owner;              // Future owner of all contracts
+    string name;                // Token name
+    string symbol;              // Token symbol
+    uint8 decimals;             // Token decimals (0-18)
+    address irs;                // IdentityRegistryStorage (0x0 = deploy new)
+    address ONCHAINID;          // Token's OnchainID (0x0 = auto-create)
+    address[] irAgents;         // Identity Registry agents (max 5)
+    address[] tokenAgents;      // Token agents (max 5)
+    address[] complianceModules; // Modules to bind
+    bytes[] complianceSettings;  // Module configuration calldata
+}
+```
+
+**ClaimDetails struct**:
+```solidity
+struct ClaimDetails {
+    uint256[] claimTopics;      // Required claim types (max 5)
+    address[] issuers;          // Trusted claim issuers (max 5)
+    uint256[][] issuerClaims;   // Claims each issuer can sign
+}
+```
+
+**Deployment Process** (in order):
+
+1. **Deploy TrustedIssuersRegistry**
+   ```solidity
+   address tir = CREATE2(salt + "TIR", TIRProxy);
+   TrustedIssuersRegistry(tir).init();
+   ```
+
+2. **Deploy ClaimTopicsRegistry**
+   ```solidity
+   address ctr = CREATE2(salt + "CTR", CTRProxy);
+   ClaimTopicsRegistry(ctr).init();
+   ```
+
+3. **Deploy ModularCompliance**
+   ```solidity
+   address mc = CREATE2(salt + "MC", MCProxy);
+   ModularCompliance(mc).init();
+   ```
+
+4. **Deploy/Use IdentityRegistryStorage**
+   ```solidity
+   if (irs == address(0)) {
+       address irs = CREATE2(salt + "IRS", IRSProxy);
+       IdentityRegistryStorage(irs).init();
+   }
+   ```
+
+5. **Deploy IdentityRegistry**
+   ```solidity
+   address ir = CREATE2(salt + "IR", IRProxy);
+   IdentityRegistry(ir).init(tir, ctr, irs);
+   ```
+
+6. **Deploy Token**
+   ```solidity
+   address token = CREATE2(salt + "Token", TokenProxy);
+   Token(token).init(ir, mc, name, symbol, decimals, ONCHAINID);
+   ```
+
+7. **Deploy Token OnchainID** (if needed)
+   ```solidity
+   if (ONCHAINID == address(0)) {
+       address tokenOID = IdFactory.createTokenIdentity(token, owner, salt);
+       Token(token).setOnchainID(tokenOID);
+   }
+   ```
+
+8. **Configure ClaimTopicsRegistry**
+   ```solidity
+   for (uint256 topic : claimTopics) {
+       ctr.addClaimTopic(topic);
+   }
+   ```
+
+9. **Configure TrustedIssuersRegistry**
+   ```solidity
+   for (uint256 i = 0; i < issuers.length; i++) {
+       tir.addTrustedIssuer(issuers[i], issuerClaims[i]);
+   }
+   ```
+
+10. **Bind IdentityRegistryStorage**
+    ```solidity
+    irs.bindIdentityRegistry(ir);
+    ```
+
+11. **Configure ModularCompliance**
+    ```solidity
+    mc.bindToken(token);
+    
+    for (address module : complianceModules) {
+        mc.addModule(module);
+    }
+    
+    for (bytes calldata : complianceSettings) {
+        mc.callModuleFunction(calldata, module);
+    }
+    ```
+
+12. **Add Agents**
+    ```solidity
+    for (address agent : irAgents) {
+        ir.addAgent(agent);
+    }
+    
+    for (address agent : tokenAgents) {
+        token.addAgent(agent);
+    }
+    ```
+
+13. **Transfer Ownerships**
+    ```solidity
+    tir.transferOwnership(owner);
+    ctr.transferOwnership(owner);
+    ir.transferOwnership(owner);
+    mc.transferOwnership(owner);
+    token.transferOwnership(owner);
+    // IRS ownership kept by factory or transferred
+    ```
+
+14. **Emit Event**
+    ```solidity
+    emit TREXSuiteDeployed(token, ir, irs, tir, ctr, mc, salt);
+    ```
+
+**Validation Checks**:
+-  Salt not used before
+-  Claim pattern valid (issuers.length == issuerClaims.length)
+-  Max 5 claim issuers at deployment
+-  Max 5 claim topics at deployment
+-  Max 5 agents per contract
+-  Max 30 compliance module actions
+
+**Gas Cost**: ~10-15 million gas (depends on # of modules and configuration)
+
+**Example Usage**:
+```solidity
+trexFactory.deployTREXSuite(
+    "acme-corp-shares-2024",
+    TokenDetails({
+        owner: 0xIssuer,
+        name: "Acme Corp Shares",
+        symbol: "ACME",
+        decimals: 0,
+        irs: address(0),              // Deploy new storage
+        ONCHAINID: address(0),        // Auto-create
+        irAgents: [0xAgent1],
+        tokenAgents: [0xAgent2],
+        complianceModules: [countryModule, maxBalanceModule],
+        complianceSettings: [
+            abi.encodeWithSignature("addCountryRestriction(uint16)", 840),
+            abi.encodeWithSignature("setMaxBalance(uint256)", 1000000)
+        ]
+    }),
+    ClaimDetails({
+        claimTopics: [1, 2],          // KYC, Accreditation
+        issuers: [kycProvider, advisor],
+        issuerClaims: [[1], [2]]      // Each issues one claim type
+    })
+);
+```
+
+##### **Configuration Functions** (Owner Only)
+
+```solidity
+function setImplementationAuthority(address _implementationAuthority) external onlyOwner
+```
+- Set the implementation authority for proxies
+- All future deployments use these implementations
+
+```solidity
+function setIdFactory(address _idFactory) external onlyOwner
+```
+- Set the OnchainID factory for creating token identities
+
+##### **Recovery Function** (Owner Only)
+
+```solidity
+function recoverContractOwnership(address _contract, address _newOwner) external onlyOwner
+```
+- Transfer ownership of contracts owned by factory
+- Typically used for IRS contracts
+
+##### **View Functions**
+
+```solidity
+function getImplementationAuthority() external view returns (address)
+function getIdFactory() external view returns (address)
+function getToken(string calldata _salt) external view returns (address)
+```
+
+#### State Variables
+
+```solidity
+address private _implementationAuthority;
+address private _idFactory;
+mapping(string => address) public tokenDeployed;
+```
+
+#### Events
+
+```solidity
+event Deployed(address indexed _addr);
+event IdFactorySet(address _idFactory);
+event ImplementationAuthoritySet(address _implementationAuthority);
+event TREXSuiteDeployed(
+    address indexed _token,
+    address _ir,
+    address _irs,
+    address _tir,
+    address _ctr,
+    address _mc,
+    string indexed _salt
+);
+```
+
+---
+
+### 6.2 TREXImplementationAuthority.sol
+
+**Location:** `contracts/proxy/authority/TREXImplementationAuthority.sol`  
+**Type:** Standard Contract  
+**Inherits:** `ITREXImplementationAuthority`, `Ownable`
+
+#### Purpose
+Central registry of implementation contract addresses for all proxies. Enables coordinated upgrades across entire ecosystem.
+
+#### Key Concepts
+
+**Reference vs. Auxiliary**:
+- **Reference IA**: Master implementation authority (one per ecosystem)
+- **Auxiliary IA**: Token-specific authority that can diverge from reference
+
+**Version Management**:
+```solidity
+struct Version {
+    uint8 major;
+    uint8 minor;
+    uint8 patch;
+}
+
+struct TREXContracts {
+    address tokenImplementation;
+    address ctrImplementation;
+    address irImplementation;
+    address irsImplementation;
+    address tirImplementation;
+    address mcImplementation;
+}
+```
+
+#### Core Functions
+
+##### **Add New Version** (Owner Only)
+
+```solidity
+function addTREXVersion(
+    Version calldata _version,
+    TREXContracts calldata _trex
+) external onlyOwner
+```
+- Add new implementation set
+- Example: Add version 4.2.0 with upgraded Token implementation
+
+```solidity
+function useTREXVersion(Version calldata _version) external onlyOwner
+```
+- Switch to using specific version
+- All new proxies use this version
+
+```solidity
+function addAndUseTREXVersion(
+    Version calldata _version,
+    TREXContracts calldata _trex
+) external onlyOwner
+```
+- Combined: add and immediately use new version
+
+##### **Individual Implementation Setters** (Owner Only)
+
+```solidity
+function setTokenImplementation(address _token) external onlyOwner
+function setCTRImplementation(address _ctr) external onlyOwner
+function setIRImplementation(address _ir) external onlyOwner
+function setIRSImplementation(address _irs) external onlyOwner
+function setTIRImplementation(address _tir) external onlyOwner
+function setMCImplementation(address _mc) external onlyOwner
+```
+- Update individual contract implementations
+- Allows partial upgrades without full version bump
+
+##### **Change Implementation Authority**
+
+```solidity
+function changeImplementationAuthority(
+    address _token,
+    address _newImplementationAuthority
+) external
+```
+
+**Purpose**: Migrate token suite to different implementation authority
+
+**Requirements**:
+- Caller must own ALL contracts in suite (token, IR, MC, IRS, CTR, TIR)
+- New IA must have same version as current IA
+- New IA must be valid (deployed by IAFactory or reference contract)
+
+**Use Cases**:
+- Fork token to independent upgrade path
+- Move from reference IA to custom IA
+- Migrate between ecosystems
+
+##### **Fetch Version from Reference** (Auxiliary Only)
+
+```solidity
+function fetchVersion(Version calldata _version) external
+```
+- Auxiliary IA copies version from reference IA
+- Allows staying in sync with ecosystem
+
+##### **View Functions**
+
+```solidity
+function getTokenImplementation() external view returns (address)
+function getCTRImplementation() external view returns (address)
+function getIRImplementation() external view returns (address)
+function getIRSImplementation() external view returns (address)
+function getTIRImplementation() external view returns (address)
+function getMCImplementation() external view returns (address)
+```
+
+```solidity
+function getCurrentVersion() external view returns (Version memory)
+function getContracts(Version calldata _version) external view returns (TREXContracts memory)
+function isReferenceContract() external view returns (bool)
+function getReferenceContract() external view returns (address)
+```
+
+#### State Variables
+
+```solidity
+Version private _currentVersion;
+mapping(bytes32 => TREXContracts) private _contracts;
+bool private _reference;
+address private _trexFactory;
+address private _iaFactory;
+```
+
+#### Usage Example
+
+```solidity
+// Deploy new Token implementation
+TokenV2 newTokenImpl = new TokenV2();
+
+// Update reference IA
+implementationAuthority.setTokenImplementation(address(newTokenImpl));
+
+// All existing Token proxies now point to TokenV2!
+// (No need to update individual tokens)
+```
+
+---
+
+### 6.3 TREXGateway.sol
+
+**Location:** `contracts/factory/TREXGateway.sol`  
+**Type:** Standard Contract  
+**Inherits:** `ITREXGateway`, `Ownable`
+
+#### Purpose
+Centralized deployment interface with fee management and access control.
+
+#### Key Features
+
+##### **Deployment Control**
+
+```solidity
+function deployTREXSuite(
+    string memory _salt,
+    ITREXFactory.TokenDetails calldata _tokenDetails,
+    ITREXFactory.ClaimDetails calldata _claimDetails
+) external payable
+```
+- Public deployment endpoint (if enabled)
+- Handles fee collection
+- Delegates to TREXFactory
+
+**Process**:
+1. Check if caller is approved deployer OR public deployment enabled
+2. Calculate required fee
+3. Collect fee (if applicable)
+4. Call `TREXFactory.deployTREXSuite()`
+5. Transfer token ownership to caller
+
+##### **Fee Management** (Owner Only)
+
+```solidity
+function enableDeploymentFee(bool _fee) external onlyOwner
+function setDeploymentFee(uint256 _fee, address _feeToken, address _feeCollector) external onlyOwner
+```
+- Enable/disable fees
+- Set fee amount, payment token, and collector address
+
+```solidity
+function setPublicDeploymentStatus(bool _publicDeploymentStatus) external onlyOwner
+```
+- Enable/disable public deployments
+- If disabled, only approved deployers can deploy
+
+##### **Deployer Management** (Owner Only)
+
+```solidity
+function addDeployer(address _deployer) external onlyOwner
+function removeDeployer(address _deployer) external onlyOwner
+function batchAddDeployer(address[] calldata _deployers) external onlyOwner
+```
+- Manage approved deployers
+
+```solidity
+function applyFeeDiscount(address _deployer, uint16 _discount) external onlyOwner
+function batchApplyFeeDiscount(address[] calldata _deployers, uint16[] calldata _discounts) external onlyOwner
+```
+- Apply fee discounts (0-10000 = 0-100%)
+
+##### **View Functions**
+
+```solidity
+function isDeployer(address _deployer) external view returns (bool)
+function getDeployer(address _deployer) external view returns (Deployer memory)
+function calculateFee(address _deployer) external view returns (uint256)
+function isPublicDeploymentEnabled() external view returns (bool)
+```
+
+#### State Variables
+
+```solidity
+struct Deployer {
+    bool isDeployer;
+    uint16 discount;  // 10000 = 100%
+}
+
+address private _factory;
+bool private _publicDeployment;
+
+struct DeploymentFee {
+    uint256 fee;
+    address feeToken;
+    address feeCollector;
+}
+
+DeploymentFee private _deploymentFee;
+bool private _feeEnabled;
+
+mapping(address => Deployer) private _deployers;
+```
+
+---
+
+### Deployment Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  FACTORY DEPLOYMENT FLOW                     │
+└─────────────────────────────────────────────────────────────┘
+
+User/Gateway
+    │
+    ├─ Calculate Fee
+    ├─ Collect Payment
+    │
+    ▼
+TREXFactory.deployTREXSuite()
+    │
+    ├─ Validate Parameters
+    ├─ Check Salt Uniqueness
+    │
+    ▼
+Implementation Authority
+    │
+    ├─ Get Token Implementation
+    ├─ Get IR Implementation
+    ├─ Get IRS Implementation
+    ├─ Get TIR Implementation
+    ├─ Get CTR Implementation
+    └─ Get MC Implementation
+    │
+    ▼
+CREATE2 Deployments (6 contracts)
+    │
+    ├─ TIRProxy ──────────► TIR Implementation
+    ├─ CTRProxy ──────────► CTR Implementation
+    ├─ MCProxy ───────────► MC Implementation
+    ├─ IRSProxy ──────────► IRS Implementation
+    ├─ IRProxy ───────────► IR Implementation
+    └─ TokenProxy ────────► Token Implementation
+    │
+    ▼
+IdFactory
+    │
+    └─ Create Token OnchainID (if needed)
+    │
+    ▼
+Configuration Phase
+    │
+    ├─ Add Claim Topics to CTR
+    ├─ Add Trusted Issuers to TIR
+    ├─ Bind IRS to IR
+    ├─ Bind Token to MC
+    ├─ Add Modules to MC
+    ├─ Configure Modules
+    ├─ Add Agents to IR
+    └─ Add Agents to Token
+    │
+    ▼
+Transfer Ownerships
+    │
+    └─ All contracts → Token Issuer
+    │
+    ▼
+ Complete Token Suite Deployed!
+```
+
+---
+
+## 7. Proxy & Upgrade System
+
+### 7.1 AbstractProxy.sol
+
+**Location:** `contracts/proxy/AbstractProxy.sol`  
+**Type:** Abstract Base Contract  
+**Inherits:** `IProxy`, `Initializable`
+
+#### Purpose
+Base proxy implementation using custom beacon proxy pattern for T-REX contracts.
+
+#### Key Concepts
+
+**Storage Slot**:
+```solidity
+// Storage slot: keccak256("ERC-3643.proxy.beacon")
+// = 0x821f3e4d3d679f19eacc940c87acf846ea6eae24a63058ea750304437a62aafc
+```
+- Changed in v4.1.3 to avoid confusion with ERC-1822
+- Stores TREXImplementationAuthority address
+
+#### Core Functions
+
+```solidity
+function setImplementationAuthority(address _newImplementationAuthority) external override
+```
+- Update implementation authority
+- Only current IA can call
+- Validates new IA has all required implementations
+
+```solidity
+function getImplementationAuthority() public view returns (address)
+```
+- Retrieve current IA address from storage slot
+
+```solidity
+function _storeImplementationAuthority(address implementationAuthority) internal
+```
+- Store IA address in custom storage slot
+- Uses inline assembly for precise storage control
+
+#### Storage Pattern
+
+```solidity
+assembly {
+    sstore(0x821f3e4d3d679f19eacc940c87acf846ea6eae24a63058ea750304437a62aafc, implementationAuthority)
+}
+```
+
+---
+
+### 7.2 Specific Proxy Contracts
+
+Each contract type has its own proxy that inherits `AbstractProxy`:
+
+#### **TokenProxy.sol**
+```solidity
+contract TokenProxy is AbstractProxy {
+    constructor(address _implementationAuthority) {
+        _storeImplementationAuthority(_implementationAuthority);
+    }
+    
+    fallback() external payable {
+        address logic = ITREXImplementationAuthority(
+            getImplementationAuthority()
+        ).getTokenImplementation();
+        
+        assembly {
+            calldatacopy(0, 0, calldatasize())
+            let result := delegatecall(gas(), logic, 0, calldatasize(), 0, 0)
+            returndatacopy(0, 0, returndatasize())
+            switch result
+            case 0 { revert(0, returndatasize()) }
+            default { return(0, returndatasize()) }
+        }
+    }
+}
+```
+
+**Other Proxies** (same pattern):
+- `IdentityRegistryProxy.sol` - Points to IR implementation
+- `IdentityRegistryStorageProxy.sol` - Points to IRS implementation
+- `TrustedIssuersRegistryProxy.sol` - Points to TIR implementation
+- `ClaimTopicsRegistryProxy.sol` - Points to CTR implementation
+- `ModularComplianceProxy.sol` - Points to MC implementation
+
+---
+
+### 7.3 Upgrade Mechanism
+
+#### How Upgrades Work
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    UPGRADE MECHANISM                         │
+└─────────────────────────────────────────────────────────────┘
+
+Before Upgrade:
+    TokenProxy
+        │
+        ├─ getImplementationAuthority() → 0xIA
+        │
+    0xIA (Implementation Authority)
+        │
+        └─ getTokenImplementation() → 0xTokenV1
+        
+    User Call: proxy.transfer(...)
+        ↓
+    Delegatecall to 0xTokenV1
+        ↓
+    TokenV1 logic executes with proxy's storage
+
+
+After Upgrade (set new implementation):
+    Owner calls: IA.setTokenImplementation(0xTokenV2)
+    
+    TokenProxy (unchanged!)
+        │
+        ├─ getImplementationAuthority() → 0xIA (same)
+        │
+    0xIA (Implementation Authority)
+        │
+        └─ getTokenImplementation() → 0xTokenV2 ⬅ UPDATED
+        
+    User Call: proxy.transfer(...)
+        ↓
+    Delegatecall to 0xTokenV2 ⬅ NEW LOGIC
+        ↓
+    TokenV2 logic executes with proxy's storage (preserved)
+```
+
+#### Upgrade Process
+
+**Step 1: Deploy New Implementation**
+```solidity
+TokenV2 newImpl = new TokenV2();
+```
+
+**Step 2: Update Implementation Authority**
+```solidity
+implementationAuthority.setTokenImplementation(address(newImpl));
+```
+
+**Step 3: All Proxies Automatically Use New Logic**
+- No need to update individual proxies
+- Storage preserved
+- Existing token holders unaffected
+
+#### Upgrade Safety
+
+**Storage Collisions Prevention**:
+```solidity
+contract TokenStorage {
+    // Existing storage
+    mapping(address => uint256) internal _balances;
+    // ...
+    
+    // Gap for future variables
+    uint256[49] private __gap;
+}
+```
+
+**New Version Can Add**:
+```solidity
+contract TokenV2Storage is TokenStorage {
+    // New storage (uses __gap space)
+    mapping(address => uint256) internal _newFeature;
+    
+    // Reduced gap
+    uint256[48] private __gap;
+}
+```
+
+**⚠️ NEVER DO**:
+```solidity
+// ❌ BAD: Changes existing storage layout
+contract TokenV2StorageBad is TokenStorage {
+    mapping(address => uint256) internal _newFeature;  // Inserted BEFORE existing
+    mapping(address => uint256) internal _balances;    // SHIFTED position!
+}
+```
+
+---
+
+## 8. Roles & Access Control
+
+### 8.1 AgentRole.sol / AgentRoleUpgradeable.sol
+
+**Location:** `contracts/roles/AgentRole.sol`  
+**Inherits:** `Ownable` (or `OwnableUpgradeable`)
+
+#### Purpose
+Implements agent-based access control for operational functions.
+
+#### Core Functions
+
+```solidity
+function addAgent(address _agent) public onlyOwner
+```
+- Grant agent privileges
+- Only owner can add agents
+
+```solidity
+function removeAgent(address _agent) public onlyOwner
+```
+- Revoke agent privileges
+
+```solidity
+function isAgent(address _agent) public view returns (bool)
+```
+- Check if address is an agent
+
+#### Modifier
+
+```solidity
+modifier onlyAgent() {
+    require(isAgent(msg.sender), "AgentRole: caller does not have the Agent role");
+    _;
+}
+```
+
+#### Role Hierarchy
+
+```
+Owner
+  ├─ Can do everything Agent can do
+  ├─ Can add/remove Agents
+  ├─ Can change critical settings (IR, Compliance)
+  └─ Can transfer ownership
+
+Agent
+  ├─ Can freeze/unfreeze wallets
+  ├─ Can mint/burn tokens
+  ├─ Can force transfers
+  ├─ Can pause/unpause token
+  ├─ Can register/delete identities
+  └─ Can recover wallets
+
+User
+  └─ Can transfer tokens (if compliant)
+```
+
+---
+
+## 9. Storage Contracts
+
+### Storage Pattern
+
+T-REX uses dedicated storage contracts to separate state from logic:
+
+**TokenStorage.sol**:
+```solidity
+contract TokenStorage {
+    mapping(address => uint256) internal _balances;
+    mapping(address => mapping(address => uint256)) internal _allowances;
+    uint256 internal _totalSupply;
+    
+    string internal _tokenName;
+    string internal _tokenSymbol;
+    uint8 internal _tokenDecimals;
+    address internal _tokenOnchainID;
+    
+    mapping(address => bool) internal _frozen;
+    mapping(address => uint256) internal _frozenTokens;
+    bool internal _tokenPaused;
+    
+    IIdentityRegistry internal _tokenIdentityRegistry;
+    IModularCompliance internal _tokenCompliance;
+    
+    uint256[49] private __gap;
+}
+```
+
+**IRStorage.sol**, **TIRStorage.sol**, **CTRStorage.sol**, **MCStorage.sol** - Similar pattern
+
+**Benefits**:
+-  Clear separation of concerns
+-  Easier to understand state variables
+-  Safer upgrades (explicit storage layout)
+-  Reusable across implementation versions
+
+---
+
+## 10. Security Considerations
+
+### 10.1 Centralization Risks
+
+**Owner Power**:
+- Can change compliance rules
+- Can change identity registry
+- Can upgrade implementations
+- **Mitigation**: Use multi-sig wallet, timelock
+
+**Agent Power**:
+- Can freeze wallets
+- Can force transfers
+- Can mint/burn tokens
+- **Mitigation**: Multi-sig for agents, rate limits, monitoring
+
+### 10.2 Upgrade Risks
+
+**Implementation Change**:
+- Malicious implementation can steal funds
+- Storage corruption if layout changes
+- **Mitigation**: Timelock on upgrades, audits, formal verification
+
+**Implementation Authority Control**:
+- IA owner controls all proxies
+- Single point of failure
+- **Mitigation**: Multi-sig, separate IAs for different token suites
+
+### 10.3 Identity System Risks
+
+**Claim Issuer Trust**:
+- Compromised claim issuer can verify bad actors
+- Revoked claims not automatically rechecked
+- **Mitigation**: Multiple claim requirements, regular audits
+
+**OnchainID Security**:
+- If investor loses OnchainID control, tokens stuck
+- **Mitigation**: Recovery mechanisms, backup key management
+
+### 10.4 Compliance Module Risks
+
+**Module Bugs**:
+- Faulty module can block all transfers
+- Module state corruption
+- **Mitigation**: Thorough testing, ability to remove modules
+
+**Module Count**:
+- Too many modules = high gas costs
+- **Mitigation**: Limit to 25 modules, optimize checks
+
+### 10.5 Recommended Security Practices
+
+1. **Multi-Signature Wallets**
+   - Use Gnosis Safe or similar for owner/agent roles
+   - Require 3/5 or 2/3 signatures for critical operations
+
+2. **Timelock Contracts**
+   - Add 24-48 hour delay for upgrades
+   - Gives token holders time to react
+
+3. **Circuit Breakers**
+   - Pause functionality for emergencies
+   - Already included via `pause()` function
+
+4. **Monitoring & Alerts**
+   - Monitor agent operations
+   - Alert on unusual transfer patterns
+   - Track compliance module changes
+
+5. **Regular Audits**
+   - Audit new implementations before upgrade
+   - Review compliance module configurations
+   - Test upgrade paths on testnet
+
+6. **Separation of Concerns**
+   - Use different agents for different operations
+   - Limit agent privileges to minimum necessary
+   - Rotate agent keys regularly
+
+---
+
+## 11. Gas Optimization Notes
+
+### Typical Gas Costs
+
+**Standard Transfer**:
+- Base transfer: ~50,000 gas
+- Identity verification: ~30,000 gas
+- Compliance checks (3 modules): ~40,000 gas
+- Module state updates: ~20,000 gas
+- **Total**: ~140,000 gas
+
+**Mint/Burn**:
+- Similar to transfer: ~120,000-150,000 gas
+
+**Forced Transfer** (Agent):
+- Slightly less (skips some checks): ~100,000-120,000 gas
+
+**Batch Operations**:
+- First operation: Full cost
+- Additional operations: ~70% of first
+- Example: 10 mints ≈ 7x cost of single mint (not 10x)
+
+### Optimization Strategies
+
+1. **Minimize Modules**: Each module adds ~10,000-15,000 gas
+2. **Batch Operations**: Use `batchMint()`, `batchTransfer()`, etc.
+3. **Optimize Module Logic**: Cache storage reads, minimize writes
+4. **Consider Module Order**: Put cheapest checks first (fail fast)
+
+---
+
+## 12. Contract Interaction Flows
+
+### Flow 1: Token Transfer
+
+```
+User calls: token.transfer(to, 100)
+    ↓
+Token._transfer()
+    ├─ Check: !paused ✓
+    ├─ Check: !frozen[from] ✓
+    ├─ Check: !frozen[to] ✓
+    ├─ Check: sufficient unfrozen balance ✓
+    │
+    ├─ IdentityRegistry.isVerified(to)
+    │   ├─ IdentityRegistryStorage.storedIdentity(to)
+    │   ├─ ClaimTopicsRegistry.getClaimTopics()
+    │   ├─ TrustedIssuersRegistry.getTrustedIssuers()
+    │   └─ OnchainID.getClaim() + verify signature
+    │   └─ Return true 
+    │
+    ├─ ModularCompliance.canTransfer(from, to, 100)
+    │   ├─ Module1.moduleCheck() → true
+    │   ├─ Module2.moduleCheck() → true
+    │   └─ Module3.moduleCheck() → true
+    │   └─ Return true 
+    │
+    ├─ Update: _balances[from] -= 100
+    ├─ Update: _balances[to] += 100
+    ├─ Emit: Transfer(from, to, 100)
+    │
+    └─ ModularCompliance.transferred(from, to, 100)
+        ├─ Module1.moduleTransferAction()
+        ├─ Module2.moduleTransferAction()
+        └─ Module3.moduleTransferAction()
+```
+
+### Flow 2: Investor Onboarding
+
+```
+1. Investor creates OnchainID
+    IdFactory.createIdentity(investorWallet, "salt")
+    
+2. KYC Provider issues claim
+    KYCProvider.addClaim(investorOnchainID, topic=1, data, signature)
+    
+3. Agent registers identity
+    IdentityRegistry.registerIdentity(wallet, onchainID, country)
+    └─ IdentityRegistryStorage.addIdentityToStorage()
+    
+4. Agent mints tokens
+    Token.mint(wallet, 1000)
+    ├─ Check: isVerified(wallet) ✓
+    ├─ Update: _balances[wallet] += 1000
+    └─ ModularCompliance.created(wallet, 1000)
+        └─ Modules update supply tracking
+```
+
+### Flow 3: Compliance Module Update
+
+```
+1. Owner adds module
+    ModularCompliance.addModule(newModule)
+    ├─ Check: module.canComplianceBind(compliance)
+    ├─ Call: module.bindCompliance(compliance)
+    └─ Add to _modules[]
+    
+2. Owner configures module
+    ModularCompliance.callModuleFunction(
+        abi.encodeWithSignature("setLimit(uint256)", 1000000),
+        newModule
+    )
+    
+3. Future transfers now check this module
+    Transfer → canTransfer() → newModule.moduleCheck()
+```
+
+### Flow 4: Implementation Upgrade
+
+```
+1. Deploy new implementation
+    TokenV2 newImpl = new TokenV2();
+    
+2. Update implementation authority
+    ImplementationAuthority.setTokenImplementation(address(newImpl))
+    
+3. All token proxies now use V2
+    TokenProxy
+        ├─ getImplementationAuthority() → IA
+        └─ IA.getTokenImplementation() → newImpl 
+        
+4. Next user call uses new logic
+    User: proxy.transfer()
+        ↓ delegatecall
+    TokenV2 logic executes
+```
+
+---
+
+## 13. Deployment Checklist
+
+### Pre-Deployment
+
+- [ ] Deploy all implementation contracts
+- [ ] Deploy TREXImplementationAuthority
+- [ ] Add implementation addresses to authority
+- [ ] Deploy IdFactory (OnchainID)
+- [ ] Deploy TREXFactory
+- [ ] Set implementation authority on factory
+- [ ] Set ID factory on factory
+- [ ] Deploy compliance modules (if custom)
+- [ ] Test on testnet with full flows
+
+### Deployment
+
+- [ ] Prepare TokenDetails struct
+- [ ] Prepare ClaimDetails struct
+- [ ] Prepare compliance module addresses
+- [ ] Prepare compliance settings calldata
+- [ ] Call TREXFactory.deployTREXSuite()
+- [ ] Verify all contracts on block explorer
+- [ ] Test token transfer (should fail - paused)
+
+### Post-Deployment
+
+- [ ] Verify all contract addresses
+- [ ] Check ownership transferred correctly
+- [ ] Verify agents added correctly
+- [ ] Verify compliance modules bound
+- [ ] Verify compliance settings applied
+- [ ] Test identity registration
+- [ ] Test minting
+- [ ] Unpause token
+- [ ] Test compliant transfer
+- [ ] Test non-compliant transfer (should fail)
+- [ ] Setup monitoring
+- [ ] Document all addresses
+- [ ] Setup multi-sig for owner/agents
+
+---
+
+## 14. Common Operations
+
+### Add New Investor
+
+```solidity
+// 1. Investor creates OnchainID (off-chain KYC completed)
+IdFactory.createIdentity(investorWallet, "investor-123");
+
+// 2. KYC Provider issues claim
+kycProvider.addClaim(investorOID, 1, keccakData, signature);
+
+// 3. Agent registers investor
+identityRegistry.registerIdentity(investorWallet, investorOID, 840);
+
+// 4. Agent mints tokens
+token.mint(investorWallet, 100000);
+
+// 5. Agent unpauses token (first time only)
+token.unpause();
+```
+
+### Update Compliance Rules
+
+```solidity
+// Add country restriction
+modularCompliance.addModule(countryRestrictModule);
+modularCompliance.callModuleFunction(
+    abi.encodeWithSignature("addCountryRestriction(uint16)", 840),
+    countryRestrictModule
+);
+
+// Update transfer limit
+modularCompliance.callModuleFunction(
+    abi.encodeWithSignature("setTimeTransferLimit(uint32,uint256)", 
+        30 days, 
+        1000000
+    ),
+    timeTransferLimitsModule
+);
+```
+
+### Handle Lost Wallet
+
+```solidity
+// Investor proves ownership of new wallet with OnchainID
+// Agent recovers tokens
+token.recoveryAddress(
+    lostWallet,
+    newWallet,
+    investorOnchainID
+);
+```
+
+### Upgrade Token Implementation
+
+```solidity
+// 1. Deploy new implementation
+TokenV2 newImpl = new TokenV2();
+
+// 2. Audit new implementation
+// ... security review ...
+
+// 3. Update implementation authority (with timelock)
+implementationAuthority.setTokenImplementation(address(newImpl));
+
+// 4. All token proxies now use V2
+// Storage preserved, new logic active
+```
+
+---
+
+## 15. Glossary
+
+**T-REX**: Token for Regulated EXchanges - The protocol name
+
+**ERC-3643**: Ethereum standard for security tokens with on-chain compliance
+
+**OnchainID**: ERC-725/735 identity contract storing claims about an entity
+
+**Claim**: Cryptographically signed attestation (e.g., "KYC verified")
+
+**Claim Topic**: Type of claim (1=KYC, 2=Accreditation, etc.)
+
+**Claim Issuer**: Trusted entity that signs claims (KYC provider, etc.)
+
+**Identity Registry**: Links wallets to OnchainIDs and validates claims
+
+**Modular Compliance**: System of pluggable rules for transfer validation
+
+**Compliance Module**: Individual rule enforcing specific requirements
+
+**Agent**: Privileged role for operational functions
+
+**Implementation Authority**: Registry of implementation contracts for proxies
+
+**Proxy**: Contract that delegates calls to implementation (upgradeable)
+
+**Storage Gap**: Reserved storage slots for future upgrades
+
+**Forced Transfer**: Agent-initiated transfer bypassing sender checks
+
+**Frozen Wallet**: Wallet blocked from sending tokens
+
+**Partial Freeze**: Specific token amount locked (vesting, escrow)
+
+---
+
+## 16. Additional Resources
+
+**Official Documentation**: https://docs.tokeny.com/docs/smart-contracts
+
+**ERC-3643 Specification**: https://eips.ethereum.org/EIPS/eip-3643
+
+**OnchainID**: https://github.com/onchain-id/solidity
+
+**GitHub Repository**: https://github.com/ERC-3643/ERC-3643
+
+**Whitepaper**: See `docs/TREX-WhitePaper.pdf` in repository
+
+**Audit Report**: https://tokeny.com/wp-content/uploads/2023/04/Tokeny_TREX-v4_SC_Audit_Report.pdf
+
+---
+
+## 17. Conclusion
+
+The ERC-3643 T-REX protocol is a **production-ready, enterprise-grade** framework for security tokens. Its modular architecture provides:
+
+ **Regulatory Compliance**: Identity verification and flexible compliance rules  
+ **Upgradeability**: Proxy pattern allows bug fixes and feature additions  
+ **Flexibility**: Modular compliance supports diverse regulatory requirements  
+ **Security**: Audited codebase with role-based access control  
+ **Operational Control**: Agent system for day-to-day management  
+ **Recovery Mechanisms**: Wallet recovery for lost private keys  
+
+**Best For**:
+- Tokenized securities (stocks, bonds, funds)
+- Real estate tokenization
+- Regulated digital assets
+- Any asset requiring KYC/AML compliance
+
+**Trade-offs**:
+- Higher gas costs than standard ERC-20
+- Complexity requires careful deployment planning
+- Centralized control points (owner/agents/IA)
+- Requires off-chain KYC infrastructure
+
+**Key Takeaway**: T-REX prioritizes **compliance and regulatory compatibility** over decentralization. It's the right choice when legal compliance is mandatory, not optional.
+
+---
+
+*End of Documentation*
+
+---
+
+**Document Version**: 1.0  
+**Last Updated**: January 2026  
+**T-REX Version Covered**: 4.1.3  
+
+For questions or issues, please refer to the official documentation or GitHub issues.
+
+
