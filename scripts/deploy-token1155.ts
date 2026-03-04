@@ -1,17 +1,17 @@
 /**
- * Deploy Token1155 Suite — Script explicativo
+ * Deploy Token1155 Suite
  *
- * Este script demonstra o deploy completo de um token ERC-1155 regulado (T-REX)
- * com 2 tokenIds, cada um com módulos de compliance diferentes:
+ * This script deploys a complete regulated ERC-1155 token (T-REX)
+ * with 2 tokenIds, each with different compliance modules:
  *
- *   tokenId 0 (18 decimais) → MaxBalanceModule  (máximo 10.000 tokens por carteira)
- *   tokenId 1 (8 decimais)  → TransferLimitModule (máximo 5.000 por transferência)
+ *   tokenId 0 (18 decimals) → MaxBalanceModule  (max 10,000 tokens per wallet)
+ *   tokenId 1 (8 decimals)  → TransferLimitModule (max 5,000 per transfer)
  *
- * Arquitetura do deploy:
+ * Deployment architecture:
  *
  *   ┌──────────────────────────────────────────────────────────┐
  *   │                  TREXImplementationAuthority              │
- *   │  (registra as implementações de todos os contratos)       │
+ *   │  (registers all contract implementations)                │
  *   └────────────┬─────────────────────────────────────────────┘
  *                │
  *   ┌────────────▼────────────────────────────────────────┐
@@ -33,9 +33,9 @@
  *   │  IdentityRegistryStorage                             │
  *   └─────────────────────────────────────────────────────┘
  *
- * Para rodar:
+ * Usage:
  *   npx hardhat run scripts/deploy-token1155.ts
- *   npx hardhat run scripts/deploy-token1155.ts --network <rede>
+ *   npx hardhat run scripts/deploy-token1155.ts --network <network>
  */
 
 import { ethers } from 'hardhat';
@@ -47,9 +47,9 @@ async function main() {
   console.log('Balance:', ethers.utils.formatEther(await deployer.getBalance()), 'ETH\n');
 
   // =========================================================================
-  // PASSO 1: Deploy das implementações (contratos lógicos, usados pelos proxies)
+  // STEP 1: Deploy implementations (logic contracts used by proxies)
   // =========================================================================
-  console.log('=== PASSO 1: Implementações ===');
+  console.log('=== STEP 1: Implementations ===');
 
   const claimTopicsRegistryImpl = await ethers.deployContract('ClaimTopicsRegistry', deployer);
   const trustedIssuersRegistryImpl = await ethers.deployContract('TrustedIssuersRegistry', deployer);
@@ -61,9 +61,9 @@ async function main() {
   console.log('  Token1155 implementation:', token1155Impl.address);
 
   // =========================================================================
-  // PASSO 2: TREXImplementationAuthority — Registra todas as implementações
+  // STEP 2: TREXImplementationAuthority — Registers all implementations
   // =========================================================================
-  console.log('\n=== PASSO 2: Implementation Authority ===');
+  console.log('\n=== STEP 2: Implementation Authority ===');
 
   const trexIA = await ethers.deployContract(
     'TREXImplementationAuthority',
@@ -71,7 +71,7 @@ async function main() {
     deployer,
   );
 
-  // Registra a versão com TODAS as implementações (inclusive Token1155)
+  // Register version with ALL implementations (including Token1155)
   await trexIA.addAndUseTREXVersion(
     { major: 4, minor: 0, patch: 0 },
     {
@@ -87,9 +87,9 @@ async function main() {
   console.log('  TREXImplementationAuthority:', trexIA.address);
 
   // =========================================================================
-  // PASSO 3: Deploy da infraestrutura de identidade (registries)
+  // STEP 3: Deploy identity infrastructure (registries)
   // =========================================================================
-  console.log('\n=== PASSO 3: Registry Infrastructure ===');
+  console.log('\n=== STEP 3: Registry Infrastructure ===');
 
   const claimTopicsRegistry = await ethers
     .deployContract('ClaimTopicsRegistryProxy', [trexIA.address], deployer)
@@ -119,57 +119,57 @@ async function main() {
   await identityRegistryStorage.bindIdentityRegistry(identityRegistry.address);
 
   // =========================================================================
-  // PASSO 4: Deploy dos módulos de compliance
+  // STEP 4: Deploy compliance modules
   // =========================================================================
-  console.log('\n=== PASSO 4: Compliance Modules ===');
+  console.log('\n=== STEP 4: Compliance Modules ===');
 
-  // Módulo 1: MaxBalanceModule — limita saldo máximo por carteira
+  // Module 1: MaxBalanceModule — limits max balance per wallet
   const maxBalanceModule = await ethers.deployContract('MaxBalanceModule', deployer);
   console.log('  MaxBalanceModule:', maxBalanceModule.address);
 
-  // Módulo 2: TransferLimitModule — limita valor máximo por transferência
+  // Module 2: TransferLimitModule — limits max amount per transfer
   const transferLimitModule = await ethers.deployContract('TransferLimitModule', deployer);
   console.log('  TransferLimitModule:', transferLimitModule.address);
 
   // =========================================================================
-  // PASSO 5: Deploy das ModularCompliance (uma por tokenId)
+  // STEP 5: Deploy ModularCompliance (one per tokenId)
   // =========================================================================
-  console.log('\n=== PASSO 5: Modular Compliance (1 por tokenId) ===');
+  console.log('\n=== STEP 5: Modular Compliance (1 per tokenId) ===');
 
-  // Compliance para tokenId 0: usa MaxBalanceModule
+  // Compliance for tokenId 0: uses MaxBalanceModule
   const compliance0 = await ethers
     .deployContract('ModularComplianceProxy', [trexIA.address], deployer)
     .then((proxy) => ethers.getContractAt('ModularCompliance', proxy.address));
   console.log('  Compliance0 (tokenId 0):', compliance0.address);
 
-  // Adiciona o MaxBalanceModule e configura max = 10.000
+  // Add MaxBalanceModule and configure max = 10,000
   await compliance0.addModule(maxBalanceModule.address);
   await compliance0.callModuleFunction(
     maxBalanceModule.interface.encodeFunctionData('setMaxBalance', [10000]),
     maxBalanceModule.address,
   );
-  console.log('    └─ MaxBalanceModule adicionado (max: 10.000)');
+  console.log('    └─ MaxBalanceModule added (max: 10,000)');
 
-  // Compliance para tokenId 1: usa TransferLimitModule
+  // Compliance for tokenId 1: uses TransferLimitModule
   const compliance1 = await ethers
     .deployContract('ModularComplianceProxy', [trexIA.address], deployer)
     .then((proxy) => ethers.getContractAt('ModularCompliance', proxy.address));
   console.log('  Compliance1 (tokenId 1):', compliance1.address);
 
-  // Adiciona o TransferLimitModule e configura limit = 5.000
+  // Add TransferLimitModule and configure limit = 5,000
   await compliance1.addModule(transferLimitModule.address);
   await compliance1.callModuleFunction(
     transferLimitModule.interface.encodeFunctionData('setTransferLimit', [5000]),
     transferLimitModule.address,
   );
-  console.log('    └─ TransferLimitModule adicionado (max: 5.000)');
+  console.log('    └─ TransferLimitModule added (max: 5,000)');
 
   // =========================================================================
-  // PASSO 6: Deploy do Token1155 via proxy
+  // STEP 6: Deploy Token1155 via proxy
   // =========================================================================
-  console.log('\n=== PASSO 6: Token1155 ===');
+  console.log('\n=== STEP 6: Token1155 ===');
 
-  // Deploy da OnchainID para o token (necessário para ERC-3643)
+  // Deploy OnchainID for the token (required by ERC-3643)
   const identityImplAuth = await new ethers.ContractFactory(
     OnchainID.contracts.ImplementationAuthority.abi,
     OnchainID.contracts.ImplementationAuthority.bytecode,
@@ -200,38 +200,38 @@ async function main() {
   console.log('  Symbol:', await token1155.symbol());
 
   // =========================================================================
-  // PASSO 7: Criar tokenIds (cada um com sua compliance)
+  // STEP 7: Create tokenIds (each with its own compliance)
   // =========================================================================
-  console.log('\n=== PASSO 7: Criar TokenIds ===');
+  console.log('\n=== STEP 7: Create TokenIds ===');
 
-  // tokenId 0: 18 decimais, compliance com MaxBalanceModule
+  // tokenId 0: 18 decimals, compliance with MaxBalanceModule
   await token1155.createTokenId(18, compliance0.address);
-  console.log('  tokenId 0: 18 decimais → MaxBalanceModule (max 10.000/carteira)');
+  console.log('  tokenId 0: 18 decimals → MaxBalanceModule (max 10,000/wallet)');
 
-  // tokenId 1: 8 decimais, compliance com TransferLimitModule
+  // tokenId 1: 8 decimals, compliance with TransferLimitModule
   await token1155.createTokenId(8, compliance1.address);
-  console.log('  tokenId 1: 8 decimais  → TransferLimitModule (max 5.000/tx)');
+  console.log('  tokenId 1: 8 decimals  → TransferLimitModule (max 5,000/tx)');
 
-  // Ambos começam pausados (padrão do createTokenId)
-  console.log('  Status: ambos pausados (padrão)');
-  console.log('  Total de tokenIds:', (await token1155.getTokenIdCount()).toString());
+  // Both start paused (default behavior of createTokenId)
+  console.log('  Status: both paused (default)');
+  console.log('  Total tokenIds:', (await token1155.getTokenIdCount()).toString());
 
   // =========================================================================
-  // PASSO 8: Configurar agents
+  // STEP 8: Configure agents
   // =========================================================================
-  console.log('\n=== PASSO 8: Agents ===');
+  console.log('\n=== STEP 8: Agents ===');
 
-  // O deployer se adiciona como agent (em produção, seria outra conta)
+  // Deployer adds itself as agent (in production, use a separate account)
   await token1155.addAgent(deployer.address);
   await identityRegistry.addAgent(deployer.address);
   await identityRegistry.addAgent(token1155.address);
-  console.log('  Agent adicionado:', deployer.address);
+  console.log('  Agent added:', deployer.address);
 
   // =========================================================================
-  // RESUMO
+  // SUMMARY
   // =========================================================================
   console.log('\n══════════════════════════════════════════════════');
-  console.log('  DEPLOY COMPLETO!');
+  console.log('  DEPLOY COMPLETE!');
   console.log('══════════════════════════════════════════════════');
   console.log('');
   console.log('  Token1155:              ', token1155.address);
@@ -242,15 +242,15 @@ async function main() {
   console.log('  Implementation Authority:', trexIA.address);
   console.log('');
   console.log('  tokenId 0 → Compliance: ', compliance0.address);
-  console.log('               Module:     MaxBalanceModule (max: 10.000)');
+  console.log('               Module:     MaxBalanceModule (max: 10,000)');
   console.log('  tokenId 1 → Compliance: ', compliance1.address);
-  console.log('               Module:     TransferLimitModule (max: 5.000)');
+  console.log('               Module:     TransferLimitModule (max: 5,000)');
   console.log('');
-  console.log('  Próximos passos:');
-  console.log('    1. Registrar identidades dos investidores no IdentityRegistry');
-  console.log('    2. Configurar claim topics e trusted issuers');
-  console.log('    3. Unpause os tokenIds (agent chama unpause(0) e unpause(1))');
-  console.log('    4. Mint tokens para investidores verificados');
+  console.log('  Next steps:');
+  console.log('    1. Register investor identities in IdentityRegistry');
+  console.log('    2. Configure claim topics and trusted issuers');
+  console.log('    3. Unpause tokenIds (agent calls unpause(0) and unpause(1))');
+  console.log('    4. Mint tokens to verified investors');
   console.log('');
 }
 

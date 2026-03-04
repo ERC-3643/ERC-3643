@@ -5,26 +5,26 @@ import OnchainID from '@onchain-id/solidity';
 import { deployIdentityProxy } from '../fixtures/deploy-full-suite.fixture';
 
 /**
- * Este teste demonstra o deploy completo do Token1155 com 2 módulos de compliance:
+ * This test demonstrates a full Token1155 deployment with 2 compliance modules:
  *
- *   tokenId 0 → MaxBalanceModule    (máximo 10.000 tokens por carteira)
- *   tokenId 1 → TransferLimitModule (máximo 5.000 por transferência)
+ *   tokenId 0 → MaxBalanceModule    (max 10,000 tokens per wallet)
+ *   tokenId 1 → TransferLimitModule (max 5,000 per transfer)
  *
- * O fluxo de transferência do Token1155:
+ * Token1155 transfer flow:
  *
  *   safeTransferFrom(from, to, id, amount, data)
  *     │
- *     ├─ 1. tokenId existe?                    → TokenIdDoesNotExist
- *     ├─ 2. tokenId não está pausado?           → TokenIdIsPaused
- *     ├─ 3. caller é owner ou approved?         → CallerNotOwnerOrApproved
- *     ├─ 4. to != address(0)?                   → ERC1155TransferToZeroAddress
- *     ├─ 5. from/to não estão frozen?            → WalletIsFrozen
- *     ├─ 6. saldo livre suficiente?             → InsufficientUnfrozenBalance
- *     ├─ 7. to tem identidade verificada?       → IdentityNotVerified
- *     ├─ 8. compliance.canTransfer()?           → TransferNotCompliant   ← MÓDULOS CHECAM AQUI
+ *     ├─ 1. tokenId exists?                    → TokenIdDoesNotExist
+ *     ├─ 2. tokenId not paused?                → TokenIdIsPaused
+ *     ├─ 3. caller is owner or approved?       → CallerNotOwnerOrApproved
+ *     ├─ 4. to != address(0)?                  → ERC1155TransferToZeroAddress
+ *     ├─ 5. from/to not frozen?                → WalletIsFrozen
+ *     ├─ 6. sufficient unfrozen balance?       → InsufficientUnfrozenBalance
+ *     ├─ 7. to has verified identity?          → IdentityNotVerified
+ *     ├─ 8. compliance.canTransfer()?          → TransferNotCompliant   ← MODULES CHECK HERE
  *     │      └─ MaxBalanceModule.moduleCheck()
  *     │      └─ TransferLimitModule.moduleCheck()
- *     └─ 9. Transfere + compliance.transferred()
+ *     └─ 9. Execute transfer + compliance.transferred()
  */
 
 async function deployToken1155WithModulesFixture() {
@@ -89,7 +89,7 @@ async function deployToken1155WithModulesFixture() {
   const maxBalanceModule = await ethers.deployContract('MaxBalanceModule', deployer);
   const transferLimitModule = await ethers.deployContract('TransferLimitModule', deployer);
 
-  // --- Compliance 0: MaxBalanceModule (max 10.000) ---
+  // --- Compliance 0: MaxBalanceModule (max 10,000) ---
   const compliance0 = await ethers
     .deployContract('ModularComplianceProxy', [trexIA.address], deployer)
     .then((p) => ethers.getContractAt('ModularCompliance', p.address));
@@ -99,7 +99,7 @@ async function deployToken1155WithModulesFixture() {
     maxBalanceModule.address,
   );
 
-  // --- Compliance 1: TransferLimitModule (max 5.000) ---
+  // --- Compliance 1: TransferLimitModule (max 5,000) ---
   const compliance1 = await ethers
     .deployContract('ModularComplianceProxy', [trexIA.address], deployer)
     .then((p) => ethers.getContractAt('ModularCompliance', p.address));
@@ -171,8 +171,8 @@ async function deployToken1155WithModulesFixture() {
 
   // Mint initial tokens and unpause
   // Note: mints also go through compliance canTransfer(address(0), to, amount)
-  // tokenId 0 has MaxBalanceModule (max 10.000 per operation) — fine
-  // tokenId 1 has TransferLimitModule (max 5.000 per operation) — must mint in batches
+  // tokenId 0 has MaxBalanceModule (max 10,000 per operation) — fine
+  // tokenId 1 has TransferLimitModule (max 5,000 per operation) — must mint in batches
   await token1155.connect(tokenAgent).mint(aliceWallet.address, 5000, 0);
   await token1155.connect(tokenAgent).mint(bobWallet.address, 3000, 0);
   // Mint tokenId 1 in batches of 5000 (within transfer limit)
@@ -234,7 +234,7 @@ describe('Token1155 Deploy with Compliance Modules', () => {
         accounts: { aliceWallet, bobWallet },
       } = await loadFixture(deployToken1155WithModulesFixture);
 
-      // Bob has 3000, receiving 2000 → 5000 (within 10.000 max)
+      // Bob has 3000, receiving 2000 → 5000 (within 10,000 max)
       await token1155.connect(aliceWallet).safeTransferFrom(aliceWallet.address, bobWallet.address, 0, 2000, '0x');
       expect(await token1155.balanceOf(bobWallet.address, 0)).to.equal(5000);
     });
@@ -245,7 +245,7 @@ describe('Token1155 Deploy with Compliance Modules', () => {
         accounts: { aliceWallet, tokenAgent },
       } = await loadFixture(deployToken1155WithModulesFixture);
 
-      // Alice has 5000, minting 10001 would exceed max 10.000 per tx check
+      // Alice has 5000, minting 10001 would exceed max 10,000 per tx check
       await expect(
         token1155.connect(tokenAgent).mint(aliceWallet.address, 10001, 0),
       ).to.be.revertedWithCustomError(token1155, 'TransferNotCompliant');
@@ -314,10 +314,10 @@ describe('Token1155 Deploy with Compliance Modules', () => {
       } = await loadFixture(deployToken1155WithModulesFixture);
 
       // tokenId 1 has TransferLimitModule (max 5000), NOT MaxBalanceModule
-      // So multiple transfers can push balance above 10.000 (no max balance check on tokenId 1)
+      // So multiple transfers can push balance above 10,000 (no max balance check on tokenId 1)
       await token1155.connect(aliceWallet).safeTransferFrom(aliceWallet.address, bobWallet.address, 1, 4000, '0x');
       await token1155.connect(aliceWallet).safeTransferFrom(aliceWallet.address, bobWallet.address, 1, 4000, '0x');
-      // Bob now has 10.000 on tokenId 1 — no MaxBalance restriction here
+      // Bob now has 10,000 on tokenId 1 — no MaxBalance restriction here
       expect(await token1155.balanceOf(bobWallet.address, 1)).to.equal(10000);
     });
 
