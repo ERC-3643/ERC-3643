@@ -277,6 +277,13 @@ contract TREXImplementationAuthority is ITREXImplementationAuthority, Ownable {
     }
 
     /**
+     *  @dev See {ITREXImplementationAuthority-getToken1155Implementation}.
+     */
+    function getToken1155Implementation() external view override returns (address) {
+        return _contracts[_versionToBytes(_currentVersion)].token1155Implementation;
+    }
+
+    /**
      *  @dev See {ITREXImplementationAuthority-addTREXVersion}.
      */
     function addTREXVersion(Version calldata _version, TREXContracts calldata _trex) public override onlyOwner {

@@ -79,6 +79,8 @@ interface ITREXImplementationAuthority {
         address tirImplementation;
         // address of ModularCompliance implementation contract
         address mcImplementation;
+        // address of Token1155 implementation contract (optional, can be address(0))
+        address token1155Implementation;
     }
 
     struct Version {
@@ -248,6 +250,13 @@ interface ITREXImplementationAuthority {
      *  currently used by the proxies using this TREXImplementationAuthority
      */
     function getMCImplementation() external view returns (address);
+
+    /**
+     *  @dev getter function returning address of Token1155 contract implementation
+     *  currently used by the proxies using this TREXImplementationAuthority
+     *  returns address(0) if no Token1155 implementation is set
+     */
+    function getToken1155Implementation() external view returns (address);
 
     /**
      *  @dev returns true if the contract is the main contract
