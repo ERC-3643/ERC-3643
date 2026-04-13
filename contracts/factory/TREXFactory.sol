@@ -313,7 +313,7 @@ contract TREXFactory is ITREXFactory, Ownable, AccessManaged {
         returns (address)
     {
         bytes memory _code = type(IdentityRegistryStorageProxy).creationCode;
-        bytes memory _constructData = abi.encode(implementationAuthority_, address(accessManager_));
+        bytes memory _constructData = abi.encode(implementationAuthority_, address(accessManager_), _idFactory);
         bytes memory bytecode = abi.encodePacked(_code, _constructData);
         return _deploy(_salt, bytecode);
     }

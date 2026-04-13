@@ -99,4 +99,10 @@ interface IIdentityRegistry is IERC3643IdentityRegistry {
      */
     function enableEligibilityChecks() external;
 
+    /**
+     * @notice Returns true when the wallet has an identity stored locally in this registry,
+     * ignoring the global identity registry fallback.
+     */
+    function isLocallyRegistered(address userAddress) external view returns (bool);
+
 }

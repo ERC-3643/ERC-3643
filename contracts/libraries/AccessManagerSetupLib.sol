@@ -177,9 +177,10 @@ library AccessManagerSetupLib {
 
     function setupIdentityRegistryStorageRoles(IAccessManager accessManager, address identityRegistryStorage) internal {
         // ------ OWNER role ------
-        bytes4[] memory functions = new bytes4[](2);
+        bytes4[] memory functions = new bytes4[](3);
         functions[0] = IdentityRegistryStorage.bindIdentityRegistry.selector;
         functions[1] = IdentityRegistryStorage.unbindIdentityRegistry.selector;
+        functions[2] = IdentityRegistryStorage.setIdFactory.selector;
         accessManager.setTargetFunctionRole(identityRegistryStorage, functions, RolesLib.OWNER);
 
         // ------ AGENT role ------

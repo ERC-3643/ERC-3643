@@ -8,6 +8,7 @@ import { ERC3643EventsLib } from "contracts/ERC-3643/ERC3643EventsLib.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { EventsLib } from "contracts/libraries/EventsLib.sol";
 import { RolesLib } from "contracts/libraries/RolesLib.sol";
+import { IIdentityRegistry } from "contracts/registry/interface/IIdentityRegistry.sol";
 
 import { TokenBaseUnitTest } from "../helpers/TokenBaseUnitTest.t.sol";
 
@@ -276,6 +277,16 @@ contract TokenERC2771UnitTest is TokenBaseUnitTest {
         vm.mockCall(
             identityRegistryAddr,
             abi.encodeWithSelector(IERC3643IdentityRegistry.contains.selector, account2.addr),
+            abi.encode(false)
+        );
+        vm.mockCall(
+            identityRegistryAddr,
+            abi.encodeWithSelector(IIdentityRegistry.isLocallyRegistered.selector, account1.addr),
+            abi.encode(true)
+        );
+        vm.mockCall(
+            identityRegistryAddr,
+            abi.encodeWithSelector(IIdentityRegistry.isLocallyRegistered.selector, account2.addr),
             abi.encode(false)
         );
         vm.mockCall(

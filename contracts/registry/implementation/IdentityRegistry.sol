@@ -309,6 +309,13 @@ contract IdentityRegistry is IIdentityRegistry, OwnableUpgradeable, AccessManage
     }
 
     /**
+     *  @dev See {IIdentityRegistry-isLocallyRegistered}.
+     */
+    function isLocallyRegistered(address _userAddress) external view override returns (bool) {
+        return _getStorage().tokenIdentityStorage.isLocallyStored(_userAddress);
+    }
+
+    /**
      *  @dev See {IIdentityRegistry-registerIdentity}.
      */
     function registerIdentity(address _userAddress, IIdentity _identity, uint16 _country) public override restricted {

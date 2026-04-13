@@ -90,6 +90,7 @@ import { IERC3643Compliance } from "../ERC-3643/IERC3643Compliance.sol";
 import { IERC3643IdentityRegistry } from "../ERC-3643/IERC3643IdentityRegistry.sol";
 import { ErrorsLib } from "../libraries/ErrorsLib.sol";
 import { EventsLib } from "../libraries/EventsLib.sol";
+import { IIdentityRegistry } from "../registry/interface/IIdentityRegistry.sol";
 import { AgentRole } from "../roles/AgentRole.sol";
 import { IERC173 } from "../roles/IERC173.sol";
 import { IToken } from "./IToken.sol";
@@ -414,13 +415,14 @@ contract Token is
                 emit ERC3643EventsLib.AddressFrozen(newWallet, true, address(this));
             }
         }
-        if (s.identityRegistry.contains(lostWallet)) {
-            if (!s.identityRegistry.contains(newWallet)) {
-                s.identityRegistry
-                    .registerIdentity(
-                        newWallet, IIdentity(investorOnchainId), s.identityRegistry.investorCountry(lostWallet)
-                    );
-            }
+        IIdentityRegistry registry = IIdentityRegistry(address(s.identityRegistry));
+        if (!registry.isLocallyRegistered(newWallet)) {
+            s.identityRegistry
+                .registerIdentity(
+                    newWallet, IIdentity(investorOnchainId), s.identityRegistry.investorCountry(lostWallet)
+                );
+        }
+        if (registry.isLocallyRegistered(lostWallet)) {
             s.identityRegistry.deleteIdentity(lostWallet);
         }
 

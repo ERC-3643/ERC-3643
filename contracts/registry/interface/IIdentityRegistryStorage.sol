@@ -64,8 +64,10 @@ pragma solidity ^0.8.30;
 
 import { IERC3643IdentityRegistryStorage } from "../../ERC-3643/IERC3643IdentityRegistryStorage.sol";
 
-// solhint-disable-next-line no-empty-blocks
 interface IIdentityRegistryStorage is IERC3643IdentityRegistryStorage {
-    // functions that are not part of the original standard can be added here in future versions
 
-    }
+    /// @notice Returns true when the wallet has an identity stored locally in this IRS,
+    /// ignoring the global identity registry fallback.
+    function isLocallyStored(address userAddress) external view returns (bool);
+
+}

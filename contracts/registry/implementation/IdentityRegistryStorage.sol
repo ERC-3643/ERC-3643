@@ -62,6 +62,7 @@
 
 pragma solidity ^0.8.30;
 
+import { IIdFactory } from "@onchain-id/solidity/contracts/factory/IIdFactory.sol";
 import { IIdentity } from "@onchain-id/solidity/contracts/interface/IIdentity.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {
@@ -72,6 +73,7 @@ import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol
 
 import { ERC3643EventsLib } from "../../ERC-3643/ERC3643EventsLib.sol";
 import { ErrorsLib } from "../../libraries/ErrorsLib.sol";
+import { EventsLib } from "../../libraries/EventsLib.sol";
 import { RolesLib } from "../../libraries/RolesLib.sol";
 import { AgentRole } from "../../roles/AgentRole.sol";
 import { IERC173 } from "../../roles/IERC173.sol";
@@ -98,6 +100,9 @@ contract IdentityRegistryStorage is
 
         /// @dev array of Identity Registries linked to this storage
         address[] identityRegistries;
+
+        /// @dev global identity registry used as a fallback when no local identity is stored
+        IIdFactory idFactory;
     }
 
     // keccak256(abi.encode(uint256(keccak256("ERC3643.storage.IdentityRegistryStorage")) - 1)) & ~bytes32(uint256(0xff));
@@ -109,9 +114,13 @@ contract IdentityRegistryStorage is
 
     /// @notice Initializes the contract
     /// @param accessManagerAddress the address of the access manager
-    function init(address accessManagerAddress) external initializer {
+    /// @param idFactoryAddress the address of the global identity registry (IdFactory) used as fallback
+    function init(address accessManagerAddress, address idFactoryAddress) external initializer {
+        require(idFactoryAddress != address(0), ErrorsLib.ZeroAddress());
         __AccessManaged_init(accessManagerAddress);
         __Ownable_init(accessManagerAddress);
+        _getStorage().idFactory = IIdFactory(idFactoryAddress);
+        emit EventsLib.IdFactorySet(idFactoryAddress);
     }
 
     /**
@@ -202,6 +211,23 @@ contract IdentityRegistryStorage is
     }
 
     /**
+     *  @notice Sets the global identity registry (IdFactory) used as a fallback when a wallet has no local identity.
+     *  @param idFactoryAddress the address of the global identity registry
+     */
+    function setIdFactory(address idFactoryAddress) external restricted {
+        require(idFactoryAddress != address(0), ErrorsLib.ZeroAddress());
+        _getStorage().idFactory = IIdFactory(idFactoryAddress);
+        emit EventsLib.IdFactorySet(idFactoryAddress);
+    }
+
+    /**
+     *  @notice Returns the address of the global identity registry (IdFactory) used as a fallback.
+     */
+    function idFactory() external view returns (address) {
+        return address(_getStorage().idFactory);
+    }
+
+    /**
      *  @dev See {IIdentityRegistryStorage-linkedIdentityRegistries}.
      */
     function linkedIdentityRegistries() external view override returns (address[] memory) {
@@ -209,14 +235,29 @@ contract IdentityRegistryStorage is
     }
 
     /**
+     *  @dev See {IIdentityRegistryStorage-isLocallyStored}.
+     */
+    function isLocallyStored(address _userAddress) external view override returns (bool) {
+        return address(_getStorage().identities[_userAddress].identityContract) != address(0);
+    }
+
+    /**
      *  @dev See {IIdentityRegistryStorage-storedIdentity}.
+     *  @dev Falls back to the global identity registry (IdFactory) when no local identity is stored.
      */
     function storedIdentity(address _userAddress) external view override returns (IIdentity) {
-        return _getStorage().identities[_userAddress].identityContract;
+        Storage storage s = _getStorage();
+        IIdentity local = s.identities[_userAddress].identityContract;
+        if (address(local) != address(0)) {
+            return local;
+        }
+        return IIdentity(s.idFactory.getIdentity(_userAddress));
     }
 
     /**
      *  @dev See {IIdentityRegistryStorage-storedInvestorCountry}.
+     *  @dev Returns 0 for wallets that only exist in the global identity registry fallback, because the
+     *  global registry does not track investor country.
      */
     function storedInvestorCountry(address _userAddress) external view override returns (uint16) {
         return _getStorage().identities[_userAddress].investorCountry;

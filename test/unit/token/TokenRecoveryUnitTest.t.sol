@@ -8,6 +8,7 @@ import { ERC3643EventsLib } from "contracts/ERC-3643/ERC3643EventsLib.sol";
 import { IERC3643IdentityRegistry } from "contracts/ERC-3643/IERC3643IdentityRegistry.sol";
 import { ErrorsLib } from "contracts/libraries/ErrorsLib.sol";
 import { RolesLib } from "contracts/libraries/RolesLib.sol";
+import { IIdentityRegistry } from "contracts/registry/interface/IIdentityRegistry.sol";
 
 import { TokenBaseUnitTest } from "../helpers/TokenBaseUnitTest.t.sol";
 
@@ -58,6 +59,8 @@ contract TokenRecoveryUnitTest is TokenBaseUnitTest {
     function testTokenRecoveryAddressNominal() public {
         mockIdentityRegistryContains(lostWallet, true);
         mockIdentityRegistryContains(newWallet, false);
+        mockIdentityRegistryIsLocallyRegistered(lostWallet, true);
+        mockIdentityRegistryIsLocallyRegistered(newWallet, false);
         mockIdentityRegistryInvestorCountry(lostWallet, 1);
         mockIdentityRegistryRegisterIdentity(newWallet, IIdentity(investorOnchainId), 1);
 
@@ -78,6 +81,8 @@ contract TokenRecoveryUnitTest is TokenBaseUnitTest {
 
         mockIdentityRegistryContains(lostWallet, true);
         mockIdentityRegistryContains(newWallet, false);
+        mockIdentityRegistryIsLocallyRegistered(lostWallet, true);
+        mockIdentityRegistryIsLocallyRegistered(newWallet, false);
         mockIdentityRegistryInvestorCountry(lostWallet, 1);
         mockIdentityRegistryRegisterIdentity(newWallet, IIdentity(investorOnchainId), 1);
 
@@ -99,6 +104,8 @@ contract TokenRecoveryUnitTest is TokenBaseUnitTest {
 
         mockIdentityRegistryContains(lostWallet, true);
         mockIdentityRegistryContains(newWallet, false);
+        mockIdentityRegistryIsLocallyRegistered(lostWallet, true);
+        mockIdentityRegistryIsLocallyRegistered(newWallet, false);
         mockIdentityRegistryInvestorCountry(lostWallet, 1);
         mockIdentityRegistryRegisterIdentity(newWallet, IIdentity(investorOnchainId), 1);
 
@@ -117,6 +124,8 @@ contract TokenRecoveryUnitTest is TokenBaseUnitTest {
         // Mock identity registry contains - both wallets are registered
         mockIdentityRegistryContains(lostWallet, true);
         mockIdentityRegistryContains(newWallet, true);
+        mockIdentityRegistryIsLocallyRegistered(lostWallet, true);
+        mockIdentityRegistryIsLocallyRegistered(newWallet, true);
 
         vm.expectEmit(true, true, true, true, address(token));
         emit ERC3643EventsLib.RecoverySuccess(lostWallet, newWallet, investorOnchainId);
@@ -143,6 +152,14 @@ contract TokenRecoveryUnitTest is TokenBaseUnitTest {
             identityRegistry,
             abi.encodeWithSelector(IERC3643IdentityRegistry.contains.selector, wallet),
             abi.encode(contains)
+        );
+    }
+
+    function mockIdentityRegistryIsLocallyRegistered(address wallet, bool locallyRegistered) internal {
+        vm.mockCall(
+            identityRegistry,
+            abi.encodeWithSelector(IIdentityRegistry.isLocallyRegistered.selector, wallet),
+            abi.encode(locallyRegistered)
         );
     }
 

@@ -121,13 +121,11 @@ contract TransferCheckTest is TREXSuiteTest {
     }
 
     /// @notice Should return false when no identity is registered
-    function test_getTransferStatus_ReturnsFalse_WhenNoIdentityRegistered() public {
-        // Delete bob's identity
-        vm.prank(agent);
-        identityRegistry.deleteIdentity(bob);
-
+    function test_getTransferStatus_ReturnsFalse_WhenNoIdentityRegistered() public view {
+        // `another` has no identity registered locally AND no identity in the global IdFactory fallback,
+        // so eligibility must fail regardless of the fallback semantics.
         (bool freezeStatus, bool eligibilityStatus, bool complianceStatus) =
-            utilityChecker.getTransferStatus(address(token), alice, bob, 100);
+            utilityChecker.getTransferStatus(address(token), alice, another, 100);
 
         assertTrue(freezeStatus);
         assertFalse(eligibilityStatus);
