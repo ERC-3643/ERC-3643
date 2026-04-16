@@ -290,11 +290,6 @@ contract TokenERC2771UnitTest is TokenBaseUnitTest {
             abi.encode(false)
         );
         vm.mockCall(
-            identityRegistryAddr,
-            abi.encodeWithSelector(IERC3643IdentityRegistry.investorCountry.selector, account1.addr),
-            abi.encode(uint16(0))
-        );
-        vm.mockCall(
             identityRegistryAddr, abi.encodeWithSelector(IERC3643IdentityRegistry.registerIdentity.selector), ""
         );
 

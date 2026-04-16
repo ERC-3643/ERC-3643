@@ -259,10 +259,14 @@ contract TREXSuiteTest is Test, AccessManagerHelper {
     function _registerIdentities(Token _token) internal {
         vm.startPrank(agent);
         IERC3643IdentityRegistry ir = _token.identityRegistry();
-        ir.registerIdentity(alice, aliceIdentity, Countries.FRANCE);
-        ir.registerIdentity(bob, bobIdentity, Countries.UNITED_STATES);
-        ir.registerIdentity(charlie, charlieIdentity, Countries.SPAIN);
+        ir.registerIdentity(alice, aliceIdentity, 0);
+        ir.registerIdentity(bob, bobIdentity, 0);
+        ir.registerIdentity(charlie, charlieIdentity, 0);
         vm.stopPrank();
+
+        _addCountryClaim(aliceIdentity, Countries.FRANCE, alice);
+        _addCountryClaim(bobIdentity, Countries.UNITED_STATES, bob);
+        _addCountryClaim(charlieIdentity, Countries.SPAIN, charlie);
     }
 
     /// @notice Helper function to create and add a claim to an identity
@@ -282,6 +286,12 @@ contract TREXSuiteTest is Test, AccessManagerHelper {
 
         vm.prank(_caller);
         _identity.addClaim(_claimTopic, 1, _claimIssuer, signature, _claimData, "uri");
+    }
+
+    /// @notice Helper to add a country claim to an identity using the claim issuer
+    function _addCountryClaim(IIdentity _identity, uint16 _country, address _wallet) internal {
+        bytes memory claimData = abi.encode(_country);
+        _addClaim(_identity, 2_000_008, claimData, claimIssuerSigner.key, address(claimIssuer), _wallet);
     }
 
     // ============ Helper Functions ============

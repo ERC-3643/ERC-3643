@@ -70,6 +70,7 @@ library ErrorsLib {
     error ZeroValue();
     error ArraySizeLimited(uint256 maxSize);
     error InitializationFailed();
+    error Deprecated();
     error InvalidImplementationAuthority();
 
     // Token Errors

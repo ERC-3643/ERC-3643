@@ -22,6 +22,7 @@ import { IdentityRegistryStorage } from "contracts/registry/implementation/Ident
 import { TrustedIssuersRegistry } from "contracts/registry/implementation/TrustedIssuersRegistry.sol";
 import { InterfaceIdCalculator } from "contracts/utils/InterfaceIdCalculator.sol";
 
+import { Countries } from "../helpers/Countries.sol";
 import { TREXSuiteTest } from "../helpers/TREXSuiteTest.sol";
 import { ClaimIssuerTrick } from "../mocks/ClaimIssuerTrick.sol";
 import { MockContract } from "../mocks/MockContract.sol";
@@ -482,6 +483,27 @@ contract IdentityRegistryTest is TREXSuiteTest {
             // If no topics required, verification should pass
             assertTrue(identityRegistry.isVerified(charlie));
         }
+    }
+
+    // ============ investorCountry() Tests ============
+
+    /// @notice Should return the country from the identity's country claim
+    function test_investorCountry_ReturnsCountryFromClaim() public view {
+        assertEq(identityRegistry.investorCountry(alice), Countries.FRANCE);
+    }
+
+    /// @notice Should return 0 when identity has no country claim
+    function test_investorCountry_ReturnsZero_WhenNoCountryClaim() public view {
+        assertEq(identityRegistry.investorCountry(another), 0);
+    }
+
+    // ============ updateCountry() Tests ============
+
+    /// @notice Should revert with Deprecated
+    function test_updateCountry_RevertWhen_Deprecated() public {
+        vm.prank(accessManagerAdmin);
+        vm.expectRevert(ErrorsLib.Deprecated.selector);
+        identityRegistry.updateCountry(alice, Countries.SPAIN);
     }
 
 }

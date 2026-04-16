@@ -97,21 +97,11 @@ contract IdentityRegistryStorageTest is TREXSuiteTest {
 
     // ============ modifyStoredInvestorCountry() Tests ============
 
-    /// @notice Should revert when wallet is zero address
-    function test_modifyStoredInvestorCountry_RevertWhen_WalletZeroAddress() public {
-        vm.prank(agent);
-        vm.expectRevert(ErrorsLib.ZeroAddress.selector);
-        identityRegistryStorage.modifyStoredInvestorCountry(address(0), Countries.UNITED_STATES);
-    }
-
-    /// @notice Should revert when wallet is not registered
-    function test_modifyStoredInvestorCountry_RevertWhen_NotStored() public {
-        vm.prank(agent);
-        identityRegistryStorage.removeIdentityFromStorage(charlie);
-
-        vm.prank(agent);
-        vm.expectRevert(ErrorsLib.AddressNotYetStored.selector);
-        identityRegistryStorage.modifyStoredInvestorCountry(charlie, Countries.UNITED_STATES);
+    /// @notice Should revert with Deprecated
+    function test_modifyStoredInvestorCountry_RevertWhen_Deprecated() public {
+        vm.prank(accessManagerAdmin);
+        vm.expectRevert(ErrorsLib.Deprecated.selector);
+        identityRegistryStorage.modifyStoredInvestorCountry(bob, Countries.UNITED_STATES);
     }
 
     // ============ removeIdentityFromStorage() Tests ============
@@ -208,7 +198,7 @@ contract IdentityRegistryStorageTest is TREXSuiteTest {
         identityRegistryStorage.unbindIdentityRegistry(identityRegistry);
     }
 
-    // ============ storedIdentity() / storedInvestorCountry() Fallback Tests ============
+    // ============ storedIdentity() Fallback Tests ============
 
     /// @notice storedIdentity returns the local identity when present (no fallback to global)
     function test_storedIdentity_UsesLocal_WhenPresent() public view {
@@ -230,10 +220,9 @@ contract IdentityRegistryStorageTest is TREXSuiteTest {
         assertEq(address(identityRegistryStorage.storedIdentity(another)), address(0));
     }
 
-    /// @notice storedInvestorCountry returns 0 for wallets only present in the global registry
-    function test_storedInvestorCountry_ReturnsZero_ForGlobalOnlyWallet() public {
-        vm.prank(deployer);
-        idFactory.createIdentity(another, "another");
+    /// @notice storedInvestorCountry always returns 0 (country is now on the identity claim)
+    function test_storedInvestorCountry_AlwaysReturnsZero() public view {
+        assertEq(identityRegistryStorage.storedInvestorCountry(bob), 0);
         assertEq(identityRegistryStorage.storedInvestorCountry(another), 0);
     }
 

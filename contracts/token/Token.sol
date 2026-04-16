@@ -417,10 +417,7 @@ contract Token is
         }
         IIdentityRegistry registry = IIdentityRegistry(address(s.identityRegistry));
         if (!registry.isLocallyRegistered(newWallet)) {
-            s.identityRegistry
-                .registerIdentity(
-                    newWallet, IIdentity(investorOnchainId), s.identityRegistry.investorCountry(lostWallet)
-                );
+            s.identityRegistry.registerIdentity(newWallet, IIdentity(investorOnchainId), 0);
         }
         if (registry.isLocallyRegistered(lostWallet)) {
             s.identityRegistry.deleteIdentity(lostWallet);
