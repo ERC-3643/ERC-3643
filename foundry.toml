@@ -29,7 +29,7 @@ remappings_regenerate = false
 forge-std = { version = "v1.14.0", git = "https://github.com/foundry-rs/forge-std.git", tag = "v1.14.0" }
 "@openzeppelin-contracts" = "5.5.0"
 "@openzeppelin-contracts-upgradeable" = "5.5.0"
-onchain-id = { version = "2.2.2-beta3", git = "https://github.com/onchain-id/solidity.git", tag = "2.2.2-beta3" }
+onchain-id = { version = "branch", git = "https://github.com/onchain-id/solidity.git", branch = "feature/BT-1447-global-identity-registry-id-factory" }
 
 [rpc_endpoints]
 baseSepolia = "https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}"

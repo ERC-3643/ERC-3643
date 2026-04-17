@@ -12,6 +12,3 @@ node_modules/
 # IDEs
 .idea/
 .vscode/
-
-.storage_delta_cache
-storage_delta

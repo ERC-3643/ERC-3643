@@ -20,6 +20,6 @@ rev = "v1.14.0"
 
 [[dependencies]]
 name = "onchain-id"
-version = "2.2.2-beta3"
+version = "branch"
 git = "https://github.com/onchain-id/solidity.git"
-rev = "0e681fbf40f7982be5f76f3bbb1f2995e28e40f8"
+rev = "6c71d8a8521cda936f136ecb8936bec4fca3a3a4"
