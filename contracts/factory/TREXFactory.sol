@@ -122,6 +122,7 @@ contract TREXFactory is ITREXFactory, Ownable, AccessManaged {
             (bool hasAdminRole,) = accessManager.hasRole(0, address(this));
             require(hasAdminRole, ErrorsLib.FactoryMissingAdminRoleOnAccessManager());
         }
+        AccessManagerSetupLib.setupLabels(accessManager);
 
         require((_claimDetails.issuers).length == (_claimDetails.issuerClaims).length, ErrorsLib.InvalidClaimPattern());
         require((_claimDetails.issuers).length <= 5, ErrorsLib.MaxClaimIssuersReached(5));

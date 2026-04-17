@@ -45,6 +45,12 @@ contract IdentityRegistryStorageTest is TREXSuiteTest {
         identityRegistryStorage.init(address(accessManager), address(idFactory));
     }
 
+    /// @notice Should revert when idFactory is the zero address
+    function test_init_RevertWhen_IdFactoryZeroAddress() public {
+        vm.expectRevert(ErrorsLib.InitializationFailed.selector);
+        new IdentityRegistryStorageProxy(address(trexImplementationAuthority), address(accessManager), address(0));
+    }
+
     // ============ addIdentityToStorage() Tests ============
 
     /// @notice Should revert when identity is zero address
@@ -196,6 +202,45 @@ contract IdentityRegistryStorageTest is TREXSuiteTest {
         emit ERC3643EventsLib.IdentityRegistryUnbound(identityRegistry);
         vm.prank(deployer);
         identityRegistryStorage.unbindIdentityRegistry(identityRegistry);
+    }
+
+    /// @notice Should unbind a registry located past index 0 (exercises the loop increment)
+    function test_unbindIdentityRegistry_Success_WhenNotFirst() public {
+        address firstIR = address(token.identityRegistry());
+        address secondIR = makeAddr("secondIR");
+
+        vm.prank(deployer);
+        identityRegistryStorage.bindIdentityRegistry(secondIR);
+
+        // Unbind the second one — match is at index 1, so the loop increments past index 0
+        vm.prank(deployer);
+        identityRegistryStorage.unbindIdentityRegistry(secondIR);
+
+        address[] memory linked = identityRegistryStorage.linkedIdentityRegistries();
+        assertEq(linked.length, 1);
+        assertEq(linked[0], firstIR);
+    }
+
+    // ============ linkedIdentityRegistries() Tests ============
+
+    /// @notice Should return the list of bound identity registries
+    function test_linkedIdentityRegistries_ReturnsBoundRegistries() public {
+        address existingIR = address(token.identityRegistry());
+
+        // Initially only the suite's IR is bound
+        address[] memory initial = identityRegistryStorage.linkedIdentityRegistries();
+        assertEq(initial.length, 1);
+        assertEq(initial[0], existingIR);
+
+        // Bind another registry and verify it appears
+        address extraIR = makeAddr("extraIR");
+        vm.prank(deployer);
+        identityRegistryStorage.bindIdentityRegistry(extraIR);
+
+        address[] memory updated = identityRegistryStorage.linkedIdentityRegistries();
+        assertEq(updated.length, 2);
+        assertEq(updated[0], existingIR);
+        assertEq(updated[1], extraIR);
     }
 
     // ============ storedIdentity() Fallback Tests ============

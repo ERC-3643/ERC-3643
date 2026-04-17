@@ -10,6 +10,7 @@ import { ModuleProxy } from "contracts/compliance/modular/modules/ModuleProxy.so
 import { ITREXFactory, TREXFactory } from "contracts/factory/TREXFactory.sol";
 import { AccessManagerSetupLib } from "contracts/libraries/AccessManagerSetupLib.sol";
 import { ErrorsLib } from "contracts/libraries/ErrorsLib.sol";
+import { TrustedIssuersRegistryProxy } from "contracts/proxy/TrustedIssuersRegistryProxy.sol";
 import { TREXImplementationAuthority } from "contracts/proxy/authority/TREXImplementationAuthority.sol";
 import { Token } from "contracts/token/Token.sol";
 
@@ -272,6 +273,28 @@ contract TREXFactoryTest is TREXSuiteTest {
         trexFactory.setIdFactory(address(newIdFactory));
 
         assertEq(trexFactory.getIdFactory(), address(newIdFactory), "IdFactory should be updated");
+    }
+
+    /// @notice Should revert when the CREATE2 target address already contains code
+    function test_deployTREXSuite_RevertWhen_Create2AddressCollides() public {
+        ITREXFactory.TokenDetails memory tokenDetails = _createEmptyTokenDetails();
+        ITREXFactory.ClaimDetails memory claimDetails = _createEmptyClaimDetails();
+
+        string memory salt = "collision-salt";
+        bytes32 saltBytes = bytes32(keccak256(abi.encodePacked(salt)));
+
+        // First contract deployed by deployTREXSuite is the TrustedIssuersRegistryProxy.
+        // Predict its CREATE2 address and pre-populate code there so CREATE2 fails.
+        bytes memory initCode = abi.encodePacked(
+            type(TrustedIssuersRegistryProxy).creationCode,
+            abi.encode(address(trexImplementationAuthority), address(accessManager))
+        );
+        address predicted = vm.computeCreate2Address(saltBytes, keccak256(initCode), address(trexFactory));
+        vm.etch(predicted, hex"60006000");
+
+        vm.prank(deployer);
+        vm.expectRevert();
+        trexFactory.deployTREXSuite(salt, tokenDetails, claimDetails);
     }
 
     /// @notice Should deploy TREX suite when irs is provided (not address(0))

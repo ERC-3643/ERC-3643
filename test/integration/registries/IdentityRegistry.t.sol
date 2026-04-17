@@ -497,6 +497,72 @@ contract IdentityRegistryTest is TREXSuiteTest {
         assertEq(identityRegistry.investorCountry(another), 0);
     }
 
+    /// @notice Should return 0 when identity exists but has no country claim
+    function test_investorCountry_ReturnsZero_WhenIdentityHasNoCountryClaim() public {
+        // david has no identity yet — give him one without a country claim
+        vm.prank(deployer);
+        IIdentity davidIdentity = IIdentity(idFactory.createIdentity(david, "david"));
+
+        vm.prank(agent);
+        identityRegistry.registerIdentity(david, davidIdentity, 0);
+
+        assertEq(identityRegistry.investorCountry(david), 0);
+    }
+
+    /// @notice Should return 0 when the country claim on the identity has empty data
+    function test_investorCountry_ReturnsZero_WhenCountryClaimDataIsEmpty() public {
+        vm.prank(deployer);
+        IIdentity davidIdentity = IIdentity(idFactory.createIdentity(david, "david"));
+
+        vm.prank(agent);
+        identityRegistry.registerIdentity(david, davidIdentity, 0);
+
+        // Add a country claim with empty data bytes (signed by claimIssuer).
+        bytes memory emptyData = "";
+        _addClaim(
+            davidIdentity,
+            identityRegistry.COUNTRY_CLAIM_TOPIC(),
+            emptyData,
+            claimIssuerSigner.key,
+            address(claimIssuer),
+            david
+        );
+
+        assertEq(identityRegistry.investorCountry(david), 0);
+    }
+
+    // ============ batchRegisterIdentity() Tests ============
+
+    /// @notice Should register multiple identities in a single call
+    function test_batchRegisterIdentity_Success() public {
+        // Create two fresh identities for david and another (not yet registered)
+        vm.startPrank(deployer);
+        IIdentity davidIdentity = IIdentity(idFactory.createIdentity(david, "david"));
+        IIdentity anotherIdentity = IIdentity(idFactory.createIdentity(another, "another"));
+        vm.stopPrank();
+
+        address[] memory users = new address[](2);
+        users[0] = david;
+        users[1] = another;
+
+        IIdentity[] memory identities = new IIdentity[](2);
+        identities[0] = davidIdentity;
+        identities[1] = anotherIdentity;
+
+        uint16[] memory countries = new uint16[](2);
+        countries[0] = Countries.FRANCE;
+        countries[1] = Countries.SPAIN;
+
+        // batchRegisterIdentity has no explicit role configured, so it defaults to admin-only
+        vm.prank(accessManagerAdmin);
+        identityRegistry.batchRegisterIdentity(users, identities, countries);
+
+        assertEq(address(identityRegistry.identity(david)), address(davidIdentity));
+        assertEq(address(identityRegistry.identity(another)), address(anotherIdentity));
+        assertTrue(identityRegistry.isLocallyRegistered(david));
+        assertTrue(identityRegistry.isLocallyRegistered(another));
+    }
+
     // ============ updateCountry() Tests ============
 
     /// @notice Should revert with Deprecated
