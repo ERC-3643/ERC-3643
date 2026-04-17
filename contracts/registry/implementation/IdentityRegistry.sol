@@ -68,6 +68,7 @@ import "@onchain-id/solidity/contracts/interface/IIdentity.sol";
 import "../interface/IClaimTopicsRegistry.sol";
 import "../interface/ITrustedIssuersRegistry.sol";
 import "../interface/IIdentityRegistry.sol";
+import "../interface/IIdentityVerifier.sol";
 import "../../roles/AgentRoleUpgradeable.sol";
 import "../interface/IIdentityRegistryStorage.sol";
 import "../storage/IRStorage.sol";
@@ -167,10 +168,30 @@ contract IdentityRegistry is IIdentityRegistry, AgentRoleUpgradeable, IRStorage 
     }
 
     /**
+     *  @dev See {IIdentityRegistry-setIdentityVerifier}.
+     */
+    function setIdentityVerifier(address _verifier) external override onlyOwner {
+        _identityVerifier = _verifier;
+        emit IdentityVerifierSet(_verifier);
+    }
+
+    /**
+     *  @dev See {IIdentityRegistry-identityVerifier}.
+     */
+    function identityVerifier() external view override returns (address) {
+        return _identityVerifier;
+    }
+
+    /**
      *  @dev See {IIdentityRegistry-isVerified}.
      */
     // solhint-disable-next-line code-complexity
     function isVerified(address _userAddress) external view override returns (bool) {
+        // If a pluggable IdentityVerifier is configured, delegate to it and
+        // bypass the built-in ONCHAINID-based verification entirely.
+        if (_identityVerifier != address(0)) {
+            return IIdentityVerifier(_identityVerifier).isVerified(_userAddress);
+        }
         if (address(identity(_userAddress)) == address(0)) {return false;}
         uint256[] memory requiredClaimTopics = _tokenTopicsRegistry.getClaimTopics();
         if (requiredClaimTopics.length == 0) {
