@@ -124,6 +124,14 @@ interface IIdentityRegistry {
     event CountryUpdated(address indexed investorAddress, uint16 indexed country);
 
     /**
+     *  this event is emitted when the pluggable IdentityVerifier is set (or cleared).
+     *  the event is emitted by the `setIdentityVerifier` function.
+     *  `_verifier` is the address of the new verifier contract (address(0) clears it
+     *   and restores default ONCHAINID-based verification).
+     */
+    event IdentityVerifierSet(address indexed _verifier);
+
+    /**
      *  @dev Register an identity contract corresponding to a user address.
      *  Requires that the user doesn't have an identity contract already registered.
      *  This function can only be called by a wallet set as agent of the smart contract
@@ -252,4 +260,23 @@ interface IIdentityRegistry {
      *  @dev Returns the ClaimTopicsRegistry linked to the current IdentityRegistry.
      */
     function topicsRegistry() external view returns (IClaimTopicsRegistry);
+
+    /**
+     *  @dev Sets (or clears) the pluggable IdentityVerifier used by `isVerified`.
+     *  When a non-zero `_verifier` is set, `isVerified(wallet)` delegates to
+     *  `IIdentityVerifier(_verifier).isVerified(wallet)` and bypasses the built-in
+     *  ONCHAINID-based verification entirely. Passing `address(0)` restores the
+     *  default behaviour.
+     *  This function can only be called by the wallet set as owner of the smart contract.
+     *  @param _verifier The address of the pluggable verifier (or address(0) to clear).
+     *  emits `IdentityVerifierSet` event
+     */
+    function setIdentityVerifier(address _verifier) external;
+
+    /**
+     *  @dev Returns the address of the currently configured pluggable IdentityVerifier,
+     *  or address(0) if none is set (in which case default ONCHAINID-based
+     *  verification is used by `isVerified`).
+     */
+    function identityVerifier() external view returns (address);
 }
