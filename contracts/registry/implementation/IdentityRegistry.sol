@@ -169,8 +169,31 @@ contract IdentityRegistry is IIdentityRegistry, AgentRoleUpgradeable, IRStorage 
 
     /**
      *  @dev See {IIdentityRegistry-setIdentityVerifier}.
+     *
+     *  Security considerations:
+     *  Setting `_verifier` to an untrusted contract is equivalent to handing
+     *  that contract full authority over every `isVerified` call on this
+     *  registry. A malicious or buggy verifier that reverts will DoS all
+     *  transfers on every token using this registry, and one that returns
+     *  `true` for adversarial wallets bypasses compliance entirely. The
+     *  verifier is expected to be an audited component owned by the same
+     *  trust boundary as the registry's owner (typically a compliance
+     *  multisig).
+     *
+     *  Input sanity checks:
+     *  - Non-zero `_verifier` must be a contract (has runtime code). Guards
+     *    against accidental EOA or deleted-contract addresses, which would
+     *    otherwise cause every subsequent `isVerified` to revert. Does NOT
+     *    prove the contract implements `IIdentityVerifier` — that remains
+     *    the operator's responsibility.
+     *  - No-op when `_verifier` equals the current value (saves a redundant
+     *    SSTORE and event).
      */
     function setIdentityVerifier(address _verifier) external override onlyOwner {
+        require(_verifier == address(0) || _verifier.code.length > 0, "verifier must be a contract");
+        if (_verifier == _identityVerifier) {
+            return;
+        }
         _identityVerifier = _verifier;
         emit IdentityVerifierSet(_verifier);
     }
