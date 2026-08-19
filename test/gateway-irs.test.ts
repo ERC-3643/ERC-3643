@@ -27,7 +27,9 @@ async function setup() {
   return { context, gateway };
 }
 
-async function irsOfLastDeployment(context: any, owner: string, name: string) {
+type FullSuiteContext = Awaited<ReturnType<typeof deployFullSuiteFixture>>;
+
+async function irsOfLastDeployment(context: FullSuiteContext, owner: string, name: string) {
   const salt = owner.toLowerCase() + name;
   const tokenAddr = await context.factories.trexFactory.getToken(salt);
   const token = await ethers.getContractAt('Token', tokenAddr);
@@ -135,7 +137,10 @@ describe('TREXGateway - IRS access control', () => {
       const irs = await irsOfLastDeployment(context, alice.address, 'AliceToken');
 
       await expect(gateway.connect(bob).transferIRSOwnership(irs, bob.address)).to.be.revertedWithCustomError(gateway, 'OnlyIRSOwnerCall');
-      await expect(gateway.connect(alice).transferIRSOwnership(irs, ethers.constants.AddressZero)).to.be.revertedWithCustomError(gateway, 'ZeroAddress');
+      await expect(gateway.connect(alice).transferIRSOwnership(irs, ethers.constants.AddressZero)).to.be.revertedWithCustomError(
+        gateway,
+        'ZeroAddress',
+      );
       await expect(gateway.connect(alice).transferIRSOwnership(irs, bob.address))
         .to.emit(gateway, 'IRSOwnershipTransferred')
         .withArgs(irs, alice.address, bob.address);
