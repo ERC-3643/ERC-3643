@@ -102,6 +102,22 @@ interface ITREXGateway {
     /// event emitted whenever a TREX token has been deployed by the TREX factory through the use of the Gateway
     event GatewaySuiteDeploymentProcessed(address indexed requester, address intendedOwner, uint256 feeApplied);
 
+    /// event emitted when an Identity Registry Storage is registered on the Gateway with its owner
+    /// (automatically at deployment of a new IRS, or manually by an admin for pre-existing IRS)
+    event IRSRegistered(address indexed irs, address indexed irsOwner);
+
+    /// event emitted when the registered owner of an IRS is changed
+    event IRSOwnershipTransferred(address indexed irs, address indexed previousOwner, address indexed newOwner);
+
+    /// event emitted when the owner of an IRS allows another token owner to bind new Identity Registries to it
+    event IRSUsageAuthorized(address indexed irs, address indexed tokenOwner);
+
+    /// event emitted when the owner of an IRS revokes the right of a token owner to bind new Identity Registries to it
+    event IRSUsageRevoked(address indexed irs, address indexed tokenOwner);
+
+    /// event emitted when the contract ownership of an IRS is recovered from the Factory by the registered IRS owner
+    event IRSOwnershipRecovered(address indexed irs, address indexed newOwner);
+
     /// Functions
 
     /**
@@ -268,6 +284,87 @@ interface ITREXGateway {
     function batchDeployTREXSuite(
         ITREXFactory.TokenDetails[] memory _tokenDetails,
         ITREXFactory.ClaimDetails[] memory _claimDetails) external;
+
+    /**
+    * @notice Registers a pre-existing Identity Registry Storage on the Gateway and sets its owner.
+    * @dev Only an admin (owner or agent of the Gateway) can call this method.
+    * Used to onboard IRS contracts deployed before this version of the Gateway (or outside of it) so that
+    * they can be reused in new deployments under the same access rules as IRS deployed through the Gateway.
+    * The IRS must be owned by the Factory, otherwise the Factory cannot bind new Identity Registries to it.
+    * Reverts with `IRSAlreadyRegistered` if the IRS is already registered.
+    * Reverts with `IRSNotOwnedByFactory` if the Factory is not the owner of the IRS.
+    * @param irs The address of the Identity Registry Storage.
+    * @param irsOwner The address to register as owner of the IRS (typically the owner of the token(s) using it).
+    * emits IRSRegistered
+    */
+    function registerIRS(address irs, address irsOwner) external;
+
+    /**
+    * @notice Transfers the registered ownership of an IRS on the Gateway to a new address.
+    * @dev Only the registered owner of the IRS can call this method.
+    * This does not change the on-chain `Ownable` owner of the IRS contract (which stays the Factory),
+    * it only changes who controls the IRS sharing rules on the Gateway.
+    * Reverts with `ZeroAddress` if `newOwner` is the zero address.
+    * Reverts with `OnlyIRSOwnerCall` if the caller is not the registered owner of the IRS.
+    * @param irs The address of the Identity Registry Storage.
+    * @param newOwner The address of the new registered owner.
+    * emits IRSOwnershipTransferred
+    */
+    function transferIRSOwnership(address irs, address newOwner) external;
+
+    /**
+    * @notice Allows another token owner to reuse the IRS in new TREX suite deployments.
+    * @dev Only the registered owner of the IRS can call this method.
+    * Once authorized, `tokenOwner` can be set as `TokenDetails.owner` in a deployment referencing this IRS,
+    * which results in the new Identity Registry being bound to the IRS (and thus becoming an agent of it).
+    * Reverts with `OnlyIRSOwnerCall` if the caller is not the registered owner of the IRS.
+    * Reverts with `IRSUsageAlreadyAuthorized` if `tokenOwner` is already authorized.
+    * @param irs The address of the Identity Registry Storage.
+    * @param tokenOwner The address of the token owner allowed to reuse the IRS.
+    * emits IRSUsageAuthorized
+    */
+    function authorizeIRSUsage(address irs, address tokenOwner) external;
+
+    /**
+    * @notice Revokes the right of a token owner to reuse the IRS in new TREX suite deployments.
+    * @dev Only the registered owner of the IRS can call this method.
+    * This only blocks future deployments; Identity Registries already bound to the IRS are not unbound
+    * (the IRS owner can do that directly on the IRS after recovering its ownership).
+    * Reverts with `OnlyIRSOwnerCall` if the caller is not the registered owner of the IRS.
+    * Reverts with `IRSUsageNotAuthorized` if `tokenOwner` is not currently authorized.
+    * @param irs The address of the Identity Registry Storage.
+    * @param tokenOwner The address of the token owner losing the right to reuse the IRS.
+    * emits IRSUsageRevoked
+    */
+    function revokeIRSUsage(address irs, address tokenOwner) external;
+
+    /**
+    * @notice Recovers the contract ownership of an IRS from the Factory.
+    * @dev Only the registered owner of the IRS can call this method.
+    * Calls `recoverContractOwnership` on the Factory, transferring the `Ownable` ownership of the IRS to the caller.
+    * After this call the Factory can no longer bind new Identity Registries to this IRS, so any deployment
+    * referencing it will revert with `IRSNotOwnedByFactory` until ownership is given back to the Factory.
+    * Reverts with `OnlyIRSOwnerCall` if the caller is not the registered owner of the IRS.
+    * @param irs The address of the Identity Registry Storage.
+    * emits IRSOwnershipRecovered
+    */
+    function recoverIRSOwnership(address irs) external;
+
+    /**
+    * @notice Returns the registered owner of an IRS.
+    * @param irs The address of the Identity Registry Storage.
+    * @return The registered owner, or the zero address if the IRS is not registered on the Gateway.
+    */
+    function getIRSOwner(address irs) external view returns(address);
+
+    /**
+    * @notice Checks whether a token owner is allowed to reuse an IRS in new deployments.
+    * @dev Returns true if `tokenOwner` is the registered owner of the IRS or has been authorized by them.
+    * @param irs The address of the Identity Registry Storage.
+    * @param tokenOwner The address of the token owner.
+    * @return True if `tokenOwner` can reference `irs` in `TokenDetails.irs`, false otherwise.
+    */
+    function isIRSUsageAuthorized(address irs, address tokenOwner) external view returns(bool);
 
     /**
     * @notice Retrieves the current public deployment status.
