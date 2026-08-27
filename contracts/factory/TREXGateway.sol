@@ -487,7 +487,7 @@ contract TREXGateway is ITREXGateway, AgentRole {
      *  @dev See {ITREXGateway-isIRSUsageAuthorized}.
      */
     function isIRSUsageAuthorized(address irs, address tokenOwner) public override view returns(bool) {
-        return _irsOwner[irs] == tokenOwner || _irsAuthorizedUsers[irs][tokenOwner];
+        return (_irsOwner[irs] != address(0)) && (_irsOwner[irs] == tokenOwner || _irsAuthorizedUsers[irs][tokenOwner]);
     }
 
     /// registers the IRS deployed by the factory for `_salt` with `irsOwner` as its owner

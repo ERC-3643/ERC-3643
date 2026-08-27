@@ -194,4 +194,45 @@ describe('TREXGateway - IRS access control', () => {
       expect(await irsOfLastDeployment(context, bob.address, 'BobToken')).to.equal(legacyIrs.address);
     });
   });
+
+  describe('isIRSUsageAuthorized', () => {
+    it('returns false for an unregistered IRS, whoever the token owner is', async () => {
+      const { context, gateway } = await setup();
+      const alice = context.accounts.aliceWallet;
+      // never went through registerIRS nor a gateway deployment, so its owner slot is still empty
+      const unregisteredIrs = context.suite.identityRegistryStorage.address;
+
+      expect(await gateway.getIRSOwner(unregisteredIrs)).to.equal(ethers.constants.AddressZero);
+      expect(await gateway.isIRSUsageAuthorized(unregisteredIrs, alice.address)).to.be.false;
+      // the zero address must not be reported as authorized just because the owner slot is empty:
+      // this is what the `_irsOwner[irs] != address(0)` guard prevents
+      expect(await gateway.isIRSUsageAuthorized(unregisteredIrs, ethers.constants.AddressZero)).to.be.false;
+      expect(await gateway.isIRSUsageAuthorized(ethers.Wallet.createRandom().address, ethers.constants.AddressZero)).to.be.false;
+      expect(await gateway.isIRSUsageAuthorized(ethers.constants.AddressZero, ethers.constants.AddressZero)).to.be.false;
+    });
+
+    it('keeps returning false for the zero address once the IRS is registered', async () => {
+      const { context, gateway } = await setup();
+      const alice = context.accounts.aliceWallet;
+      await gateway.connect(alice).deployTREXSuite(tokenDetails(alice.address, 'AliceToken'), emptyClaims);
+      const irs = await irsOfLastDeployment(context, alice.address, 'AliceToken');
+
+      expect(await gateway.isIRSUsageAuthorized(irs, alice.address)).to.be.true;
+      // registered now, but the zero address is neither the owner nor an authorized user
+      expect(await gateway.isIRSUsageAuthorized(irs, ethers.constants.AddressZero)).to.be.false;
+    });
+
+    it('goes back to false for the zero address after the IRS owner recovers Ownable ownership', async () => {
+      const { context, gateway } = await setup();
+      const alice = context.accounts.aliceWallet;
+      await gateway.connect(alice).deployTREXSuite(tokenDetails(alice.address, 'AliceToken'), emptyClaims);
+      const irs = await irsOfLastDeployment(context, alice.address, 'AliceToken');
+
+      // recovering does not clear the registration, so the guard still holds
+      await gateway.connect(alice).recoverIRSOwnership(irs);
+      expect(await gateway.getIRSOwner(irs)).to.equal(alice.address);
+      expect(await gateway.isIRSUsageAuthorized(irs, ethers.constants.AddressZero)).to.be.false;
+      expect(await gateway.isIRSUsageAuthorized(irs, alice.address)).to.be.true;
+    });
+  });
 });
