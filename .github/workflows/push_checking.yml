@@ -52,3 +52,14 @@ jobs:
           path: |
             coverage/
             coverage.json
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    needs: [lint, unit_test]
+    if: always()
+    steps:
+      - name: Verify upstream jobs succeeded
+        run: |
+          echo "lint: ${{ needs.lint.result }}"
+          echo "unit_test: ${{ needs.unit_test.result }}"
+          test "${{ needs.lint.result }}" = "success" -a "${{ needs.unit_test.result }}" = "success"

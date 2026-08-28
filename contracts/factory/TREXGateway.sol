@@ -63,6 +63,7 @@ pragma solidity 0.8.17;
 
 import "./ITREXGateway.sol";
 import "../roles/AgentRole.sol";
+import "../token/IToken.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -102,6 +103,24 @@ error OnlyAdminCall();
 /// Batch Size is too big, could run out of gas
 error BatchMaxLengthExceeded(uint16 lengthLimit);
 
+/// The IRS is not registered on the Gateway, it cannot be reused in a deployment
+error IRSNotRegistered(address irs);
+
+/// The IRS is already registered on the Gateway
+error IRSAlreadyRegistered(address irs);
+
+/// The Factory is not the owner of the IRS, it cannot bind new Identity Registries to it
+error IRSNotOwnedByFactory(address irs);
+
+/// Only the registered owner of the IRS can call
+error OnlyIRSOwnerCall(address irs);
+
+/// The token owner is not allowed to reuse this IRS
+error IRSUsageNotAuthorized(address irs, address tokenOwner);
+
+/// The token owner is already allowed to reuse this IRS
+error IRSUsageAlreadyAuthorized(address irs, address tokenOwner);
+
 
 contract TREXGateway is ITREXGateway, AgentRole {
 
@@ -122,6 +141,12 @@ contract TREXGateway is ITREXGateway, AgentRole {
 
     /// mapping for deployment discounts on fees
     mapping(address => uint16) private _feeDiscount;
+
+    /// mapping IRS address => registered owner of the IRS (controls reuse of the IRS in new deployments)
+    mapping(address => address) private _irsOwner;
+
+    /// mapping IRS address => token owner => allowed to reuse the IRS in new deployments
+    mapping(address => mapping(address => bool)) private _irsAuthorizedUsers;
 
     /// constructor of the contract, setting up the factory address and
     /// the public deployment status
@@ -291,6 +316,75 @@ contract TREXGateway is ITREXGateway, AgentRole {
     }
 
     /**
+     *  @dev See {ITREXGateway-registerIRS}.
+     */
+    function registerIRS(address irs, address irsOwner) external override {
+        if(!isAgent(msg.sender) && msg.sender != owner()) {
+            revert OnlyAdminCall();
+        }
+        if(irs == address(0) || irsOwner == address(0)) {
+            revert ZeroAddress();
+        }
+        if(_irsOwner[irs] != address(0)) {
+            revert IRSAlreadyRegistered(irs);
+        }
+        if(Ownable(irs).owner() != _factory) {
+            revert IRSNotOwnedByFactory(irs);
+        }
+        _irsOwner[irs] = irsOwner;
+        emit IRSRegistered(irs, irsOwner);
+    }
+
+    /**
+     *  @dev See {ITREXGateway-transferIRSOwnership}.
+     */
+    function transferIRSOwnership(address irs, address newOwner) external override {
+        _onlyIRSOwner(irs);
+        if(newOwner == address(0)) {
+            revert ZeroAddress();
+        }
+        address previousOwner = _irsOwner[irs];
+        _irsOwner[irs] = newOwner;
+        emit IRSOwnershipTransferred(irs, previousOwner, newOwner);
+    }
+
+    /**
+     *  @dev See {ITREXGateway-authorizeIRSUsage}.
+     */
+    function authorizeIRSUsage(address irs, address tokenOwner) external override {
+        _onlyIRSOwner(irs);
+        if(tokenOwner == address(0)) {
+            revert ZeroAddress();
+        }
+        if(_irsAuthorizedUsers[irs][tokenOwner]) {
+            revert IRSUsageAlreadyAuthorized(irs, tokenOwner);
+        }
+        _irsAuthorizedUsers[irs][tokenOwner] = true;
+        emit IRSUsageAuthorized(irs, tokenOwner);
+    }
+
+    /**
+     *  @dev See {ITREXGateway-revokeIRSUsage}.
+     */
+    function revokeIRSUsage(address irs, address tokenOwner) external override {
+        _onlyIRSOwner(irs);
+        if(!_irsAuthorizedUsers[irs][tokenOwner]) {
+            revert IRSUsageNotAuthorized(irs, tokenOwner);
+        }
+        delete _irsAuthorizedUsers[irs][tokenOwner];
+        emit IRSUsageRevoked(irs, tokenOwner);
+    }
+
+    /**
+     *  @dev See {ITREXGateway-recoverIRSOwnership}.
+     */
+    function recoverIRSOwnership(address irs) external override {
+        _onlyIRSOwner(irs);
+        ITREXFactory(_factory).recoverContractOwnership(irs, msg.sender);
+        emit IRSOwnershipRecovered(irs, msg.sender);
+    }
+
+    /**
      *  @dev See {ITREXGateway-batchDeployTREXSuite}.
      */
     function batchDeployTREXSuite(
@@ -334,6 +428,13 @@ contract TREXGateway is ITREXGateway, AgentRole {
     }
 
     /**
+     *  @dev See {ITREXGateway-getIRSOwner}.
+     */
+    function getIRSOwner(address irs) external override view returns(address) {
+        return _irsOwner[irs];
+    }
+
+    /**
      *  @dev See {ITREXGateway-deployTREXSuite}.
      */
     function deployTREXSuite(ITREXFactory.TokenDetails memory _tokenDetails, ITREXFactory.ClaimDetails memory _claimDetails)
@@ -343,6 +444,10 @@ contract TREXGateway is ITREXGateway, AgentRole {
         }
         if(_publicDeploymentStatus == true && msg.sender != _tokenDetails.owner && !isDeployer(msg.sender)) {
             revert PublicCannotDeployOnBehalf();
+        }
+        // an existing IRS can only be reused by its registered owner or by a token owner they authorized
+        if(_tokenDetails.irs != address(0)) {
+            _checkIRSUsage(_tokenDetails.irs, _tokenDetails.owner);
         }
         uint256 feeApplied = 0;
         if(_deploymentFeeEnabled == true) {
@@ -357,6 +462,10 @@ contract TREXGateway is ITREXGateway, AgentRole {
         }
         string memory _salt  = string(abi.encodePacked(Strings.toHexString(_tokenDetails.owner), _tokenDetails.name));
         ITREXFactory(_factory).deployTREXSuite(_salt, _tokenDetails, _claimDetails);
+        // a freshly deployed IRS is registered with the token owner as its owner
+        if(_tokenDetails.irs == address(0)) {
+            _registerDeployedIRS(_salt, _tokenDetails.owner);
+        }
         emit GatewaySuiteDeploymentProcessed(msg.sender, _tokenDetails.owner, feeApplied);
     }
 
@@ -372,5 +481,41 @@ contract TREXGateway is ITREXGateway, AgentRole {
      */
     function calculateFee(address deployer) public override view returns(uint256) {
         return _deploymentFee.fee - ((_feeDiscount[deployer] * _deploymentFee.fee) / 10000);
+    }
+
+    /**
+     *  @dev See {ITREXGateway-isIRSUsageAuthorized}.
+     */
+    function isIRSUsageAuthorized(address irs, address tokenOwner) public override view returns(bool) {
+        return (_irsOwner[irs] != address(0)) && (_irsOwner[irs] == tokenOwner || _irsAuthorizedUsers[irs][tokenOwner]);
+    }
+
+    /// registers the IRS deployed by the factory for `_salt` with `irsOwner` as its owner
+    function _registerDeployedIRS(string memory _salt, address irsOwner) private {
+        address token = ITREXFactory(_factory).getToken(_salt);
+        address irs = address(IToken(token).identityRegistry().identityStorage());
+        _irsOwner[irs] = irsOwner;
+        emit IRSRegistered(irs, irsOwner);
+    }
+
+    /// reverts if `tokenOwner` is not allowed to bind a new Identity Registry to `irs`
+    /// or if the factory is not in a position to do the binding
+    function _checkIRSUsage(address irs, address tokenOwner) private view {
+        if(_irsOwner[irs] == address(0)) {
+            revert IRSNotRegistered(irs);
+        }
+        if(!isIRSUsageAuthorized(irs, tokenOwner)) {
+            revert IRSUsageNotAuthorized(irs, tokenOwner);
+        }
+        if(Ownable(irs).owner() != _factory) {
+            revert IRSNotOwnedByFactory(irs);
+        }
+    }
+
+    /// reverts if msg.sender is not the registered owner of the IRS
+    function _onlyIRSOwner(address irs) private view {
+        if(_irsOwner[irs] == address(0) || msg.sender != _irsOwner[irs]) {
+            revert OnlyIRSOwnerCall(irs);
+        }
     }
 }
