@@ -101,6 +101,23 @@ interface ITREXFactory {
         uint256[][] issuerClaims;
     }
 
+    struct Token1155Details {
+        address owner;
+        string name;
+        string symbol;
+        address irs;
+        // solhint-disable-next-line var-name-mixedcase
+        address ONCHAINID;
+        address[] irAgents;
+        address[] tokenAgents;
+    }
+
+    struct TokenIdConfig {
+        uint8 decimals;
+        address[] complianceModules;
+        bytes[] complianceSettings;
+    }
+
     /// events
 
     /// event emitted whenever a single contract is deployed by the factory
@@ -115,6 +132,11 @@ interface ITREXFactory {
     /// event emitted by the factory when a full suite of T-REX contracts is deployed
     event TREXSuiteDeployed(address indexed _token, address _ir, address _irs, address _tir, address _ctr, address
     _mc, string indexed _salt);
+
+    /// event emitted by the factory when a full suite of T-REX 1155 contracts is deployed
+    event TREX1155SuiteDeployed(
+        address indexed _token, address _ir, address _irs, address _tir, address _ctr, string indexed _salt
+    );
 
     /// functions
 

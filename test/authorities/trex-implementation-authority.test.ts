@@ -47,6 +47,7 @@ describe('TrexImplementationAuthority', () => {
               irsImplementation: implementations.identityRegistryStorageImplementation.address,
               tirImplementation: implementations.trustedIssuersRegistryImplementation.address,
               mcImplementation: implementations.modularComplianceImplementation.address,
+              token1155Implementation: ethers.constants.AddressZero,
             };
             await otherTrexImplementationAuthority.connect(deployer).addAndUseTREXVersion(versionStruct, contractsStruct);
 
@@ -214,6 +215,7 @@ describe('TrexImplementationAuthority', () => {
           irsImplementation: ethers.constants.AddressZero,
           tirImplementation: implementations.trustedIssuersRegistryImplementation.address,
           mcImplementation: implementations.modularComplianceImplementation.address,
+          token1155Implementation: ethers.constants.AddressZero,
         };
 
         await expect(trexImplementationAuthority.connect(anotherWallet).addTREXVersion(versionStruct, contractsStruct)).to.be.revertedWith(
@@ -252,6 +254,7 @@ describe('TrexImplementationAuthority', () => {
             irsImplementation: implementations.identityRegistryStorageImplementation.address,
             tirImplementation: implementations.trustedIssuersRegistryImplementation.address,
             mcImplementation: implementations.modularComplianceImplementation.address,
+            token1155Implementation: ethers.constants.AddressZero,
           };
 
           await expect(otherTrexImplementationAuthority.addTREXVersion(versionStruct, contractsStruct)).to.be.revertedWith(
@@ -280,6 +283,7 @@ describe('TrexImplementationAuthority', () => {
               irsImplementation: implementations.identityRegistryStorageImplementation.address,
               tirImplementation: implementations.trustedIssuersRegistryImplementation.address,
               mcImplementation: implementations.modularComplianceImplementation.address,
+              token1155Implementation: ethers.constants.AddressZero,
             };
 
             await expect(trexImplementationAuthority.addTREXVersion(versionStruct, contractsStruct)).to.be.revertedWith('version already exists');
@@ -305,6 +309,7 @@ describe('TrexImplementationAuthority', () => {
               irsImplementation: ethers.constants.AddressZero,
               tirImplementation: implementations.trustedIssuersRegistryImplementation.address,
               mcImplementation: implementations.modularComplianceImplementation.address,
+              token1155Implementation: ethers.constants.AddressZero,
             };
 
             await expect(trexImplementationAuthority.addTREXVersion(versionStruct, contractsStruct)).to.be.revertedWith(
@@ -484,6 +489,7 @@ describe('TrexImplementationAuthority', () => {
                 irsImplementation: implementations.identityRegistryStorageImplementation.address,
                 tirImplementation: implementations.trustedIssuersRegistryImplementation.address,
                 mcImplementation: implementations.modularComplianceImplementation.address,
+                token1155Implementation: ethers.constants.AddressZero,
               },
             );
 
@@ -526,6 +532,7 @@ describe('TrexImplementationAuthority', () => {
                 irsImplementation: implementations.identityRegistryStorageImplementation.address,
                 tirImplementation: implementations.trustedIssuersRegistryImplementation.address,
                 mcImplementation: implementations.modularComplianceImplementation.address,
+                token1155Implementation: ethers.constants.AddressZero,
               },
             );
 
