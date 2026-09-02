@@ -68,6 +68,7 @@ import "@onchain-id/solidity/contracts/interface/IIdentity.sol";
 import "../interface/IClaimTopicsRegistry.sol";
 import "../interface/ITrustedIssuersRegistry.sol";
 import "../interface/IIdentityRegistry.sol";
+import "../interface/IIdentityVerifier.sol";
 import "../../roles/AgentRoleUpgradeable.sol";
 import "../interface/IIdentityRegistryStorage.sol";
 import "../storage/IRStorage.sol";
@@ -167,10 +168,53 @@ contract IdentityRegistry is IIdentityRegistry, AgentRoleUpgradeable, IRStorage 
     }
 
     /**
+     *  @dev See {IIdentityRegistry-setIdentityVerifier}.
+     *
+     *  Security considerations:
+     *  Setting `_verifier` to an untrusted contract is equivalent to handing
+     *  that contract full authority over every `isVerified` call on this
+     *  registry. A malicious or buggy verifier that reverts will DoS all
+     *  transfers on every token using this registry, and one that returns
+     *  `true` for adversarial wallets bypasses compliance entirely. The
+     *  verifier is expected to be an audited component owned by the same
+     *  trust boundary as the registry's owner (typically a compliance
+     *  multisig).
+     *
+     *  Input sanity checks:
+     *  - Non-zero `_verifier` must be a contract (has runtime code). Guards
+     *    against accidental EOA or deleted-contract addresses, which would
+     *    otherwise cause every subsequent `isVerified` to revert. Does NOT
+     *    prove the contract implements `IIdentityVerifier` — that remains
+     *    the operator's responsibility.
+     *  - No-op when `_verifier` equals the current value (saves a redundant
+     *    SSTORE and event).
+     */
+    function setIdentityVerifier(address _verifier) external override onlyOwner {
+        require(_verifier == address(0) || _verifier.code.length > 0, "verifier must be a contract");
+        if (_verifier == _identityVerifier) {
+            return;
+        }
+        _identityVerifier = _verifier;
+        emit IdentityVerifierSet(_verifier);
+    }
+
+    /**
+     *  @dev See {IIdentityRegistry-identityVerifier}.
+     */
+    function identityVerifier() external view override returns (address) {
+        return _identityVerifier;
+    }
+
+    /**
      *  @dev See {IIdentityRegistry-isVerified}.
      */
     // solhint-disable-next-line code-complexity
     function isVerified(address _userAddress) external view override returns (bool) {
+        // If a pluggable IdentityVerifier is configured, delegate to it and
+        // bypass the built-in ONCHAINID-based verification entirely.
+        if (_identityVerifier != address(0)) {
+            return IIdentityVerifier(_identityVerifier).isVerified(_userAddress);
+        }
         if (address(identity(_userAddress)) == address(0)) {return false;}
         uint256[] memory requiredClaimTopics = _tokenTopicsRegistry.getClaimTopics();
         if (requiredClaimTopics.length == 0) {

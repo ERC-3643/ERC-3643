@@ -78,8 +78,17 @@ contract IRStorage {
     IIdentityRegistryStorage internal _tokenIdentityStorage;
 
     /**
+     * @dev Address of the pluggable IdentityVerifier contract (optional).
+     * When non-zero, IdentityRegistry.isVerified delegates to this contract
+     * instead of running the built-in ONCHAINID-based verification.
+     * Appended at the end of the storage layout to preserve upgrade safety.
+     */
+    address internal _identityVerifier;
+
+    /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
+     * The gap size was reduced by 1 slot when `_identityVerifier` was appended.
      */
-    uint256[49] private __gap;
+    uint256[48] private __gap;
 }
