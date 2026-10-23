@@ -69,7 +69,6 @@ import "./TokenStorage.sol";
 import "../roles/AgentRoleUpgradeable.sol";
 
 contract Token is IToken, AgentRoleUpgradeable, TokenStorage {
-
     /// modifiers
 
     /// @dev Modifier to make a function callable only when the contract is not paused.
@@ -111,15 +110,9 @@ contract Token is IToken, AgentRoleUpgradeable, TokenStorage {
         // that check is preventing attackers to call the init functions on those
         // legacy contracts.
         require(owner() == address(0), "already initialized");
-        require(
-            _identityRegistry != address(0)
-            && _compliance != address(0)
-        , "invalid argument - zero address");
-        require(
-            keccak256(abi.encode(_name)) != keccak256(abi.encode(""))
-            && keccak256(abi.encode(_symbol)) != keccak256(abi.encode(""))
-        , "invalid argument - empty string");
-        require(0 <= _decimals && _decimals <= 18, "decimals between 0 and 18");
+        require(_identityRegistry != address(0) && _compliance != address(0), "invalid argument - zero address");
+        require(bytes(_name).length > 0 && bytes(_symbol).length > 0, "invalid argument - empty string");
+        require(_decimals <= 18, "decimals between 0 and 18");
         __Ownable_init();
         _tokenName = _name;
         _tokenSymbol = _symbol;
@@ -159,7 +152,7 @@ contract Token is IToken, AgentRoleUpgradeable, TokenStorage {
      *  @dev See {IToken-setName}.
      */
     function setName(string calldata _name) external override onlyOwner {
-        require(keccak256(abi.encode(_name)) != keccak256(abi.encode("")), "invalid argument - empty string");
+        require(bytes(_name).length > 0, "invalid argument - empty string");
         _tokenName = _name;
         emit UpdatedTokenInformation(_tokenName, _tokenSymbol, _tokenDecimals, _TOKEN_VERSION, _tokenOnchainID);
     }
@@ -168,7 +161,7 @@ contract Token is IToken, AgentRoleUpgradeable, TokenStorage {
      *  @dev See {IToken-setSymbol}.
      */
     function setSymbol(string calldata _symbol) external override onlyOwner {
-        require(keccak256(abi.encode(_symbol)) != keccak256(abi.encode("")), "invalid argument - empty string");
+        require(bytes(_symbol).length > 0, "invalid argument - empty string");
         _tokenSymbol = _symbol;
         emit UpdatedTokenInformation(_tokenName, _tokenSymbol, _tokenDecimals, _TOKEN_VERSION, _tokenOnchainID);
     }
@@ -217,11 +210,7 @@ contract Token is IToken, AgentRoleUpgradeable, TokenStorage {
      *  @param _amount The number of tokens to transfer
      *  @return `true` if successful and revert if unsuccessful
      */
-    function transferFrom(
-        address _from,
-        address _to,
-        uint256 _amount
-    ) external override whenNotPaused returns (bool) {
+    function transferFrom(address _from, address _to, uint256 _amount) external override whenNotPaused returns (bool) {
         require(!_frozen[_to] && !_frozen[_from], "wallet is frozen");
         require(_amount <= balanceOf(_from) - (_frozenTokens[_from]), "Insufficient Balance");
         if (_tokenIdentityRegistry.isVerified(_to) && _tokenCompliance.canTransfer(_from, _to, _amount)) {
@@ -236,11 +225,7 @@ contract Token is IToken, AgentRoleUpgradeable, TokenStorage {
     /**
      *  @dev See {IToken-batchForcedTransfer}.
      */
-    function batchForcedTransfer(
-        address[] calldata _fromList,
-        address[] calldata _toList,
-        uint256[] calldata _amounts
-    ) external override {
+    function batchForcedTransfer(address[] calldata _fromList, address[] calldata _toList, uint256[] calldata _amounts) external override {
         for (uint256 i = 0; i < _fromList.length; i++) {
             forcedTransfer(_fromList[i], _toList[i], _amounts[i]);
         }
@@ -294,19 +279,14 @@ contract Token is IToken, AgentRoleUpgradeable, TokenStorage {
     /**
      *  @dev See {IToken-recoveryAddress}.
      */
-    function recoveryAddress(
-        address _lostWallet,
-        address _newWallet,
-        address _investorOnchainID
-    ) external override onlyAgent returns (bool) {
+    function recoveryAddress(address _lostWallet, address _newWallet, address _investorOnchainID) external override onlyAgent returns (bool) {
         require(balanceOf(_lostWallet) != 0, "no tokens to recover");
         IIdentity _onchainID = IIdentity(_investorOnchainID);
         bytes32 _key = keccak256(abi.encode(_newWallet));
         if (_onchainID.keyHasPurpose(_key, 1)) {
             uint256 investorTokens = balanceOf(_lostWallet);
             uint256 frozenTokens = _frozenTokens[_lostWallet];
-            _tokenIdentityRegistry.registerIdentity(_newWallet, _onchainID, _tokenIdentityRegistry.investorCountry
-                (_lostWallet));
+            _tokenIdentityRegistry.registerIdentity(_newWallet, _onchainID, _tokenIdentityRegistry.investorCountry(_lostWallet));
             forcedTransfer(_lostWallet, _newWallet, investorTokens);
             if (frozenTokens > 0) {
                 freezePartialTokens(_newWallet, frozenTokens);
@@ -428,11 +408,7 @@ contract Token is IToken, AgentRoleUpgradeable, TokenStorage {
     /**
      *  @dev See {IToken-forcedTransfer}.
      */
-    function forcedTransfer(
-        address _from,
-        address _to,
-        uint256 _amount
-    ) public override onlyAgent returns (bool) {
+    function forcedTransfer(address _from, address _to, uint256 _amount) public override onlyAgent returns (bool) {
         require(balanceOf(_from) >= _amount, "sender balance too low");
         uint256 freeBalance = balanceOf(_from) - (_frozenTokens[_from]);
         if (_amount > freeBalance) {
@@ -531,11 +507,7 @@ contract Token is IToken, AgentRoleUpgradeable, TokenStorage {
     /**
      *  @dev See {ERC20-_transfer}.
      */
-    function _transfer(
-        address _from,
-        address _to,
-        uint256 _amount
-    ) internal virtual {
+    function _transfer(address _from, address _to, uint256 _amount) internal virtual {
         require(_from != address(0), "ERC20: transfer from the zero address");
         require(_to != address(0), "ERC20: transfer to the zero address");
 
@@ -575,11 +547,7 @@ contract Token is IToken, AgentRoleUpgradeable, TokenStorage {
     /**
      *  @dev See {ERC20-_approve}.
      */
-    function _approve(
-        address _owner,
-        address _spender,
-        uint256 _amount
-    ) internal virtual {
+    function _approve(address _owner, address _spender, uint256 _amount) internal virtual {
         require(_owner != address(0), "ERC20: approve from the zero address");
         require(_spender != address(0), "ERC20: approve to the zero address");
 
