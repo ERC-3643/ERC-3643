@@ -277,5 +277,22 @@ describe('IdentityRegistry', () => {
         await expect(identityRegistry.isVerified(aliceWallet.address)).to.eventually.be.false;
       });
     });
+
+    describe('when the identity returns a claim naming an untrusted issuer', () => {
+      it('should return false', async () => {
+        const {
+          suite: { identityRegistry, claimTopicsRegistry, token },
+          accounts: { tokenAgent, davidWallet },
+        } = await loadFixture(deployFullSuiteFixture);
+
+        const claimTopics = await claimTopicsRegistry.getClaimTopics();
+        const forgedIssuer = await ethers.deployContract('AlwaysValidClaimIssuer');
+        const forgedIdentity = await ethers.deployContract('ForgedIdentity', [claimTopics[0], forgedIssuer.address]);
+        await identityRegistry.connect(tokenAgent).registerIdentity(davidWallet.address, forgedIdentity.address, 42);
+
+        await expect(identityRegistry.isVerified(davidWallet.address)).to.eventually.be.false;
+        await expect(token.connect(tokenAgent).mint(davidWallet.address, 100)).to.be.revertedWith('Identity is not verified.');
+      });
+    });
   });
 });

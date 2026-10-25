@@ -179,7 +179,6 @@ contract IdentityRegistry is IIdentityRegistry, AgentRoleUpgradeable, IRStorage 
 
         uint256 foundClaimTopic;
         uint256 scheme;
-        address issuer;
         bytes memory sig;
         bytes memory data;
         uint256 claimTopic;
@@ -195,10 +194,12 @@ contract IdentityRegistry is IIdentityRegistry, AgentRoleUpgradeable, IRStorage 
             }
 
             for (uint256 j = 0; j < claimIds.length; j++) {
-                (foundClaimTopic, scheme, issuer, sig, data, ) = identity(_userAddress).getClaim(claimIds[j]);
+                (foundClaimTopic, scheme, , sig, data, ) = identity(_userAddress).getClaim(claimIds[j]);
 
                 if (foundClaimTopic == requiredClaimTopics[claimTopic]) {
-                    try IClaimIssuer(issuer).isClaimValid(identity(_userAddress), requiredClaimTopics[claimTopic], sig,
+                    // validate against the trusted issuer the claim id was derived from, not the issuer
+                    // reported by the (user supplied) identity contract
+                    try trustedIssuers[j].isClaimValid(identity(_userAddress), requiredClaimTopics[claimTopic], sig,
                         data) returns(bool _validity) {
 
                         if (
